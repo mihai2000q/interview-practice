@@ -23,6 +23,16 @@ class DocumentPublic(ApiModel):
     created_at: datetime
 
 
+class DocumentAnalysisPublic(ApiModel):
+    """Response of `POST /api/documents/:id/analysis`."""
+
+    model: str
+    domain: str | None
+    company_name: str | None
+    skills: list[str]
+    likely_topics: list[str]
+
+
 class DocumentListQuery(ApiModel):
     type: DocumentType | None = None
 

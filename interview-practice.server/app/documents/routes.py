@@ -4,10 +4,13 @@ from pathlib import Path
 from flask import current_app, jsonify, request, send_file
 from flask.typing import ResponseReturnValue
 from sqlalchemy import select
+from sqlalchemy.orm.exc import ObjectDeletedError
 
 from app.documents import documents_bp
+from app.documents.analysis import ensure_analyses
 from app.documents.parsing import PdfParseError, extract_pdf_text
 from app.documents.schemas import (
+    DocumentAnalysisPublic,
     DocumentCreateForm,
     DocumentListQuery,
     DocumentPublic,
@@ -20,7 +23,10 @@ from app.errors.exceptions import (
     UnprocessableFileError,
 )
 from app.extensions import db
+from app.interviews.model_rules import DEFAULT_INTERVIEW_MODEL
+from app.llm.factory import get_llm_client
 from app.llm.guard import MAX_DOCUMENT_CHARS, check_text
+from app.llm.openrouter import CompletionSettings
 from app.models import Document
 from app.paths import instance_dir
 from app.serialization import to_json, to_json_list
@@ -104,6 +110,26 @@ def create_document() -> ResponseReturnValue:
         raise
 
     return jsonify(to_json(DocumentPublic, document)), 201
+
+
+@documents_bp.put("/<uuid:document_id>/analysis")
+def analyze_document(document_id: uuid.UUID) -> ResponseReturnValue:
+    """Run phase 1 on the Document now, so Create Interview can reuse the result.
+
+    Idempotent: with a cached analysis from the default model it
+    answers without calling the LLM. An Interview that overrides the `jd_analysis`
+    model, or a Document with no analysis, is (re-)analysed at creation instead.
+    """
+    document = _get_document_or_404(document_id)
+    ensure_analyses(
+        get_llm_client(), DEFAULT_INTERVIEW_MODEL, CompletionSettings(), [document]
+    )
+    try:
+        analysis = document.analysis
+    except ObjectDeletedError as exc:
+        # Removed while the LLM call ran (the candidate deleted the attachment).
+        raise NotFoundError("Document not found.") from exc
+    return jsonify(to_json(DocumentAnalysisPublic, analysis))
 
 
 @documents_bp.get("/<uuid:document_id>/download")

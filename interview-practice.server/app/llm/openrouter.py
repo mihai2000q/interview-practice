@@ -6,6 +6,8 @@ No LangChain (ADR 0005). Every failure becomes an `ApiError` subclass, so routes
 let it propagate and the error handlers produce the JSON contract.
 """
 
+import base64
+import binascii
 import json
 import logging
 from collections.abc import Callable
@@ -40,6 +42,27 @@ class CompletionSettings:
     temperature: float | None = None
     max_tokens: int | None = None
     reasoning_effort: str | None = None
+
+
+@dataclass(frozen=True)
+class GeneratedImage:
+    data: bytes
+    extension: str  # "png" | "jpg" | "webp", from the bytes themselves
+
+
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+IMAGE_TIMEOUT_SECONDS = 120.0
+
+
+def _sniff_extension(data: bytes) -> str | None:
+    """The image type by its magic bytes; the provider's `media_type` isn't trusted."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    return None  # anything else (SVG included) is refused
 
 
 @dataclass(frozen=True)
@@ -105,16 +128,39 @@ class OpenRouterClient:
             logger.error("Model %s broke the %s contract: %s", model, schema, exc)
             raise LlmUpstreamError("The model returned an unusable response.") from exc
 
+    def generate_image(self, model: str, prompt: str) -> GeneratedImage:
+        """One image from OpenRouter's image API (`POST /images`, base64 reply)."""
+        payload = self._post(
+            "/images",
+            {"model": model, "prompt": prompt, "n": 1},
+            timeout=IMAGE_TIMEOUT_SECONDS,
+        )
+        try:
+            encoded = payload["data"][0]["b64_json"]
+            data = base64.b64decode(encoded, validate=True)
+        except (KeyError, IndexError, TypeError, binascii.Error) as exc:
+            raise LlmUpstreamError("The image service returned no image.") from exc
+        extension = _sniff_extension(data)
+        if extension is None or len(data) > MAX_IMAGE_BYTES:
+            logger.error("Image from %s refused: %d bytes", model, len(data))
+            raise LlmUpstreamError("The image service returned an unusable image.")
+        return GeneratedImage(data=data, extension=extension)
+
     # -- internals ---------------------------------------------------------------
 
-    def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+    def _post(
+        self, path: str, body: dict[str, Any], *, timeout: float | None = None
+    ) -> dict[str, Any]:
         key = self._api_key()
         if not key:
             logger.error("OpenRouter API key is not configured.")
             raise LlmUnavailableError("The AI service is not available right now.")
         try:
             response = self._http.post(
-                path, json=body, headers={"Authorization": f"Bearer {key}"}
+                path,
+                json=body,
+                headers={"Authorization": f"Bearer {key}"},
+                timeout=timeout if timeout is not None else httpx.USE_CLIENT_DEFAULT,
             )
         except httpx.TimeoutException as exc:
             raise LlmTimeoutError("The AI service took too long to respond.") from exc

@@ -1,23 +1,17 @@
-"""Phase 1: JD/CV analysis (docs/architecture.md, "The 5 system prompts / phases").
+"""Phase 1's extraction: one zero-shot call per Document with a JSON output contract.
 
-One zero-shot extraction call per Document, with a structured JSON output contract. The
-result is cached on the Document as a `DocumentAnalysis` and reused by later Interviews
-until a different model is chosen (ADR 0012). The text is plain context injection, not
-RAG (ADR 0004), fenced so the model treats it as data (see `app.llm.guard.fence`).
+The text is plain context injection, not RAG (ADR 0004), fenced so the model treats it
+as data (see `app.llm.guard.fence`). The reply is bounded and tidied here because it is
+derived from untrusted text and feeds later prompts and the database.
 """
 
-from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from pydantic import BaseModel
-from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
 
-from app.extensions import db
 from app.llm.guard import fence
 from app.llm.openrouter import ChatMessage, CompletionSettings, OpenRouterClient
-from app.models import Document, DocumentAnalysis, DocumentType
+from app.models import DocumentType
 
 MAX_SKILLS = 15
 MAX_TOPICS = 8
@@ -105,7 +99,7 @@ class _AnalysisReply(BaseModel):
 
 
 @dataclass(frozen=True)
-class _Extracted:
+class Extracted:
     domain: str | None
     company_name: str | None
     skills: list[str]
@@ -129,13 +123,13 @@ def _clean_list(items: list[str], limit: int) -> list[str]:
     return [item for item in cleaned if item][:limit]
 
 
-def _extract(
+def extract(
     client: OpenRouterClient,
     model: str,
     settings: CompletionSettings,
     document_type: DocumentType,
     text: str,
-) -> _Extracted:
+) -> Extracted:
     """One LLM call. Touches no database state, so it can run in a worker thread."""
     reply = client.chat_structured(
         _AnalysisReply, model, build_messages(document_type, text), settings
@@ -148,7 +142,7 @@ def _extract(
     if "company_name" not in asked or company.lower() in _NOT_A_COMPANY:
         company = ""
     domain = (reply.domain or "").strip().lower() if "domain" in asked else ""
-    return _Extracted(
+    return Extracted(
         domain=domain[:MAX_DOMAIN_CHARS] or None,
         company_name=company[:MAX_COMPANY_CHARS] or None,
         skills=_clean_list(reply.skills, MAX_SKILLS) if "skills" in asked else [],
@@ -158,42 +152,3 @@ def _extract(
             else []
         ),
     )
-
-
-def ensure_analyses(
-    client: OpenRouterClient,
-    model: str,
-    settings: CompletionSettings,
-    documents: Sequence[Document],
-) -> None:
-    """Make sure each Document has a `DocumentAnalysis` made by `model`.
-
-    Documents already analysed by `model` are skipped; the rest are analysed in
-    parallel and their rows created or overwritten, then committed straight away: an
-    analysis is valid on its own, so it stays even if a later step of the request fails.
-
-    Two requests can analyse the same Document at once (a cancelled client request keeps
-    running on the server while the candidate submits). The first to commit wins; the
-    other finds the row already there, which is just as good.
-    """
-    stale = [d for d in documents if d.analysis is None or d.analysis.model != model]
-    if not stale:
-        return
-    jobs = [(document.type, document.raw_text) for document in stale]
-    with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
-        results = list(
-            pool.map(lambda job: _extract(client, model, settings, *job), jobs)
-        )
-    for document, result in zip(stale, results, strict=True):
-        analysis = document.analysis or DocumentAnalysis()
-        analysis.model = model
-        analysis.domain = result.domain
-        analysis.company_name = result.company_name
-        analysis.skills = result.skills
-        analysis.likely_topics = result.likely_topics
-        analysis.created_at = func.now()
-        document.analysis = analysis
-    try:
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()

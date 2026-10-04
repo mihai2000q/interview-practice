@@ -24,7 +24,11 @@ def _key_reader(key_file: str | None, env_key: str | None) -> Callable[[], str |
 
 
 def get_llm_client() -> OpenRouterClient:
-    """The app-wide client, created on first use."""
+    """The app-wide client, created on first use.
+
+    The single seam for tests: put a client in `app.extensions["llm_client"]` before the
+    first call and every use case gets it.
+    """
     extensions = current_app.extensions
     if "llm_client" not in extensions:
         config = current_app.config

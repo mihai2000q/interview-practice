@@ -1,8 +1,8 @@
 """initial
 
-Revision ID: ed9e6dcd6266
+Revision ID: b1d4ece64571
 Revises: 
-Create Date: 2026-10-03 14:30:38.167888
+Create Date: 2026-10-04 13:10:24.975262
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'ed9e6dcd6266'
+revision = 'b1d4ece64571'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -76,10 +76,11 @@ def upgrade():
     sa.Column('target_question_count', sa.Integer(), nullable=False),
     sa.Column('status', sa.Enum('in_progress', 'completed', 'abandoned', name='interviewstatus'), nullable=False),
     sa.Column('last_activity_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('turn_started_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('persona_name', sa.String(), nullable=False),
     sa.Column('persona_title', sa.String(), nullable=False),
     sa.Column('persona_backstory', sa.Text(), nullable=False),
-    sa.Column('persona_image_path', sa.String(), nullable=False),
+    sa.Column('persona_image_path', sa.String(), nullable=True),
     sa.Column('job_description_document_id', sa.Uuid(), nullable=True),
     sa.Column('cv_document_id', sa.Uuid(), nullable=True),
     sa.Column('cover_letter_document_id', sa.Uuid(), nullable=True),

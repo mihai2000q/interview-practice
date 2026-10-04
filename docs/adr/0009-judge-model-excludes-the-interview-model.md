@@ -10,5 +10,7 @@ model for both roles and quietly defeat the whole reason `InterviewerReview` is 
 from `gpt-5-mini` in the first place (see [ADR 0003](./0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)).
 Enforced by excluding the colliding model from the judge-model picker everywhere it
 appears (Preferences, per-interview advanced settings), with a backend validation check as
-a safety net for anything that bypasses the UI (`app/interviews/model_rules.py`, raising
-`409 JUDGE_MODEL_COLLISION`).
+a safety net for anything that bypasses the UI (`app/llm/phase_settings.py`, raising
+`409 JUDGE_MODEL_COLLISION`). The check resolves each phase's model the same way the
+phases themselves do, so overrides and defaults can't disagree. The same rule for the
+global Preferences pair is not built yet: it comes with the Preferences feature.

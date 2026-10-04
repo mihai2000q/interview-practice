@@ -77,6 +77,10 @@ One template, one real file, one exception:
     Requires the backend's OpenRouter client to read this from config rather than
     hardcoding the real URL — a small, cheap change worth making regardless of whether
     `mock-llm` gets used.
+  - **`PORTRAIT_GENERATION_ENABLED`**: defaults to `true`. Set it to `false` (also `0`, `no`,
+    `off`) to skip the persona portrait, which is slow and billed: interviews are then
+    created with `personaImageUrl: null`, the same as when generating it fails. It reaches
+    the `server` container through its `env_file`, like the other `.env` values.
 - **`OPENROUTER_API_KEY`** is the one exception — deliberately **not** in `.env.dev`/`.env`
   or any other file in this repo. It stays wherever it already lives on each developer's
   own machine (shell environment). `docker-compose.yml` declares it as a Compose

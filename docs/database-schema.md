@@ -86,11 +86,12 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `interviewer_role` | `text` | e.g. recruiter/hr/hiring_manager; plain text, same extensibility reasoning as `tone` |
 | `target_question_count` | `integer` | soft cap, seeded by difficulty; 1–30 (`CHECK`) |
 | `status` | `enum(in_progress, completed, abandoned)` | |
+| `turn_started_at` | `timestamptz`, nullable | set while a Q&A turn is being processed so a second reply is refused (`409 TURN_IN_PROGRESS`); cleared when the turn commits or fails; ignored once older than 5 minutes — see ADR 0013 |
 | `last_activity_at` | `timestamptz` | updated on every new message; staleness timeout 30 minutes — lazily detects a stale/ungracefully-closed session and marks it `abandoned` — see domain-model.md |
 | `persona_name` | `text` | |
 | `persona_title` | `text` | job title shown alongside `persona_name`; generated in the same phase 2 call |
 | `persona_backstory` | `text` | the persona's background and knowledge scope, from the same phase 2 call; fed to the live conversation, never returned by the API |
-| `persona_image_path` | `text` | local-disk path, under the Flask app's `instance/` folder |
+| `persona_image_path` | `text`, nullable | local-disk path, relative to the Flask app's `instance/` folder; null if the portrait couldn't be generated |
 | `job_description_document_id` | `uuid`, nullable, FK → `documents.id` | |
 | `cv_document_id` | `uuid`, nullable, FK → `documents.id` | |
 | `cover_letter_document_id` | `uuid`, nullable, FK → `documents.id` | |

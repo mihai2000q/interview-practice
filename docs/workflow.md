@@ -53,7 +53,8 @@ step is implemented.
 - **Interview helpers** toggle — boolean, default `false`. When on, each Q&A-phase question
   comes with a coaching-hint card grounded in the CV/cover letter where a real match
   exists, falling back to a generic hint when there's no document or no grounded match —
-  the hint prompt must never fabricate experience the candidate didn't actually provide.
+  the hint prompt must never fabricate experience the candidate didn't actually provide —
+  and the ask-back phase offers suggested questions to ask the interviewer (see below).
 - **Advanced settings** (collapsed, nice to have) — per-phase overrides for model
   (`gpt-5-mini`/`gpt-5-nano`/`gpt-4o-mini`/`typesafe/jev-1.13`), temperature, max tokens, and reasoning effort,
   for any of the 5 phases individually; anything left unset falls back to the global
@@ -66,7 +67,8 @@ candidate into the session.
 
 ## 2. Interview Session — Q&A phase
 
-The interviewer asks questions toward the difficulty-derived target count, but can end the
+The interviewer opens the session (greeting plus the first question) as part of creating the
+Interview. The interviewer asks questions toward the difficulty-derived target count, but can end the
 phase early once it judges it has enough signal. Each interviewer question is read aloud
 via text-to-speech, so it genuinely feels asked rather than just displayed. If interview
 helpers are enabled, each question also comes with its coaching-hint card. The candidate
@@ -79,7 +81,8 @@ completed.
 
 Always offered once the Q&A phase ends: the candidate can ask the interviewer their own
 questions (with optional AI-suggested questions, tailored to the interviewer's role, that
-they can accept, edit, or ignore), or decline entirely. What they ask — or that they
+they can accept, edit, or ignore — offered when the Interview helpers toggle is on), or
+decline entirely. What they ask — or that they
 decline — is itself a signal that feeds into the evaluation, the way it would in a real
 interview.
 

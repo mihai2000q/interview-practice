@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pydantic import BaseModel
 
 from app.errors.exceptions import LlmUpstreamError
+from app.interviews.schemas import InterviewCreate
 from app.interviews.shared.guidance import (
     DIFFICULTY_GUIDANCE,
     ROLE_GUIDANCE,
@@ -19,11 +20,12 @@ from app.interviews.shared.guidance import (
 )
 from app.llm.guard import fence
 from app.llm.openrouter import ChatMessage, CompletionSettings, OpenRouterClient
-from app.models import Difficulty, DocumentAnalysis, InterviewCategory
+from app.models import InterviewCategory
+from app.services.document_analysis import JobContext
 
 logger = logging.getLogger(__name__)
 
-# Until the plan supplies one for Interviews with no analysed job description or CV.
+# For Interviews with no analysed domain when the model gives none either.
 FALLBACK_DOMAIN = "general"
 
 # Phase 2: question plan, persona and evaluation criteria in one call. Instruction/
@@ -45,7 +47,7 @@ class CriterionDraft:
 
 @dataclass(frozen=True)
 class InterviewPlan:
-    domain: str | None  # only when it was asked for (no analysed document had one)
+    domain: str  # the analysed one, else the model's, else a placeholder
     persona_name: str
     persona_title: str
     persona_backstory: str
@@ -66,59 +68,39 @@ def _skew(interview_type: str) -> str:
     return "Balance the two categories."
 
 
-def _analysis_lines(label: str, analysis: DocumentAnalysis | None) -> str:
-    if analysis is None or not (analysis.skills or analysis.likely_topics):
-        return ""
-    skills = ", ".join(analysis.skills) or "(none)"
-    topics = ", ".join(analysis.likely_topics) or "(none)"
-    return fence(label, f"skills: {skills}\ntopics: {topics}")
-
-
-def _build_messages(
-    *,
-    job_title: str,
-    seniority: str,
-    difficulty: Difficulty,
-    tone: str,
-    interview_type: str,
-    interviewer_role: str,
-    target_question_count: int,
-    company_name: str | None,
-    domain: str | None,
-    job_description_analysis: DocumentAnalysis | None,
-    cv_analysis: DocumentAnalysis | None,
-) -> list[ChatMessage]:
-    keys = _PLAN_KEYS if domain else _PLAN_DOMAIN_KEY + _PLAN_KEYS
+def _build_messages(request: InterviewCreate, context: JobContext) -> list[ChatMessage]:
+    company = request.company_name or context.company_name
+    keys = _PLAN_KEYS if context.domain else _PLAN_DOMAIN_KEY + _PLAN_KEYS
     system = _PLAN_SYSTEM_PROMPT.format(
-        role=ROLE_GUIDANCE.get(interviewer_role, interviewer_role),
-        tone=TONE_GUIDANCE.get(tone, tone),
-        count=target_question_count,
-        skew=_skew(interview_type),
-        difficulty=DIFFICULTY_GUIDANCE[difficulty.value],
+        role=ROLE_GUIDANCE.get(request.interviewer_role, request.interviewer_role),
+        tone=TONE_GUIDANCE.get(request.tone, request.tone),
+        count=request.target_question_count,
+        skew=_skew(request.interview_type),
+        difficulty=DIFFICULTY_GUIDANCE[request.difficulty.value],
         company=(
             " At least one question must test what the candidate knows about the "
             "company and why they want to work there."
-            if company_name
+            if company
             else ""
         ),
         keys=keys,
     )
     setup = [
-        f"job_title: {job_title}",
-        f"seniority: {seniority}",
-        f"difficulty: {difficulty.value}",
-        f"interview_type: {interview_type}",
-        f"interviewer_role: {interviewer_role}",
-        f"tone: {tone}",
+        f"job_title: {request.job_title}",
+        f"seniority: {request.seniority}",
+        f"difficulty: {request.difficulty.value}",
+        f"interview_type: {request.interview_type}",
+        f"interviewer_role: {request.interviewer_role}",
+        f"tone: {request.tone}",
     ]
-    if company_name:
-        setup.append(f"company: {company_name}")
-    if domain:
-        setup.append(f"domain: {domain}")
+    if company:
+        setup.append(f"company: {company}")
+    if context.domain:
+        setup.append(f"domain: {context.domain}")
     parts = [
         fence("interview_setup", "\n".join(setup)),
-        _analysis_lines("job_analysis", job_description_analysis),
-        _analysis_lines("candidate_analysis", cv_analysis),
+        context.job_text,
+        context.candidate_text,
     ]
     user = "\n\n".join(part for part in parts if part)
     return [ChatMessage("system", system), ChatMessage("user", user)]
@@ -128,34 +110,14 @@ def plan_interview(
     client: OpenRouterClient,
     model: str,
     settings: CompletionSettings,
-    *,
-    job_title: str,
-    seniority: str,
-    difficulty: Difficulty,
-    tone: str,
-    interview_type: str,
-    interviewer_role: str,
-    target_question_count: int,
-    company_name: str | None,
-    domain: str | None,
-    job_description_analysis: DocumentAnalysis | None,
-    cv_analysis: DocumentAnalysis | None,
+    request: InterviewCreate,
+    context: JobContext,
 ) -> InterviewPlan:
-    """Run phase 2. `domain` is asked of the model only when it is None."""
-    messages = _build_messages(
-        job_title=job_title,
-        seniority=seniority,
-        difficulty=difficulty,
-        tone=tone,
-        interview_type=interview_type,
-        interviewer_role=interviewer_role,
-        target_question_count=target_question_count,
-        company_name=company_name,
-        domain=domain,
-        job_description_analysis=job_description_analysis,
-        cv_analysis=cv_analysis,
+    """Run phase 2. The domain is asked of the model only when the context has none."""
+    reply = client.chat_structured(
+        _PlanReply, model, _build_messages(request, context), settings
     )
-    reply = client.chat_structured(_PlanReply, model, messages, settings)
+    target = request.target_question_count
 
     # Bounded and tidied because it is stored and fed to every later prompt.
     questions = [
@@ -174,18 +136,16 @@ def plan_interview(
     if not (criteria and name and title and backstory):
         raise LlmUpstreamError("The model returned an incomplete interview plan.")
     # The prompt asks for exactly this many; anything else breaks the contract.
-    if len(questions) != target_question_count:
+    if len(questions) != target:
         logger.error(
-            "Model %s returned %d questions, expected %d",
-            model,
-            len(questions),
-            target_question_count,
+            "Model %s returned %d questions, expected %d", model, len(questions), target
         )
         raise LlmUpstreamError("The model returned the wrong number of questions.")
 
-    clean_domain = (reply.domain or "").strip().lower()[:_MAX_DOMAIN_CHARS]
+    # The analysed domain, else the model's, else a placeholder: never empty.
+    model_domain = (reply.domain or "").strip().lower()[:_MAX_DOMAIN_CHARS]
     return InterviewPlan(
-        domain=None if domain else (clean_domain or FALLBACK_DOMAIN),
+        domain=context.domain or model_domain or FALLBACK_DOMAIN,
         persona_name=name,
         persona_title=title,
         persona_backstory=backstory,

@@ -160,6 +160,7 @@ One mock interview session, from creation through evaluation.
 - `status`: `in_progress` | `completed` | `abandoned` — `abandoned` either when the
   candidate explicitly quits mid-session, or when the session goes stale (see
   `last_activity_at` below); evaluation still runs in both cases but is flagged incomplete
+- `turn_started_at`: nullable timestamptz — set while a turn is being processed so a second reply is refused with `TURN_IN_PROGRESS`, cleared when the turn ends, and treated as expired after 5 minutes if its request died (see ADR 0013). An Interview with a live marker is never marked stale
 - `last_activity_at`: timestamptz, updated on every new `Message`. Staleness timeout: **30
   minutes** — long enough that a candidate thinking mid-answer isn't falsely flagged, short
   enough that history doesn't show obviously-dead "in progress" sessions. The second path
@@ -176,9 +177,10 @@ One mock interview session, from creation through evaluation.
   Produced by the same phase 2 call and stored so the live conversation (phase 3) keeps the
   persona consistent every turn, and so the judge can score persona consistency. Never
   shown to the candidate
-- `persona_image_path`: local-disk path to the generated portrait image, under the Flask
-  app's `instance/` folder (see `architecture.md` — generated once at creation, stored, not
-  regenerated)
+- `persona_image_path`: nullable — local-disk path to the generated portrait image, under
+  the Flask app's `instance/` folder (see `architecture.md` — generated once at creation,
+  stored, not regenerated). Null when generation failed: the portrait is cosmetic, so the
+  Interview is created without one
 - `job_description_document_id`: optional FK → Document (`type = job_description`)
 - `cv_document_id`: optional FK → Document (`type = cv`)
 - `cover_letter_document_id`: optional FK → Document (`type = cover_letter`)
@@ -238,7 +240,9 @@ One turn in the interview transcript. Ordered, phase-tagged, role-tagged.
 - `content`: text
 - `helper_text`: nullable text — a coaching-hint card, populated only for `interviewer` /
   `qa`-phase messages when `Interview.coaching_helpers_enabled` is true (see `architecture.md`)
-- `sequence`: ordering index within the interview
+- `sequence`: ordering index within the interview, from 1. The first message of every
+  Interview is the interviewer's opening, created with it. The Interview's current phase is
+  the phase of its last message (`qa` before any)
 - `created_at`
 
 ## Evaluation

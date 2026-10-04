@@ -39,7 +39,7 @@ def generate_portrait(
 ) -> GeneratedImage | None:
     """The portrait, or None if the image service failed (logged, never raised).
 
-    Touches no Flask or database state, so it can run in a worker thread.
+    Runs in a worker thread (see `app.llm.concurrency`): it uses only the client.
     """
     try:
         return client.generate_image(model, build_prompt(name, title, tone))

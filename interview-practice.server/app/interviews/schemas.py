@@ -2,10 +2,18 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import ConfigDict, Field, StringConstraints
+from pydantic import ConfigDict, Field, StringConstraints, field_validator
 
-from app.llm.guard import guarded
-from app.models import Difficulty, InterviewStatus, ResponseStyle
+from app.llm.guard import MAX_MESSAGE_CHARS, guarded
+from app.models import (
+    Difficulty,
+    GenerationPhase,
+    InterviewPhaseSettings,
+    InterviewStatus,
+    MessagePhase,
+    MessageRole,
+    ResponseStyle,
+)
 from app.serialization import ApiModel
 
 ShortText = Annotated[
@@ -36,9 +44,24 @@ class PhaseSettingsOverride(ApiModel):
     evaluation: PhaseSettings | None = None
     interviewer_review: PhaseSettings | None = None
 
-    def to_storage(self) -> dict[str, Any]:
-        """The snake_case JSONB shape stored on `Interview.phase_settings_override`."""
-        return self.model_dump(by_alias=False, exclude_none=True)
+    def to_rows(self) -> list[InterviewPhaseSettings]:
+        """One unsaved row per phase that carries an override."""
+        return [
+            InterviewPhaseSettings(
+                phase=GenerationPhase(name),
+                **settings.model_dump(by_alias=False, exclude_none=True),
+            )
+            for name in type(self).model_fields
+            if (settings := getattr(self, name)) is not None
+        ]
+
+
+# The request names the six phases as explicit fields (the API contract); they must stay
+# in step with the enum the rest of the code uses.
+if set(PhaseSettingsOverride.model_fields) != {p.value for p in GenerationPhase}:
+    raise RuntimeError(
+        "PhaseSettingsOverride and GenerationPhase list different phases"
+    )
 
 
 class ExistingJobApplication(ApiModel):
@@ -90,12 +113,74 @@ class InterviewPublic(ApiModel):
     status: InterviewStatus
     persona_name: str
     persona_title: str
-    persona_image_path: str
+    persona_image_url: str | None
     job_description_document_id: uuid.UUID | None
     cv_document_id: uuid.UUID | None
     cover_letter_document_id: uuid.UUID | None
     coaching_helpers_enabled: bool
     response_style: ResponseStyle
-    phase_settings_override: dict[str, Any]
+    phase_settings_override: dict[str, dict[str, Any]] = Field(
+        validation_alias="phase_settings", serialization_alias="phaseSettingsOverride"
+    )
     last_activity_at: datetime
     created_at: datetime
+    ended_at: datetime | None
+
+    @field_validator("phase_settings_override", mode="before")
+    @classmethod
+    def _from_rows(cls, rows: Any) -> Any:
+        """The settings rows as `{phase: {setting: value}}`, set fields only."""
+        if isinstance(rows, dict):
+            return rows
+        return {
+            row.phase.value: {
+                name: value
+                for name in ("model", "temperature", "max_tokens", "reasoning_effort")
+                if (value := getattr(row, name)) is not None
+            }
+            for row in rows
+        }
+
+
+class MessagePublic(ApiModel):
+    id: uuid.UUID
+    phase: MessagePhase
+    role: MessageRole
+    content: str
+    helper_text: str | None
+    sequence: int
+    created_at: datetime
+
+
+class InterviewDetail(InterviewPublic):
+    """`GET /api/interviews/:id`: the Interview with its transcript."""
+
+    phase: MessagePhase
+    messages: list[MessagePublic]
+
+
+class MessageCreate(ApiModel):
+    """`POST /api/interviews/:id/messages` body: the candidate's reply."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    content: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1),
+        guarded(MAX_MESSAGE_CHARS),
+    ]
+
+
+class MessageExchange(ApiModel):
+    """Response of `POST /api/interviews/:id/messages`."""
+
+    candidate_message: MessagePublic
+    interviewer_message: MessagePublic
+    phase: MessagePhase
+    status: InterviewStatus
+
+
+class AskBackSuggestions(ApiModel):
+    """Response of `GET /api/interviews/:id/ask-back-suggestions`."""
+
+    suggestions: list[str]

@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -19,6 +19,7 @@ from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import Base, uuid_pk
+from app.models.message import MessagePhase
 
 if TYPE_CHECKING:
     from app.models.document import Document
@@ -70,10 +71,14 @@ class Interview(Base):
     last_activity_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # Set while a turn is being processed, so a second reply is rejected instead of
+    # racing it; expires on its own (see interview_lifecycle.TURN_TTL) if the request
+    # dies.
+    turn_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     persona_name: Mapped[str] = mapped_column(String)
     persona_title: Mapped[str] = mapped_column(String)
     persona_backstory: Mapped[str] = mapped_column(Text)
-    persona_image_path: Mapped[str] = mapped_column(String)
+    persona_image_path: Mapped[str | None] = mapped_column(String)
     job_description_document_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("documents.id", ondelete="SET NULL"), index=True
     )
@@ -141,13 +146,13 @@ class Interview(Base):
     )
 
     @property
-    def phase_settings_override(self) -> dict[str, dict[str, Any]]:
-        """The overrides as `{phase: {setting: value}}`, set fields only."""
-        return {
-            row.phase.value: {
-                name: value
-                for name in ("model", "temperature", "max_tokens", "reasoning_effort")
-                if (value := getattr(row, name)) is not None
-            }
-            for row in self.phase_settings
-        }
+    def phase(self) -> MessagePhase:
+        """Where the session is: the phase of the last message (Q&A before any)."""
+        return self.messages[-1].phase if self.messages else MessagePhase.qa
+
+    @property
+    def persona_image_url(self) -> str | None:
+        """Where the portrait can be fetched, or None if there isn't one."""
+        if self.persona_image_path is None:
+            return None
+        return f"/api/interviews/{self.id}/persona-image"

@@ -156,8 +156,9 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    -side only — not shown to the candidate — and is later fed into phase 5 as grounding so
    the STAR evaluation is judged against the same criteria the plan was built around.
    The model returns JSON with the persona (`name`, `title`, `backstory`), the questions
-   and the criteria, validated before anything is stored; an empty or incomplete plan fails
-   the request with `502` and creates nothing. It also returns the Interview's `domain`,
+   and the criteria, validated before anything is stored; an incomplete plan, or a
+   question count other than `target_question_count`, fails the request with `502` and
+   creates nothing. It also returns the Interview's `domain`,
    but only when no analysed Document supplied one. The backstory is stored as
    `Interview.persona_backstory`. The persona's `tone` is an input chosen by the candidate,
    not generated. The model comes from the Interview's `question_plan` setting (default
@@ -166,14 +167,27 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    persona, asks the next question, and decides pacing/follow-ups and whether it has
    gathered enough signal to end the Q&A phase early (bounded above by
    `target_question_count`). Technique: **role/persona prompting**. `Interview.response_style`
-   (concise/detailed) shapes how elaborate the interviewer's phrasing is.
+   (concise/detailed) shapes how elaborate the interviewer's phrasing is. The model gets
+   the persona (name, title, backstory), the role, tone, the question plan and the
+   transcript, and returns `{message, done}`; the server decides what kind of turn it is
+   (open, ask, wrap up, answer, close) and enforces the budget — see
+   [ADR 0013](./adr/0013-live-conversation-is-server-paced-and-atomic-per-exchange.md). The
+   evaluation criteria are deliberately not shown to it. The model comes from the
+   Interview's `live_conversation` setting.
 4. **Candidate ask-back suggestions** — generates tailored "questions to ask the
    interviewer" the candidate can accept, edit, or ignore during the ask-back phase, aware
    of `interviewer_role` so suggestions fit what that persona would actually know (e.g. not
    suggesting deep architecture questions to a recruiter persona), and of `company_name`
    when set, so suggestions are genuinely company-specific rather than generic — directly
    matching the assignment's own "questions to ask the interviewer" starter idea. Technique:
-   **few-shot**, using example good closing questions as guidance.
+   **few-shot**, using example good closing questions as guidance: the prompt carries four
+   complete input-to-output examples (one per interviewer role, five suggestions each) and
+   the model is asked for five suggestions (fewer than five usable ones is a `502`; extras are trimmed). It also sees the conversation so
+   far, so suggestions can build on what was discussed. It is offered only when the
+   Interview's interview-helpers toggle (`coaching_helpers_enabled`, the same one as the
+   coaching hints) is on, and runs on the Interview's `ask_back` model and settings. Unlike
+   the coaching hint, the candidate asks for it, so a failure is a normal error, not a
+   missing card.
 5. **STAR evaluation** — scores the full transcript (both phases) against the STAR
    framework and the Interview's `EvaluationCriterion` rows (phase 2's rubric, weighted toward
    whichever half — technical or behavioral — matches `interview_type`), and produces a
@@ -215,7 +229,17 @@ in-session toggle.
   this") rather than fabricating a personal detail or omitting the card entirely.
 - Persisted as `Message.helper_text` (see `domain-model.md` / `database-schema.md`) —
   populated only on interviewer messages in the `qa` phase when helpers are enabled; the
-  `ask_back` phase has no helper concept, since the candidate is the one asking there.
+  `ask_back` phase has no helper concept, since the candidate is the one asking there. In
+  practice that is the interviewer's opening question and every `ask` turn that asks a
+  question; the wrap-up message that invites the candidate's questions is already stored as
+  an `ask_back` message and gets none.
+- **Inputs and settings**: the exact question, the role, the job description's analysis
+  (skills and topics), and the CV and cover letter text, each fenced as data. It runs on
+  the Interview's `live_conversation` model and settings (there is no separate phase
+  setting for it). The hint is capped at 300 characters.
+- **Failure**: the hint is a nicety, so if its call fails (provider error, empty reply) the
+  message is stored with `helper_text` null and the card is simply not shown; the turn does
+  not fail. This is different from "no grounded match", which still gets a generic hint.
 
 ## Per-interview advanced settings (nice to have)
 
@@ -398,11 +422,22 @@ later upgrade if cross-browser reliability becomes a real requirement, not the v
 ## Persona image generation
 
 Generated once, at Create Interview time, alongside the question plan/persona — using
-`google/gemini-2.5-flash-image` via the standard `/chat/completions` endpoint with
-`modalities: ["image", "text"]`. The result is stored on **local disk**, under the Flask
-app's `instance/` folder (`instance/uploads/personas/<uuid>.png`) — `Interview.persona_image_path`
-holds that relative path — rather than regenerated on each view, so Results and the history
-sidebar can display it without another API call.
+`google/gemini-2.5-flash-image` through OpenRouter's dedicated image endpoint,
+`POST /images` (`{model, prompt, n: 1}`; the image comes back base64-encoded in
+`data[0].b64_json`). This replaces the earlier `/chat/completions` with `modalities` plan:
+OpenRouter's current docs describe only the image endpoint for image generation. The prompt
+is built from the persona's name, title and tone (a realistic head-and-shoulders headshot of
+a fictional person, no text or logos). The result is stored on **local disk**, under the
+Flask app's `instance/` folder (`instance/uploads/personas/<uuid>.<png|jpg|webp>`) —
+`Interview.persona_image_path` holds that relative path — rather than regenerated on each
+view, so Results and the history sidebar can display it without another API call. The file
+type is decided from the image's own bytes, not the provider's `media_type`, and anything
+other than PNG, JPEG or WebP (SVG included) is refused.
+
+The portrait is cosmetic, so a failure to generate it (provider error, unusable image) does
+**not** fail the Interview: it is logged and `persona_image_path` stays null, and the client
+shows a fallback avatar. It is generated in parallel with the interviewer's opening message,
+since both need only the persona. It is served by `GET /api/interviews/:id/persona-image`.
 
 Note: the assignment's Sprint 1 allow-list only names this one model for image generation,
 so there isn't actually a "cheapest option" to pick between within scope — using a
@@ -429,6 +464,7 @@ Create Interview
     Interview's `jd_analysis` model — normally done at upload time)
   → question-plan & persona generation prompt
   → persona image generation (stored)
+  → interviewer's opening message (phase 3, first turn)
   → Interview row created (status = in_progress)
   → redirect to Interview Session
 

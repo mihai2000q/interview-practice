@@ -39,7 +39,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 | 404 | Resource doesn't exist | `NOT_FOUND` |
 | 413 | Upload exceeds the size limit (`MAX_UPLOAD_MB`, default 10) | `FILE_TOO_LARGE` |
 | 422 | Well-formed request, but the uploaded file can't be used (not a readable PDF, encrypted, or no extractable text) | `UNPROCESSABLE_FILE` |
-| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED` |
+| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED`, `TURN_IN_PROGRESS`, `HELPERS_DISABLED`, `NOT_IN_ASK_BACK_PHASE` |
 | 422 | The security guard (or the provider's moderation) refused the text: it looks like prompt injection or is over its length limit. `details` = `{reason}` (plus `field`, the request field, for `POST /api/interviews`) with `reason` one of `prompt_injection` (+ `excerpt`, the matched wording, so the candidate can find it in a long document), `too_long` (+ `maxLength`), `moderation`; the message never names the rule that matched. Applies to `POST /api/documents` (the extracted text, max 50,000 characters) and `POST /api/interviews` (the free-text fields). Nothing is persisted and no interview state changes, so the client keeps the user's input and lets them edit and resend | `INPUT_REJECTED` |
 | 502 | The model provider failed, was unreachable, or returned an unusable/contract-breaking response | `LLM_UPSTREAM_ERROR` |
 | 503 | The provider can't serve us right now (rate limit, credits, key); `details.retryAfterSeconds` when known | `LLM_UNAVAILABLE` |
@@ -86,8 +86,14 @@ Create Interview submission. Request:
   Application's company is read from the job description or cover letter (left null if
   neither names one).
 
+The interviewer opens the session: the call also creates the first interviewer `Message`
+(a greeting and the first question, phase `qa`), so an Interview always has at least one
+message. A failure at any step (analysis, plan, opening) returns the usual `502`/`503`/`504`
+and creates nothing.
+
 Response `201`: the created `Interview` (id, `status: "in_progress"`, `personaName`,
-`personaTitle`, `personaImagePath` as a servable URL, `targetQuestionCount`, etc.) —
+`personaTitle`, `personaImageUrl` as a servable URL (`/api/interviews/:id/persona-image`, or
+`null` if the portrait couldn't be generated), `targetQuestionCount`, etc.) —
 **not** the question plan or the evaluation criteria, which stay hidden from the candidate.
 
 **Open concern, not yet resolved**: this call runs phases 1 (JD/CV analysis), 2
@@ -99,26 +105,56 @@ too slow in practice.
 ### `GET /api/interviews/:id`
 
 Fetch an Interview plus its `Message`s (ordered by `sequence`), for rendering the session
-or resuming one already in progress.
+or resuming one already in progress. Response `200`: the Interview fields (as in the create
+response, plus `endedAt`), `phase` (`"qa"` | `"ask_back"`, the phase of the last message)
+and `messages: [{id, phase, role, content, helperText, sequence, createdAt}]`. An
+`in_progress` Interview with no activity for 30 minutes is flipped to `abandoned` as it is
+read ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). `404` for
+an unknown id.
+
+### `GET /api/interviews/:id/persona-image`
+
+The persona's portrait: the stored PNG/JPEG/WebP file (`X-Content-Type-Options: nosniff`,
+cached for an hour). `404` for an unknown Interview, one with no portrait, or a missing file.
 
 ### `POST /api/interviews/:id/messages`
 
-Candidate submits a reply during the Q&A or ask-back phase. Request: `{"content": "string"}`.
+Candidate submits a reply during the Q&A or ask-back phase. Request: `{"content": "string"}`
+(1-2,000 characters, passed through the security guard: `422 INPUT_REJECTED` with
+`details.field = "content"`).
 
-Response: the stored candidate `Message`, plus the next interviewer `Message` (with
-`helperText` when coaching helpers are on) generated in the same call, the current
-`phase` (`"qa"` | `"ask_back"`), and `status`. Triggers `Evaluation` +
-`InterviewerReview` server-side the moment `status` transitions to `"completed"`.
+Response `200`: `{candidateMessage, interviewerMessage, phase, status}`: the stored
+candidate `Message` and the next interviewer `Message` (with `helperText` when coaching
+helpers are on and the message is a Q&A question; `null` otherwise, or if the hint call
+failed), both generated and stored in the same call, the current `phase`
+(`"qa"` | `"ask_back"`) and `status`. See
+[ADR 0013](./adr/0013-live-conversation-is-server-paced-and-atomic-per-exchange.md) for how a
+turn works: the server counts the interviewer's questions against `target_question_count`
+and forces the wrap-up when the budget is spent; the interviewer message that ends the Q&A
+phase is the first `ask_back` message (it invites the candidate's questions); the Interview
+becomes `completed` when the interviewer closes the ask-back phase. A turn is
+all-or-nothing: if the model fails, nothing is stored and the candidate can send the reply
+again. `409 INTERVIEW_ALREADY_ENDED` if the Interview is no longer `in_progress`, and
+`409 TURN_IN_PROGRESS` if the previous reply is still being answered (the client should wait
+for it, not resend). Evaluation
+and InterviewerReview are triggered when `status` becomes `"completed"` (not built yet).
 
 ### `GET /api/interviews/:id/ask-back-suggestions`
 
 Phase 4 call. Ephemeral — returns candidate-question suggestions the client can offer, but
 nothing is persisted until the candidate actually sends one via `POST .../messages`.
 
+Response `200`: `{"suggestions": [string, ...]}` (five; the server trims extras). `409`
+`HELPERS_DISABLED` if the Interview's interview-helpers toggle is off, `409`
+`NOT_IN_ASK_BACK_PHASE` before the Q&A phase has ended, `409` `INTERVIEW_ALREADY_ENDED`
+once the Interview is over; `502`/`503`/`504` when the provider fails (no suggestions is an
+error, not an empty list). A `GET` because it has no side effects on the Interview.
+
 ### `POST /api/interviews/:id/abandon`
 
 No body. The Interviewer-sidebar "Abandon interview" action. Marks `status: "abandoned"`,
-`endedAt`, and triggers `Evaluation` (`incomplete: true`) + `InterviewerReview`, same as
+`endedAt`, returns the Interview like `GET /api/interviews/:id` (`409 INTERVIEW_ALREADY_ENDED`
+if it already ended), and triggers `Evaluation` (`incomplete: true`) + `InterviewerReview`, same as
 the natural-completion path.
 
 ### `GET /api/interviews/:id/evaluation`
@@ -208,7 +244,9 @@ that referenced the Document are kept and just lose the link (`ON DELETE SET NUL
 List, newest first: `id`, `companyName`, `jobTitle`, the optional documents
 `jobDescription`/`cv`/`coverLetter` — each `{id, name}` or `null`, so Create Interview can
 pre-fill a new stage and show an attached document by name even when it isn't `saved` — and
-`interviews` — each stage's `id`, `interviewerRole` and `status`, oldest first. Backs the
+`interviews` — each stage's `id`, `interviewerRole` and `status`, oldest first (a stage
+that went stale is closed as it is read, so it shows `abandoned`, per
+[ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). Backs the
 sidebar's grouped history and the application select in Create Interview. Response `200`,
 an empty array when there are none.
 

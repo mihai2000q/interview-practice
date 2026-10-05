@@ -23,20 +23,21 @@ The analysis is requested through its own endpoint, `PUT /api/documents/:id/anal
 (a `PUT` because it is idempotent), which the client calls right after an upload, not
 inside `POST /api/documents`: the upload stays fast and its "Uploading…" state stays
 honest, and the client can show "Analyzing document…" separately. The latency is hidden
-behind the candidate filling in the rest of the form. The client calls it only on upload:
-a saved Document, or one pre-filled by an Application, was analysed when it was uploaded,
-and a Document that somehow has no analysis is analysed by `POST /api/interviews` at submit.
-The endpoint uses the default `jd_analysis` model; an Interview that overrides that model
-finds a mismatch at submit and re-analyses then, so the speed-up applies only when the
-model wasn't changed.
+behind the candidate filling in the rest of the form. The endpoint takes the Interview's
+`jd_analysis` override as an optional body (default model without it). For a Document the
+candidate picks rather than uploads, the client calls it only on request: the API reports
+the model that made each Document's analysis, the client compares it with the model the form
+will use, and offers "Analyze now" when it is missing or from another model. If the
+candidate doesn't, `POST /api/interviews` analyses the Document at submit, so the speed-up
+applies only when the model wasn't changed after the analysis.
 
-There is no separate cancel or retry. The attachment stays visible while the analysis
-runs, and the only way to stop it is to remove the attachment: the client abandons the
-request and deletes the Document. A failure is handled by who is at fault: if the Document
+There is no separate cancel. The attachment stays visible while the analysis runs, and the
+way to stop it is to remove the attachment (the client abandons the request and deletes the
+Document) or to pick another Document. A failure is handled by who is at fault: if the Document
 itself is rejected (`422`), the client deletes it and tells the candidate to use a different
 file, back at the dropzone; for any other failure (`502`/`503`/`504`, network), which is not
-the Document's fault, the client keeps it with a notice, and the analysis runs again at
-submit. Abandoning
+the Document's fault, the client keeps it, shows it as not analyzed with a button to try
+again, and otherwise the analysis runs at submit. Abandoning
 a request is client-side only: the server can't interrupt a running LLM call, so it
 finishes and caches the result (a deleted Document takes its analysis with it). A submit
 that overlaps a still-running analysis can duplicate the call, and whichever commits first

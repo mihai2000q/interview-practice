@@ -32,7 +32,7 @@
       @for (phase of phases; track phase; let last = $last) {
         <div [class.mb-7]="last" class="gap-1" hlmFieldGroup>
           <label [for]="phase" class="font-bolder" hlmLabel>{{ phaseLabels[phase] }}</label>
-          <fieldset [id]="phase" class="flex flex-row items-start gap-4">
+          <fieldset [id]="phase" class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
             <div class="gap-2" hlmField>
               <span class="mt-3 text-muted-foreground" hlmFieldLabel>Model</span>
               <hlm-select

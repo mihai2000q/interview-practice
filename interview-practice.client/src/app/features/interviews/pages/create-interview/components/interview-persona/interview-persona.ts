@@ -15,6 +15,7 @@ import {
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmAvatarImports } from '@spartan-ng/helm/avatar';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
+import { VoiceToggle } from '@app/features/interviews/components/voice-toggle/voice-toggle';
 
 @Component({
   providers: [provideIcons({ lucideUserCog, lucideLightbulb })],
@@ -33,6 +34,7 @@ import { HlmSwitchImports } from '@spartan-ng/helm/switch';
     HlmFieldGroup,
     HlmAvatarImports,
     HlmSwitchImports,
+    VoiceToggle,
   ],
   selector: 'app-interview-persona',
   templateUrl: './interview-persona.html',

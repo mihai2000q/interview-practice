@@ -8,7 +8,7 @@
 
   <div hlmCardContent>
     <div hlmFieldGroup>
-      <div class="flex flex-row gap-6">
+      <div class="flex flex-col gap-6 sm:flex-row">
         <div hlmField>
           <span hlmFieldLabel id="difficulty-label">Difficulty</span>
           <div
@@ -40,7 +40,7 @@
             @for (type of interviewTypes; track type.value) {
               <button
                 [value]="type.value"
-                class="group-data-[spacing=2]/toggle-group:px-6"
+                class="group-data-[spacing=2]/toggle-group:px-4 sm:group-data-[spacing=2]/toggle-group:px-6"
                 hlmToggleGroupItem
               >
                 <ng-icon [name]="type.icon" />
@@ -51,7 +51,7 @@
         </div>
       </div>
 
-      <div class="flex flex-row items-center gap-6">
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
         <div class="gap-5" hlmField>
           <div class="flex flex-row justify-between">
             <label for="target-questions" hlmFieldLabel>Number of Questions</label>

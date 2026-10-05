@@ -20,15 +20,11 @@ export const PHASE_LABELS: Record<Phase, string> = {
 };
 
 export const DEFAULT_INTERVIEW_MODEL = 'gpt-5-mini';
-export const INTERVIEW_MODELS = [
-  'gpt-5-mini',
-  'gpt-5-nano',
-  'gpt-4o-mini',
-  'typesafe/jev-1.13',
-] as const;
-/** Narrower than `INTERVIEW_MODELS` on purpose, see docs/architecture.md and ADR 0009. */
+export const INTERVIEW_MODELS = ['gpt-5-mini', 'gpt-5-nano', 'gpt-4o-mini'] as const;
+/** Not a subset of `INTERVIEW_MODELS` on purpose, see docs/architecture.md and ADR 0009. Jev is a decision model, so only the judge can use it. */
 export const JUDGE_MODELS = [
   'google/gemini-2.5-flash',
+  'google/gemini-3.5-flash-lite',
   'gpt-5-mini',
   'gpt-5-nano',
   'typesafe/jev-1.13',

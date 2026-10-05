@@ -3,7 +3,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 
 @Directive({
   selector: 'button[hlmAlertDialogAction]',
-  hostDirectives: [{ directive: HlmButton, inputs: ['variant', 'size'] }],
+  hostDirectives: [{ directive: HlmButton, inputs: ['variant', 'size', 'loading'] }],
   host: { 'data-slot': 'alert-dialog-action', '[type]': 'type()' },
 })
 export class HlmAlertDialogAction {

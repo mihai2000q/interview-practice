@@ -22,6 +22,7 @@ from app.documents.use_cases.delete_document import delete_document
 from app.documents.use_cases.download_document import download_document
 from app.documents.use_cases.list_documents import list_documents
 from app.documents.use_cases.update_document import update_document
+from app.interviews.schemas import PhaseSettings
 from app.serialization import to_json, to_json_list
 
 
@@ -40,7 +41,10 @@ def post_document() -> ResponseReturnValue:
 
 @documents_bp.put("/<uuid:document_id>/analysis")
 def put_document_analysis(document_id: uuid.UUID) -> ResponseReturnValue:
-    return jsonify(to_json(DocumentAnalysisPublic, analyze_document(document_id)))
+    settings = PhaseSettings.model_validate(request.get_json(silent=True) or {})
+    return jsonify(
+        to_json(DocumentAnalysisPublic, analyze_document(document_id, settings))
+    )
 
 
 @documents_bp.get("/<uuid:document_id>/download")

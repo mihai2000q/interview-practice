@@ -1,0 +1,38 @@
+@switch (state()) {
+  @case ('running') {
+    <div class="flex items-center gap-2 text-muted-foreground">
+      <hlm-spinner aria-hidden="true" />
+      Analyzing document…
+    </div>
+  }
+  @case ('done') {
+    <p class="flex items-center gap-1.5 font-medium text-success">
+      <ng-icon aria-hidden="true" name="lucideCircleCheck" />
+      Document analyzed!
+    </p>
+  }
+  @default {
+    <div class="flex flex-wrap items-center gap-x-1.5 text-muted-foreground">
+      {{ message() }}
+      <button
+        (click)="analyzeNow.emit()"
+        class="h-auto p-0"
+        hlmBtn
+        size="xs"
+        type="button"
+        variant="link"
+      >
+        {{ actionLabel() }}
+      </button>
+      <button
+        [attr.aria-label]="hint()"
+        [hlmTooltip]="hint()"
+        class="inline-flex rounded-full outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        position="top"
+        type="button"
+      >
+        <ng-icon aria-hidden="true" name="lucideInfo" size="16" />
+      </button>
+    </div>
+  }
+}

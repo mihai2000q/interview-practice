@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.documents.schemas import DocumentListQuery
 from app.extensions import db
@@ -9,6 +10,7 @@ def list_documents(query: DocumentListQuery) -> list[Document]:
     """The saved Documents, newest first, optionally of one type."""
     statement = (
         select(Document)
+        .options(selectinload(Document.analysis))
         .where(Document.saved.is_(True))
         .order_by(Document.created_at.desc())
     )

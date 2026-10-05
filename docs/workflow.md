@@ -45,9 +45,14 @@ step is implemented.
   "Analyzing document…" indicator, and Start stays disabled meanwhile); removing the
   attachment stops it and deletes the Document. If the Document itself is rejected it is
   deleted and the candidate is told to use a different file; if the failure is on our side
-  (provider unavailable, timeout) it is kept, with a notice, and analysed again when the
-  interview is created. Saved Documents were already
-  analysed when uploaded. Optional.
+  (provider unavailable, timeout) it is kept and marked "Document not analyzed" with an
+  "Analyze now" button (a tooltip explains that creating the interview may take longer
+  without a cached analysis); otherwise it is analysed when the interview is created. A
+  successful analysis shows "Document analyzed!". A Document picked from the saved list (or
+  pre-filled by an Application) shows the same status, compared with the analysis model of
+  this interview (the Advanced settings override, else the default): one with no analysis is
+  marked "Document not analyzed", one analysed by another model "analyzed with a different
+  model", and either can be analysed on the spot. Optional.
 - **CV** and **cover letter** — two separate fields, each with the same
   select-existing-or-dropzone-upload pattern as job description. Both optional.
 - **Interview helpers** toggle — boolean, default `false`. When on, each Q&A-phase question

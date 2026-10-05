@@ -20,6 +20,7 @@ class DocumentPublic(ApiModel):
     name: str
     source_filename: str
     saved: bool
+    analysis_model: str | None
     created_at: datetime
 
 

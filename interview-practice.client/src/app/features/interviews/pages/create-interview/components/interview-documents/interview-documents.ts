@@ -35,6 +35,10 @@ export class InterviewDocuments {
   /** True while any of the three Documents is being analysed. */
   readonly analyzing = computed(() => this.pickers().some((picker) => picker.analyzing()));
 
+  /** The `jdAnalysis` override, which decides which model the documents' analysis must come from. */
+  protected readonly analysisSettings = computed(
+    () => this.interviewForm().phaseSettings().value().jdAnalysis,
+  );
   protected readonly jobDescriptionDocs = computed(() =>
     this.asList(this.application()?.jobDescription),
   );

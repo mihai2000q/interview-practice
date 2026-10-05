@@ -10,6 +10,8 @@ export interface ApplicationStage {
 export interface ApplicationDocument {
   id: string;
   name: string;
+  /** The model that made its cached analysis; null while it has none. */
+  analysisModel: string | null;
 }
 
 export interface ApplicationSummary {

@@ -49,7 +49,14 @@
       "@spartan-ng/helm/avatar": ["./src/app/shared/components/ui/avatar/src/index.ts"],
       "@spartan-ng/helm/switch": ["./src/app/shared/components/ui/switch/src/index.ts"],
       "@spartan-ng/helm/alert-dialog": ["./src/app/shared/components/ui/alert-dialog/src/index.ts"],
-      "@spartan-ng/helm/popover": ["./src/app/shared/components/ui/popover/src/index.ts"]
+      "@spartan-ng/helm/popover": ["./src/app/shared/components/ui/popover/src/index.ts"],
+      "@spartan-ng/helm/bubble": ["./src/app/shared/components/ui/bubble/src/index.ts"],
+      "@spartan-ng/helm/message": ["./src/app/shared/components/ui/message/src/index.ts"],
+      "@spartan-ng/helm/message-scroller": [
+        "./src/app/shared/components/ui/message-scroller/src/index.ts"
+      ],
+      "@spartan-ng/helm/progress": ["./src/app/shared/components/ui/progress/src/index.ts"],
+      "@spartan-ng/helm/marker": ["./src/app/shared/components/ui/marker/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

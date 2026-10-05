@@ -47,7 +47,8 @@
       "@spartan-ng/helm/toggle-group": ["./src/app/shared/components/ui/toggle-group/src/index.ts"],
       "@spartan-ng/helm/toggle": ["./src/app/shared/components/ui/toggle/src/index.ts"],
       "@spartan-ng/helm/avatar": ["./src/app/shared/components/ui/avatar/src/index.ts"],
-      "@spartan-ng/helm/switch": ["./src/app/shared/components/ui/switch/src/index.ts"]
+      "@spartan-ng/helm/switch": ["./src/app/shared/components/ui/switch/src/index.ts"],
+      "@spartan-ng/helm/alert-dialog": ["./src/app/shared/components/ui/alert-dialog/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

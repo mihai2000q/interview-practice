@@ -2,28 +2,24 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import ConfigDict, Field, StringConstraints
+from pydantic import ConfigDict, Field, StringConstraints, field_validator
 
-from app.llm.guard import guarded
-from app.models import Difficulty, InterviewStatus, ResponseStyle
-from app.serialization import ApiModel
+from app.llm.guard import MAX_MESSAGE_CHARS, guarded
+from app.llm.schemas import PhaseSettings
+from app.models import (
+    Difficulty,
+    GenerationPhase,
+    InterviewPhaseSettings,
+    InterviewStatus,
+    MessagePhase,
+    MessageRole,
+    ResponseStyle,
+)
+from app.serialization import ApiModel, ShortText
 
-ShortText = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-]
-# Free text that is later fed to the LLM, so it goes through the security guard.
+# Free text that is later fed to the LLM, so it goes through the security guard. It is
+# capped at 200 characters before the guard runs, so only the injection check can fire.
 GuardedText = Annotated[ShortText, guarded()]
-
-
-class PhaseSettings(ApiModel):
-    """Per-phase LLM overrides; any field left out falls back to Preferences."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    model: ShortText | None = None
-    temperature: float | None = Field(default=None, ge=0, le=2)
-    max_tokens: int | None = Field(default=None, ge=1)
-    reasoning_effort: ShortText | None = None
 
 
 class PhaseSettingsOverride(ApiModel):
@@ -32,13 +28,26 @@ class PhaseSettingsOverride(ApiModel):
     jd_analysis: PhaseSettings | None = None
     question_plan: PhaseSettings | None = None
     live_conversation: PhaseSettings | None = None
-    ask_back: PhaseSettings | None = None
+    coaching_helpers: PhaseSettings | None = None
     evaluation: PhaseSettings | None = None
     interviewer_review: PhaseSettings | None = None
 
-    def to_storage(self) -> dict[str, Any]:
-        """The snake_case JSONB shape stored on `Interview.phase_settings_override`."""
-        return self.model_dump(by_alias=False, exclude_none=True)
+    def to_rows(self) -> list[InterviewPhaseSettings]:
+        """One unsaved row per phase that carries an override."""
+        rows = (
+            settings.to_row(GenerationPhase(name))
+            for name in type(self).model_fields
+            if (settings := getattr(self, name)) is not None
+        )
+        return [row for row in rows if row is not None]
+
+
+# The request names the six phases as explicit fields (the API contract); they must stay
+# in step with the enum the rest of the code uses.
+if set(PhaseSettingsOverride.model_fields) != {p.value for p in GenerationPhase}:
+    raise RuntimeError(
+        "PhaseSettingsOverride and GenerationPhase list different phases"
+    )
 
 
 class ExistingJobApplication(ApiModel):
@@ -90,12 +99,84 @@ class InterviewPublic(ApiModel):
     status: InterviewStatus
     persona_name: str
     persona_title: str
-    persona_image_path: str
+    persona_image_url: str | None
     job_description_document_id: uuid.UUID | None
     cv_document_id: uuid.UUID | None
     cover_letter_document_id: uuid.UUID | None
     coaching_helpers_enabled: bool
     response_style: ResponseStyle
-    phase_settings_override: dict[str, Any]
+    phase_settings_override: dict[str, dict[str, Any]] = Field(
+        validation_alias="phase_settings", serialization_alias="phaseSettingsOverride"
+    )
     last_activity_at: datetime
     created_at: datetime
+    ended_at: datetime | None
+
+    @field_validator("phase_settings_override", mode="before")
+    @classmethod
+    def _from_rows(cls, rows: Any) -> Any:
+        """The settings rows as `{phase: {setting: value}}`, set fields only, with the
+        same camelCase keys the request takes (`PhaseSettingsOverride` owns them)."""
+        if isinstance(rows, dict):
+            return rows
+        by_phase = {
+            row.phase.value: {
+                name: value
+                for name in PhaseSettings.model_fields
+                if (value := getattr(row, name)) is not None
+            }
+            for row in rows
+        }
+        return PhaseSettingsOverride.model_validate(by_phase).model_dump(
+            by_alias=True, exclude_none=True
+        )
+
+
+class MessagePublic(ApiModel):
+    id: uuid.UUID
+    phase: MessagePhase
+    role: MessageRole
+    content: str
+    helper_text: str | None
+    sequence: int
+    created_at: datetime
+
+
+class InterviewDetail(InterviewPublic):
+    """`GET /api/interviews/:id`: the Interview with its transcript."""
+
+    phase: MessagePhase
+    messages: list[MessagePublic]
+
+
+class MessageCreate(ApiModel):
+    """`POST /api/interviews/:id/messages` body: the candidate's reply."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    content: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1),
+        guarded(MAX_MESSAGE_CHARS),
+    ]
+
+
+class MessageExchange(ApiModel):
+    """Response of `POST /api/interviews/:id/messages`."""
+
+    candidate_message: MessagePublic
+    interviewer_message: MessagePublic
+    phase: MessagePhase
+    status: InterviewStatus
+
+
+class AskBackSuggestions(ApiModel):
+    """Response of `GET /api/interviews/:id/ask-back-suggestions`."""
+
+    suggestions: list[str]
+
+
+class PersonaImage(ApiModel):
+    """Response of `PUT /api/interviews/:id/persona-image`."""
+
+    persona_image_url: str | None

@@ -35,12 +35,12 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 
 | Status | When | Example `code` |
 |---|---|---|
-| 400 | Pydantic validation failure (malformed/missing fields) | `VALIDATION_ERROR` (`details` = Pydantic's per-field errors) |
-| 404 | Resource doesn't exist | `NOT_FOUND` |
+| 400 | Pydantic validation failure (malformed/missing fields, a value over its length limit), or a Document id of the wrong type for its slot | `VALIDATION_ERROR` (for a validation failure, `details` = `{"errors": [...]}`, one entry per failing field: Pydantic's `type`, `loc`, `msg` and `input`) |
+| 404 | Resource doesn't exist, including a Document id sent in a request body (`POST /api/interviews`) that matches no Document | `NOT_FOUND` |
 | 413 | Upload exceeds the size limit (`MAX_UPLOAD_MB`, default 10) | `FILE_TOO_LARGE` |
 | 422 | Well-formed request, but the uploaded file can't be used (not a readable PDF, encrypted, or no extractable text) | `UNPROCESSABLE_FILE` |
-| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED` |
-| 422 | The security guard (or the provider's moderation) refused the text: it looks like prompt injection or is over its length limit. `details` = `{reason}` (plus `field`, the request field, for `POST /api/interviews`) with `reason` one of `prompt_injection` (+ `excerpt`, the matched wording, so the candidate can find it in a long document), `too_long` (+ `maxLength`), `moderation`; the message never names the rule that matched. Applies to `POST /api/documents` (the extracted text, max 50,000 characters) and `POST /api/interviews` (the free-text fields). Nothing is persisted and no interview state changes, so the client keeps the user's input and lets them edit and resend | `INPUT_REJECTED` |
+| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED`, `TURN_IN_PROGRESS`, `HELPERS_DISABLED`, `NOT_IN_ASK_BACK_PHASE`, `NOT_A_QUESTION` |
+| 422 | The security guard (or the provider's moderation) refused the text: it looks like prompt injection or is over its length limit. `details` = `{reason}` (plus `field`, the request field, for the JSON bodies) with `reason` one of `prompt_injection` (+ `excerpt`, the matched wording, so the candidate can find it in a long document), `too_long` (+ `maxLength`), `moderation`; the message never names the rule that matched. Applies to `POST /api/documents` (the extracted text, max 50,000 characters; `too_long` possible), `POST /api/interviews` (the free-text fields, `prompt_injection` or `moderation` only: they are capped at 200 characters first, and a longer one is a `400 VALIDATION_ERROR`) and `POST /api/interviews/:id/messages` (the reply, max 2,000 characters; `too_long` possible). Nothing is persisted and no interview state changes, so the client keeps the user's input and lets them edit and resend | `INPUT_REJECTED` |
 | 502 | The model provider failed, was unreachable, or returned an unusable/contract-breaking response | `LLM_UPSTREAM_ERROR` |
 | 503 | The provider can't serve us right now (rate limit, credits, key); `details.retryAfterSeconds` when known | `LLM_UNAVAILABLE` |
 | 504 | The provider took too long | `LLM_TIMEOUT` |
@@ -72,7 +72,11 @@ Create Interview submission. Request:
 }
 ```
 
-- `jobDescriptionId`/`cvId`/`coverLetterId` — always the id of an existing `Document`, never an inline
+- Free-text fields (`jobTitle`, `companyName`, `seniority`, `interviewType`) are 1–200
+  characters after trimming. A longer value is a `400 VALIDATION_ERROR`, not a guard
+  rejection.
+- `jobDescriptionId`/`cvId`/`coverLetterId` — always the id of an existing `Document` of the
+  matching type (`404 NOT_FOUND` for an unknown id, `400` for a Document of the wrong type), never an inline
   file: this request is plain JSON. A new file is uploaded earlier, the moment the
   candidate picks it, via `POST /api/documents` below, and the returned `id` goes here —
   see [ADR 0011](./adr/0011-documents-are-uploaded-before-the-interview-is-created.md).
@@ -85,40 +89,114 @@ Create Interview submission. Request:
   attaches this Interview as its first stage. If `companyName` is absent, the
   Application's company is read from the job description or cover letter (left null if
   neither names one).
+  The Interview's own `companyName` is resolved the same way: the one given, else the one
+  the job description or cover letter names, else null. The persona, the live interviewer
+  and the ask-back suggestions all use that resolved value.
+
+The call runs phase 1 (JD/CV analysis, normally already cached from the upload) and phase 2
+(question plan, persona and evaluation criteria), stores the Interview and returns. It does
+**not** create the interviewer's opening message or the portrait: the session page asks for
+those when it loads, with the two idempotent calls below, so the candidate reaches the
+session without waiting for them. A failure of analysis or plan returns the usual
+`502`/`503`/`504` and creates nothing.
 
 Response `201`: the created `Interview` (id, `status: "in_progress"`, `personaName`,
-`personaTitle`, `personaImagePath` as a servable URL, `targetQuestionCount`, etc.) —
-**not** the question plan or the evaluation criteria, which stay hidden from the candidate.
+`personaTitle`, `personaImageUrl` (`null` until the portrait exists), `targetQuestionCount`,
+etc., and `phaseSettingsOverride`: the overrides stored for the Interview, in the same
+camelCase shape the request takes, `{coachingHelpers: {model, maxTokens}}`, with only the
+phases and settings that were set) — **not** the question plan or the evaluation criteria,
+which stay hidden from the candidate. It has no messages yet.
 
-**Open concern, not yet resolved**: this call runs phases 1 (JD/CV analysis), 2
-(question-plan/persona generation), and persona image generation sequentially before
-responding — a multi-second synchronous request. Acceptable for a prototype behind a
-loading state, but worth revisiting (e.g. a `202 Accepted` + polling pattern) if it proves
-too slow in practice.
+### `PUT /api/interviews/:id/opening`
+
+No body. Creates the interviewer's opening message (a greeting and the first question, phase
+`qa`; its coaching helper is asked for separately) and returns it as a `Message`
+(`{id, phase, role, content, helperText, sequence, createdAt}`). **Idempotent**: an
+Interview that already has messages returns its first message and calls no model. Two calls
+at once run the model once; the other gets `409 TURN_IN_PROGRESS`, and the client should
+re-read the Interview. A failure (`502`/`503`/`504`) leaves the Interview untouched, and
+the client retries. `409 INTERVIEW_ALREADY_ENDED` if it is no longer `in_progress` and has
+no messages yet (one that already has messages returns its first message, ended or not).
+Replying before the opening exists is refused with `409 INTERVIEW_NOT_OPENED`.
+See [ADR 0013](./adr/0013-live-conversation-is-server-paced-and-atomic-per-exchange.md).
+
+### `PUT /api/interviews/:id/persona-image`
+
+No body. Generates the persona's portrait (see "Persona image generation" in
+`architecture.md`) and returns `{personaImageUrl}`. **Idempotent**: an Interview that has a
+portrait returns its URL and calls no model. `personaImageUrl` is `null` when portrait
+generation is switched off (`PORTRAIT_GENERATION_ENABLED=false`). A failure of the image
+service is a `502`/`503`/`504` that affects nothing else; the client keeps its fallback
+avatar and may retry. Two calls at once may both generate an image, but only one is kept.
 
 ### `GET /api/interviews/:id`
 
 Fetch an Interview plus its `Message`s (ordered by `sequence`), for rendering the session
-or resuming one already in progress.
+or resuming one already in progress. Response `200`: the Interview fields (as in the create
+response, plus `endedAt`), `phase` (`"qa"` | `"ask_back"`, the phase of the last message)
+and `messages: [{id, phase, role, content, helperText, sequence, createdAt}]`. An
+`in_progress` Interview with no activity for 30 minutes is flipped to `abandoned` as it is
+read ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). `404` for
+an unknown id.
+
+### `GET /api/interviews/:id/persona-image`
+
+The persona's portrait: the stored PNG/JPEG/WebP file (`X-Content-Type-Options: nosniff`,
+cached for an hour). `404` for an unknown Interview, one with no portrait, or a missing file.
 
 ### `POST /api/interviews/:id/messages`
 
-Candidate submits a reply during the Q&A or ask-back phase. Request: `{"content": "string"}`.
+Candidate submits a reply during the Q&A or ask-back phase. Request: `{"content": "string"}`
+(1-2,000 characters, passed through the security guard: `422 INPUT_REJECTED` with
+`details.field = "content"`).
 
-Response: the stored candidate `Message`, plus the next interviewer `Message` (with
-`helperText` when coaching helpers are on) generated in the same call, the current
-`phase` (`"qa"` | `"ask_back"`), and `status`. Triggers `Evaluation` +
-`InterviewerReview` server-side the moment `status` transitions to `"completed"`.
+Response `200`: `{candidateMessage, interviewerMessage, phase, status}`: the stored
+candidate `Message` and the next interviewer `Message` (its `helperText` is always `null`
+here: the coaching helper is asked for with `PUT .../helper` below), both generated and
+stored in the same call, the current `phase`
+(`"qa"` | `"ask_back"`) and `status`. See
+[ADR 0013](./adr/0013-live-conversation-is-server-paced-and-atomic-per-exchange.md) for how a
+turn works: the server counts the interviewer's questions against `target_question_count`
+and forces the wrap-up when the budget is spent; the interviewer message that ends the Q&A
+phase is the first `ask_back` message (it invites the candidate's questions); the Interview
+becomes `completed` when the interviewer closes the ask-back phase. A turn is
+all-or-nothing: if the model fails, nothing is stored and the candidate can send the reply
+again. `409 INTERVIEW_ALREADY_ENDED` if the Interview is no longer `in_progress`, and
+`409 TURN_IN_PROGRESS` if the previous reply is still being answered (the client should wait
+for it, not resend). Evaluation
+and InterviewerReview are triggered when `status` becomes `"completed"` (not built yet).
+
+### `PUT /api/interviews/:id/messages/:messageId/helper`
+
+No body. Writes the coaching helper (the hint card) for an interviewer's Q&A question and
+returns the `Message` with `helperText` set. The session page calls it for each new
+question when the Interview's helpers toggle is on, so the question appears at once and the
+card follows while the candidate reads. It runs on the Interview's `live_conversation` model
+and settings. **Idempotent**: a message that already has a helper returns it and calls no
+model; two calls at once run the model twice, the first to store wins and both get that
+text. It does not take the turn claim, so the candidate can answer while it is written.
+A hint the model could not write is not an error: `200` with `helperText: null`, and the
+card is left out. `404` for an unknown Interview or message, `409 HELPERS_DISABLED` if the
+toggle is off, `409 NOT_A_QUESTION` for a candidate message or one outside the Q&A phase
+(the wrap-up and ask-back messages have none), `409 INTERVIEW_ALREADY_ENDED` once the
+Interview is over and the message has no helper.
 
 ### `GET /api/interviews/:id/ask-back-suggestions`
 
 Phase 4 call. Ephemeral — returns candidate-question suggestions the client can offer, but
 nothing is persisted until the candidate actually sends one via `POST .../messages`.
 
+Response `200`: `{"suggestions": [string, ...]}` (five; the server trims extras). `409`
+`HELPERS_DISABLED` if the Interview's interview-helpers toggle is off, `409`
+`NOT_IN_ASK_BACK_PHASE` before the Q&A phase has ended, `409` `INTERVIEW_ALREADY_ENDED`
+once the Interview is over; `502`/`503`/`504` when the provider fails (no suggestions is an
+error, not an empty list). A `GET` because it has no side effects on the Interview.
+
 ### `POST /api/interviews/:id/abandon`
 
 No body. The Interviewer-sidebar "Abandon interview" action. Marks `status: "abandoned"`,
-`endedAt`, and triggers `Evaluation` (`incomplete: true`) + `InterviewerReview`, same as
+`endedAt`, returns the Interview like `GET /api/interviews/:id` (`409 INTERVIEW_ALREADY_ENDED`
+if it already ended), and triggers `Evaluation` (`incomplete: true`) + `InterviewerReview`, same as
 the natural-completion path.
 
 ### `GET /api/interviews/:id/evaluation`
@@ -137,7 +215,10 @@ available for the reflection/debugging use case. `404` until the Interview has e
 
 List saved Documents (`saved = true` only), newest first — backs both the Create Interview
 select-existing control and the Preferences Documents tab. Response `200`: an array of
-`{id, type, name, sourceFilename, saved, createdAt}`. `raw_text` and `file_path` (database columns) are
+`{id, type, name, sourceFilename, saved, analysisModel, createdAt}`. `analysisModel` is the model
+that made the Document's cached `DocumentAnalysis`, or `null` if it has none, so Create Interview
+can say whether the interview will reuse it or analyze the Document again (the analysis is kept
+per Document and model, see ADR 0012). `raw_text` and `file_path` (database columns) are
 deliberately not returned (the first is large and only the LLM phases need it; the second
 is a server filesystem path). An unknown `type` value is a `400`.
 
@@ -159,22 +240,29 @@ Response `201`: the created Document, same shape as the list items.
 
 ### `PUT /api/documents/:id/analysis`
 
-No body. Runs phase 1 (JD/CV analysis, see `architecture.md`) on the Document and stores
-the result as its `DocumentAnalysis`, using the default `jd_analysis` model. A `PUT`
-because it is **idempotent**: if the Document already has an analysis from that model it
-answers at once, without calling the LLM.
+Runs phase 1 (JD/CV analysis, see `architecture.md`) on the Document and stores the result
+as its `DocumentAnalysis`. The optional JSON body is the `jdAnalysis` entry of
+`phaseSettingsOverride` (`{model?, temperature?, maxTokens?, reasoningEffort?}`, the same
+shape as in `POST /api/interviews`); without it the default `jd_analysis` model is used. A
+`PUT` because it is **idempotent**: if the Document already has an analysis from the model
+that applies it answers at once, without calling the LLM.
 
-The client calls it **only right after an upload** in Create Interview, showing the
+The client calls it **right after an upload** in Create Interview, showing the
 attachment with an "Analyzing document…" indicator and keeping the Start button disabled
-meanwhile. Picking a saved Document, or an Application that pre-fills Documents, does not
-call it: those Documents were analysed when they were uploaded, and if one has no analysis
-(or the Interview overrides the `jd_analysis` model), `POST /api/interviews` analyses it at
-submit. There is no cancel and no retry: the candidate stops the analysis by removing the
-attachment, which abandons the request and deletes the Document. A failure is handled by
+meanwhile. For a Document the candidate picks (a saved one, or one an Application pre-fills) it
+does not call it on its own: each shows "Document analyzed!" when its `analysisModel` is the
+model the interview will use (the form's `jdAnalysis` model override, else the default), "Document
+not analyzed" when it is `null`, and "Document analyzed with a different model" when it differs.
+The last two offer an "Analyze now" / "Analyze again" button, which makes this call with the form's
+`jdAnalysis` override (Start is disabled while it runs). If one still doesn't match at submit,
+`POST /api/interviews` analyzes it then. There is no cancel: the candidate stops the analysis by removing the
+attachment, which abandons the request and deletes the Document. The attachment shows the
+outcome: "Document analyzed!" once it has an analysis from the model the interview will use. A failure is handled by
 who is at fault: if the Document itself is rejected (`422 INPUT_REJECTED`), the client
 deletes it and tells the candidate to use a different file; for any other failure (provider
 unavailable, timeout, network), which is not the Document's fault, the client keeps the
-Document and shows a notice, and the analysis runs again at submit. See
+Document and shows "Document not analyzed" with an "Analyze now" button that calls this
+endpoint again; if the candidate doesn't, the analysis runs at submit. See
 [ADR 0012](./adr/0012-document-analysis-cached-per-document-and-model.md).
 
 Response `200`: `{model, domain, companyName, skills, likelyTopics}` (`domain` and
@@ -206,9 +294,11 @@ that referenced the Document are kept and just lose the link (`ON DELETE SET NUL
 ### `GET /api/applications`
 
 List, newest first: `id`, `companyName`, `jobTitle`, the optional documents
-`jobDescription`/`cv`/`coverLetter` — each `{id, name}` or `null`, so Create Interview can
+`jobDescription`/`cv`/`coverLetter` — each `{id, name, analysisModel}` or `null`, so Create Interview can
 pre-fill a new stage and show an attached document by name even when it isn't `saved` — and
-`interviews` — each stage's `id`, `interviewerRole` and `status`, oldest first. Backs the
+`interviews` — each stage's `id`, `interviewerRole` and `status`, oldest first (a stage
+that went stale is closed as it is read, so it shows `abandoned`, per
+[ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). Backs the
 sidebar's grouped history and the application select in Create Interview. Response `200`,
 an empty array when there are none.
 

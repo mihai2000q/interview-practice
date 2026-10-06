@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 
 # Per-kind length limits, in characters (callers pass one as `max_length`).
 MAX_FIELD_CHARS = 500
-MAX_MESSAGE_CHARS = 4_000
+# A chat message: the candidate's reply, and the length the interviewer is asked to
+# stay under too.
+MAX_MESSAGE_CHARS = 2_000
 MAX_DOCUMENT_CHARS = 50_000
 # Nothing may ask for more than this: it bounds the scan cost per request.
 HARD_MAX_CHARS = 100_000
@@ -184,11 +186,6 @@ def _views(text: str) -> list[str]:
     )
     leet = spaced.translate(_LEET)
     return list(dict.fromkeys([spaced, joined, collapsed, leet]))
-
-
-def normalize(text: str) -> str:
-    """The primary normalized form (invisible characters read as spaces)."""
-    return _views(text)[0]
 
 
 def check_text(text: str, *, max_length: int) -> None:

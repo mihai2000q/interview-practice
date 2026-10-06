@@ -97,9 +97,8 @@ navigation:
   (nothing shown when it isn't — same optional-field pattern as everywhere else it's used),
   a question-progress count against `target_question_count` (e.g. "Question 3 of ~8" —
   informational pacing, not a clock; distinct from the session-timer idea already
-  declined), and an explicit **"Abandon interview"** action. No bio blurb (declined). TTS
-  controls (replay/mute) are planned here too but deferred until TTS/STT are actually
-  built, not now. This is the only place Abandon lives: Create Interview has nothing
+  declined), and an explicit **"Abandon interview"** action. No bio blurb (declined). The
+  interviewer-voice toggle sits in the chat header (a per-message replay button is not built). This is the only place Abandon lives: Create Interview has nothing
   persisted yet to abandon (no `Interview` row exists until submission — its
   leave-confirmation guard is only protecting unsaved form input, a different concern), so
   a topbar-level Abandon action never actually made sense there. Abandon here runs through
@@ -147,18 +146,23 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    structured **evaluation rubric**
    (technical + behavioral criteria, stored as `EvaluationCriterion` rows; the question plan
    as `InterviewQuestion` rows) — the assignment's
-   "generate interviewer guidelines" optional task, folded into this same call rather than a
-   separate one. Seeded by `difficulty`, `domain`, `seniority`, `interview_type`,
+   "generate interviewer guidelines" optional task, folded into this same phase rather
+   than a separate one. Seeded by `difficulty`, `domain`, `seniority`, `interview_type`,
    `interviewer_role`, `company_name`, and the JD/CV analysis output. Technique:
    **instruction/constraint-based prompting** — driven by the explicit structured inputs
    (difficulty/domain/seniority/analysis output) rather than worked examples, which is what
    actually distinguishes it from phase 4's few-shot prompt. The rubric is dev/interviewer
    -side only — not shown to the candidate — and is later fed into phase 5 as grounding so
    the STAR evaluation is judged against the same criteria the plan was built around.
-   The model returns JSON with the persona (`name`, `title`, `backstory`), the questions
-   and the criteria, validated before anything is stored; an empty or incomplete plan fails
-   the request with `502` and creates nothing. It also returns the Interview's `domain`,
-   but only when no analysed Document supplied one. The backstory is stored as
+   The phase is **three independent calls run at once** — the persona (`name`, `title`,
+   `backstory`), the questions, and the evaluation criteria — because none depends on
+   another, only on the shared inputs; so it takes as long as the slowest one, not one
+   long reply (reasoning effort is deliberately not lowered to save time). Each reply is
+   validated before anything is stored; an incomplete persona, no usable criteria, or a
+   question count other than `target_question_count` fails the request with `502` and
+   creates nothing, and the other calls are abandoned. The persona call also returns the
+   Interview's `domain`, but only when no analyzed Document supplied one; the persona call
+   sees only the setup, while the questions and criteria also get the JD/CV analyses. The backstory is stored as
    `Interview.persona_backstory`. The persona's `tone` is an input chosen by the candidate,
    not generated. The model comes from the Interview's `question_plan` setting (default
    `gpt-5-mini`).
@@ -166,14 +170,29 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    persona, asks the next question, and decides pacing/follow-ups and whether it has
    gathered enough signal to end the Q&A phase early (bounded above by
    `target_question_count`). Technique: **role/persona prompting**. `Interview.response_style`
-   (concise/detailed) shapes how elaborate the interviewer's phrasing is.
+   (concise/detailed) shapes how elaborate the interviewer's phrasing is. The model gets
+   the persona (name, title, backstory), the role, tone, the question plan and the
+   transcript, and returns `{message, done}`; the server decides what kind of turn it is
+   (open, ask, wrap up, answer, close) and enforces the budget — see
+   [ADR 0013](./adr/0013-live-conversation-is-server-paced-and-atomic-per-exchange.md). The
+   evaluation criteria are deliberately not shown to it. The model comes from the
+   Interview's `live_conversation` setting.
 4. **Candidate ask-back suggestions** — generates tailored "questions to ask the
    interviewer" the candidate can accept, edit, or ignore during the ask-back phase, aware
    of `interviewer_role` so suggestions fit what that persona would actually know (e.g. not
    suggesting deep architecture questions to a recruiter persona), and of `company_name`
    when set, so suggestions are genuinely company-specific rather than generic — directly
    matching the assignment's own "questions to ask the interviewer" starter idea. Technique:
-   **few-shot**, using example good closing questions as guidance.
+   **few-shot**, using example good closing questions as guidance: the prompt carries four
+   complete input-to-output examples (one per interviewer role, five suggestions each) and
+   the model is asked for five suggestions (fewer than five usable ones is a `502`; extras are trimmed). It also sees the conversation so
+   far, so suggestions can build on what was discussed. It is offered only when the
+   Interview's interview-helpers toggle (`coaching_helpers_enabled`, the same one as the
+   coaching hints) is on, and runs on the Interview's `coaching_helpers` model and settings,
+   the same phase as the coaching hints (one phase for both, as the one toggle governs both).
+   Unlike
+   the coaching hint, the candidate asks for it, so a failure is a normal error, not a
+   missing card.
 5. **STAR evaluation** — scores the full transcript (both phases) against the STAR
    framework and the Interview's `EvaluationCriterion` rows (phase 2's rubric, weighted toward
    whichever half — technical or behavioral — matches `interview_type`), and produces a
@@ -193,14 +212,18 @@ your experience with JavaScript"). Controlled by a single boolean the candidate 
 Create Interview time (`Interview.coaching_helpers_enabled`, default `false`) — not a live
 in-session toggle.
 
-- **Call design**: one client request per Q&A turn still hits a single backend endpoint, but
-  when helpers are enabled the backend makes **two sequential, chained LLM calls** rather
-  than merging both into one structured response: first phase 3 generates the interviewer's
-  question as usual, then a second call generates the helper hint *given that exact
-  question* as context (plus the CV/cover letter text and JD analysis output, when
-  available). Both results return to the client in one HTTP response. This roughly doubles
-  OpenRouter calls during the Q&A phase, but only when helpers are enabled for that
-  Interview.
+- **Call design**: the hint is its own LLM call, made *after* the question exists and
+  *given that exact question* as context (plus the CV/cover letter text and JD analysis
+  output, when available), but not as part of the exchange. The interviewer's reply
+  (`POST .../messages`, `PUT .../opening`) comes back with `helperText` null, and the session
+  page then calls `PUT /api/interviews/:id/messages/:messageId/helper`, so the question is
+  on screen after one call and the card arrives while the candidate reads it. It is
+  idempotent (a stored hint is returned without calling the model) and takes no turn claim, so
+  answering is never blocked by a hint in flight. It was first a second call chained inside
+  the exchange, which made every question wait for two sequential reasoning calls; a merged
+  prompt or a hint pre-generated from the question plan were considered and not chosen (the
+  first mixes two voices and sends the CV to the interviewer; the second depends on the
+  interviewer reporting which planned question it asked).
 - **Grounding & no-fabrication constraint**: the hint should reference the candidate's
   actual CV/cover letter content where a relevant match exists — but since the right answer
   to a given question won't always be findable in those documents, the prompt must state
@@ -215,7 +238,17 @@ in-session toggle.
   this") rather than fabricating a personal detail or omitting the card entirely.
 - Persisted as `Message.helper_text` (see `domain-model.md` / `database-schema.md`) —
   populated only on interviewer messages in the `qa` phase when helpers are enabled; the
-  `ask_back` phase has no helper concept, since the candidate is the one asking there.
+  `ask_back` phase has no helper concept, since the candidate is the one asking there. In
+  practice that is the interviewer's opening question and every `ask` turn that asks a
+  question; the wrap-up message that invites the candidate's questions is already stored as
+  an `ask_back` message and gets none.
+- **Inputs and settings**: the exact question, the role, the job description's analysis
+  (skills and topics), and the CV and cover letter text, each fenced as data. It runs on
+  the Interview's `coaching_helpers` model and settings (the phase shared with the ask-back
+  suggestions). The hint is capped at 300 characters.
+- **Failure**: the hint is a nicety, so if its call fails (provider error, empty reply) the
+  message keeps `helper_text` null, the endpoint answers `200` with it, and the card is
+  simply not shown; nothing else fails. This is different from "no grounded match", which still gets a generic hint.
 
 ## Per-interview advanced settings (nice to have)
 
@@ -224,17 +257,20 @@ settings **per phase**, for just that Interview. Anything not overridden keeps u
 global Preferences defaults (`gpt-5-mini`, Preferences' temperature, etc.).
 
 - Stored as `InterviewPhaseSettings` rows (`interview_phase_settings`), one per overridden
-  phase — `jd_analysis`, `question_plan`, `live_conversation`, `ask_back`, `evaluation`,
-  plus `interviewer_review` (see below) — each with optional `{model, temperature,
+  phase — `jd_analysis`, `question_plan`, `live_conversation`, `coaching_helpers`,
+  `evaluation`, plus `interviewer_review` (see below) — each with optional `{model, temperature,
   max_tokens, reasoning_effort}` columns. Any field, or any phase with no row, falls back
   to the global Preferences default. A child table rather than a column per phase per
   setting, which would be a wide, mostly-null `interviews` table; the API still takes and
   returns the nested `phaseSettingsOverride` object.
-- **Model choice**: for the 5 candidate-facing phases, all allowed models (`gpt-5-mini`,
-  `gpt-5-nano`, `gpt-4o-mini`, `typesafe/jev-1.13`). The picker mechanism is already generic
-  per-phase, so there was no remaining reason to keep it artificially restricted.
+- **Model choice**: for the 5 candidate-facing phases, the chat models (`gpt-5-mini`,
+  `gpt-5-nano`, `gpt-4o-mini`). `typesafe/jev-1.13` is not among them: it is a decision
+  model (typed questions in, typed answers with probabilities out, on a separate endpoint),
+  so it cannot write a persona, questions or an interviewer reply. It is offered only as a
+  judge, whose job is a decision.
 - **`interviewer_review`'s model choice is deliberately a different, narrower set**:
-  `google/gemini-2.5-flash` (the default — see below), `gpt-5-mini`, `gpt-5-nano`,
+  `google/gemini-2.5-flash` (the default — see below), `google/gemini-3.5-flash-lite`,
+  `gpt-5-mini`, `gpt-5-nano`,
   `typesafe/jev-1.13`. No `gpt-4o-mini` here — the OpenAI options exist as quick, cheap
   experimentation, not an expected path; Gemini stays the recommendation. This is intentionally asymmetric with the
   other 5 phases, not an oversight: the judge's whole point is being a different vendor
@@ -324,13 +360,27 @@ detection, optionally backed by a cheap classification call. **Built so far**
 (`app/llm/guard.py`): length limits (checked first, so the scan is bounded) and
 prompt-injection pattern detection that also catches common disguises (invisible
 characters, accents, look-alike letters, leetspeak, spaced-out letters); a rejection is a
-`422 INPUT_REJECTED`. Wired into Document upload and Create Interview; the chat and
-ask-back endpoints should call it when they are built. Off-topic/abuse detection and the
-classification call are not built. Alongside it, `fence()` wraps untrusted text in
-tags with every angle bracket escaped, so the prompt can mark it as data. Bare
-"developer mode" is deliberately allowed (mobile developers write about it). Being one reusable module makes
-it independently testable and gives a single place to reason about coverage — important
-since this is a required part of the assignment, not optional.
+`422 INPUT_REJECTED`. Wired into Document upload, Create Interview and every chat message
+(`POST /api/interviews/:id/messages`, which also carries the candidate's ask-back
+questions). Off-topic/abuse detection and the classification call are not built. Bare
+"developer mode" is deliberately allowed (mobile developers write about it). Being one
+reusable module makes it independently testable and gives a single place to reason about
+coverage — important since this is a required part of the assignment, not optional.
+
+**Fencing.** Alongside the guard, `fence()` wraps untrusted text in tags with every angle
+bracket escaped, so a prompt can mark it as data. The rule: anything that comes from the
+candidate or from a Document, or is derived from them (the job title and company, the
+analyzed skills and topics, the CV and cover letter text, the conversation so far), goes
+into a fenced block in the *user* message, and the system prompt tells the model to treat
+tagged text as data and never follow instructions in it. **One documented exception**: the
+live-conversation system prompt (phase 3) states the persona's name, title and backstory,
+the role, domain, company, job title and the question plan directly, unfenced, because they
+are what defines the interviewer. They are mitigated rather than fenced: the candidate's
+own fields pass the guard at the API, and the persona, domain and plan are model output
+that is length-bounded and tidied before it is stored (ADR 0012). Fencing them, or moving
+them into the user message, would change what the model sees and so needs a real run to
+compare interview quality; revisit then. The candidate's replies reach this prompt only as
+chat history, never inlined.
 
 ## Preferences page
 
@@ -342,8 +392,8 @@ itself stays simple for a non-technical user.
 
 - **Interview model** selection (from the allowed OpenRouter chat models, default
   `gpt-5-mini`) — used for all 5 candidate-facing phases above: JD/CV analysis,
-  question-plan/persona generation, live conversation, ask-back suggestions, and STAR
-  evaluation
+  question-plan/persona generation, live conversation, the coaching helpers (hints and
+  ask-back suggestions), and STAR evaluation
 - **Interviewer-judge model** selection, default `google/gemini-2.5-flash` — a *separate*
   selector used only for the Interviewer Performance Review (see below), independent of the
   interview model above. This page-level picker supports any OpenRouter chat model, not
@@ -370,8 +420,17 @@ select-existing-or-upload-new control, with no inline management actions of its 
 
 The interviewer's questions are read aloud using the browser-native **Web Speech API**
 (`SpeechSynthesis`), entirely client-side in the Angular app — no backend involvement, no
-extra API cost. When a new interviewer `Message` renders during the Q&A or ask-back phase,
-the client speaks its `content` using the browser's available voices/default voice.
+extra API cost. When a new interviewer `Message` is shown during the Q&A or ask-back phase,
+the client speaks its `content` using the browser's available voices/default voice. Only the
+message that has just arrived is read, never the history loaded with the page; replying, switching
+the voice off or leaving the page silences it. Long text is read in pieces of a sentence or two,
+because Chrome stops a long utterance after about 15 seconds.
+
+The voice is **off by default** and switched by a toggle that appears in two places: the chat
+header of the Interview Session page and right next to the Tone toggle group in Create
+Interview. It is one browser preference (kept in `localStorage`), not part of the Interview: it
+isn't sent to the server, so there's no API or schema change, and it applies to every interview
+in that browser.
 
 This is a read-aloud of the same transcript text already stored in `messages.content` — it
 does not produce or persist a separate audio asset, so it has no schema impact
@@ -380,13 +439,20 @@ in `overview.md`), and voice availability depends on the user's browser/OS; some
 also require a user gesture (e.g. a click) before they'll play audio, which the Interview
 Session UI needs to account for on first load.
 
-## Speech-to-text (nice to have)
+## Speech-to-text
 
-Letting the candidate answer by voice instead of typing. Not built yet, but the approach is
-committed: **browser-native `SpeechRecognition`** (Web Speech API) — same client-only
-pattern as the TTS above: a mic button starts recognition, the live transcript fills the
-reply box, the candidate reviews/edits before sending as a normal `Message`. Small addition
-on top of what's already planned, no backend change.
+Letting the candidate answer by voice instead of typing, with **browser-native
+`SpeechRecognition`** (Web Speech API) — same client-only pattern as the TTS above. In the
+reply box the microphone button takes the place of the send button while there is nothing to
+send (which would otherwise sit disabled), and stays while it is listening so it can be
+stopped. The live transcript, interim words included, fills the reply box; typing takes over
+from dictation, and the candidate reviews/edits before sending as a normal `Message`. Starting
+it silences the interviewer's voice so the microphone doesn't hear it. While it listens, a live meter of the microphone's frequency bands (Web Audio API, an
+`AnalyserNode`; no package) shows under the box instead of the word "Listening…". It opens the
+microphone a second time next to the recognition, so it is best effort: on phones (which usually
+can't share the microphone), with reduced motion, or without permission it stays out and the
+"Listening…" text shows. Where the browser has no `SpeechRecognition` the send button works as
+before. No backend change.
 
 Caveat, accepted rather than solved: support is solid in Chrome/Edge, effectively
 unsupported in Firefox, spotty in Safari — and recognition is typically performed by the
@@ -397,12 +463,24 @@ later upgrade if cross-browser reliability becomes a real requirement, not the v
 
 ## Persona image generation
 
-Generated once, at Create Interview time, alongside the question plan/persona — using
-`google/gemini-2.5-flash-image` via the standard `/chat/completions` endpoint with
-`modalities: ["image", "text"]`. The result is stored on **local disk**, under the Flask
-app's `instance/` folder (`instance/uploads/personas/<uuid>.png`) — `Interview.persona_image_path`
-holds that relative path — rather than regenerated on each view, so Results and the history
-sidebar can display it without another API call.
+Generated once, when the session page asks for it (`PUT /api/interviews/:id/persona-image`;
+not by Create Interview, so the candidate isn't kept waiting) — using
+`google/gemini-2.5-flash-image` through OpenRouter's dedicated image endpoint,
+`POST /images` (`{model, prompt, n: 1}`; the image comes back base64-encoded in
+`data[0].b64_json`). This replaces the earlier `/chat/completions` with `modalities` plan:
+OpenRouter's current docs describe only the image endpoint for image generation. The prompt
+is built from the persona's name, title and tone (a realistic head-and-shoulders headshot of
+a fictional person, no text or logos). The result is stored on **local disk**, under the
+Flask app's `instance/` folder (`instance/uploads/personas/<uuid>.<png|jpg|webp>`) —
+`Interview.persona_image_path` holds that relative path — rather than regenerated on each
+view, so Results and the history sidebar can display it without another API call. The file
+type is decided from the image's own bytes, not the provider's `media_type`, and anything
+other than PNG, JPEG or WebP (SVG included) is refused.
+
+The portrait is cosmetic, so a failure to generate it (provider error, unusable image)
+affects nothing else: the call returns the error, `persona_image_path` stays null, the
+client shows a fallback avatar and may retry. The session page requests it in parallel with
+the opening message. It is served by `GET /api/interviews/:id/persona-image`.
 
 Note: the assignment's Sprint 1 allow-list only names this one model for image generation,
 so there isn't actually a "cheapest option" to pick between within scope — using a
@@ -425,12 +503,13 @@ a persisted Docker volume in deployment — see `deployment.md`.
 ```
 Create Interview
   → security guard checks input
-  → JD/CV analysis prompt (per Document; skipped for Documents already analysed by the
+  → JD/CV analysis prompt (per Document; skipped for Documents already analyzed by the
     Interview's `jd_analysis` model — normally done at upload time)
   → question-plan & persona generation prompt
-  → persona image generation (stored)
   → Interview row created (status = in_progress)
   → redirect to Interview Session
+  → the session page, in parallel: PUT opening (phase 3, first exchange) and
+    PUT persona-image
 
 Interview Session
   each Message → updates last_activity_at

@@ -1,6 +1,6 @@
 import os
 
-from flask.cli import load_dotenv
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -11,8 +11,6 @@ class Config:
         f"{os.environ['POSTGRES_PASSWORD']}@{os.environ['POSTGRES_HOST']}:"
         f"{os.environ['POSTGRES_PORT']}/{os.environ['POSTGRES_DB']}"
     )
-    # Largest accepted upload request, in bytes. Flask rejects bigger bodies with a 413
-    # and the documents route re-checks the file itself for a clearer message.
     MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_MB", "10")) * 1024 * 1024
     MAX_CONTENT_LENGTH = MAX_UPLOAD_BYTES
 
@@ -20,3 +18,6 @@ class Config:
     OPENROUTER_API_KEY_FILE = os.environ.get("OPENROUTER_API_KEY_FILE")
     OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
     LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS", "60"))
+    PORTRAIT_GENERATION_ENABLED = os.environ.get(
+        "PORTRAIT_GENERATION_ENABLED", "true"
+    ).strip().lower() not in ("0", "false", "no", "off")

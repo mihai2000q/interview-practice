@@ -19,6 +19,7 @@ class ApplicationDocument(ApiModel):
 
     id: uuid.UUID
     name: str
+    analysis_model: str | None
 
 
 class ApplicationSummary(ApiModel):

@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   model,
   signal,
   untracked,
@@ -17,13 +18,22 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
-import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
-import { DocumentType, StoredDocument } from '@app/features/documents/models/document.schema';
+import { ApplicationDocument } from '@app/features/applications/models/application-summary';
+import {
+  AnalysisSettings,
+  DocumentType,
+  StoredDocument,
+} from '@app/features/documents/models/document.schema';
+import { DEFAULT_INTERVIEW_MODEL } from '@app/features/interviews/models/phase-settings.schema';
 import { MAX_UPLOAD_MB } from '@app/features/documents/documents.constants';
 import { DocumentsApi } from '@app/features/documents/services/documents-api';
 import { FileDropzone } from '@app/shared/components/file-dropzone/file-dropzone';
+import {
+  DocumentAnalysisState,
+  DocumentAnalysisStatus,
+} from '../document-analysis-status/document-analysis-status';
 
 let nextId = 0;
 
@@ -34,16 +44,20 @@ const SELECT_PLACEHOLDERS: Record<DocumentType, string> = {
 };
 
 /**
- * Select a saved Document, or upload a new PDF (click or drop). Once a file is uploadedDocuments here it
+ * Select a saved Document, or upload a new PDF (click or drop). Once a file is uploaded here it
  * replaces the select and dropzone with an attachment and a "save for later" checkbox.
  * Binds to a form field as a `FormValueControl`.
  *
- * A freshly uploadedDocuments Document is analysed in the background (saved ones already were, or are
- * analysed by the server when the interview is created); `analyzing` lets the page hold back
- * submission meanwhile. Removing the upload stops the analysis. If the server rejects the
- * Document's content (422), it is discarded as if removed and the candidate is asked for a
- * different file; any other failure is on our side, so the Document stays and a notice says the
- * analysis happens when the interview starts (no retry, Start is not blocked).
+ * Whichever Document is chosen shows whether it has been analyzed by the model the interview
+ * will use (the `jdAnalysis` override, else the default): the server keeps one analysis per
+ * Document and redoes it for another model. A freshly uploaded one is analyzed by the client at
+ * once, in the background; a saved or prefilled one, or one analyzed by another model, is only
+ * analyzed when the candidate asks ("Analyze now"), because otherwise the server does it when
+ * the interview is created, which takes longer. `analyzing` lets the page hold back submission while
+ * an analysis runs. Removing the upload stops it; so does choosing something else. If the server
+ * rejects an uploaded Document's content (422), it is deleted as if removed and the candidate is
+ * asked for a different file; a rejected saved Document is kept and only reported. Any other
+ * failure is on our side: the Document stays "not analyzed" and can be tried again.
  */
 @Component({
   selector: 'app-document-picker',
@@ -54,7 +68,7 @@ const SELECT_PLACEHOLDERS: Record<DocumentType, string> = {
     HlmCheckboxImports,
     HlmFieldImports,
     HlmSelectImports,
-    HlmSpinnerImports,
+    DocumentAnalysisStatus,
     FileDropzone,
     NgIcon,
   ],
@@ -65,16 +79,38 @@ export class DocumentPicker {
   readonly label = input.required<string>();
   readonly value = model<string | null>(null);
   readonly disabled = input(false);
-  readonly extraDocuments = input<{ id: string; name: string }[]>([]);
+  readonly extraDocuments = input<ApplicationDocument[]>([]);
+  /** The interview's `jdAnalysis` override: the analysis it will use, and what "Analyze now" runs. */
+  readonly analysisSettings = input<AnalysisSettings | undefined>(undefined);
 
   protected readonly selectId = `document-picker-${nextId++}`;
-  protected readonly uploading = signal(false);
-  protected readonly uploadError = signal<string | null>(null);
+  private readonly uploadInProgress = signal(false);
+  /** A file is being sent; the Document doesn't exist yet, so the form can't be submitted. */
+  readonly uploading = this.uploadInProgress.asReadonly();
+  /** Starts over whenever another Document is chosen. */
+  protected readonly uploadError = linkedSignal<string | null, string | null>({
+    source: this.value,
+    computation: () => null,
+  });
   protected readonly uploadedDocument = signal<StoredDocument | null>(null);
-  private readonly analysisRunning = signal(false);
-  readonly analyzing = this.analysisRunning.asReadonly();
-  /** The analysis failed for a reason that isn't the Document's; the server redoes it later. */
-  protected readonly analysisDeferred = signal(false);
+  /** The Document being analyzed right now. */
+  /** The Document being analyzed; choosing another one ends it. */
+  private readonly analysisTarget = linkedSignal<string | null, string | null>({
+    source: this.value,
+    computation: (value, previous) => (previous?.value === value ? value : null),
+  });
+  readonly analyzing = computed(() => this.analysisTarget() !== null);
+  /** Models that analyzed Documents in this session; the lists loaded earlier don't know yet. */
+  private readonly analyzedModels = signal<ReadonlyMap<string, string>>(new Map());
+  /** The model the interview will analyze with: the override, else the default. */
+  protected readonly expectedModel = computed(
+    () => this.analysisSettings()?.model ?? DEFAULT_INTERVIEW_MODEL,
+  );
+  /** The last attempt to analyze the chosen Document failed for a reason that isn't its own. */
+  protected readonly analysisFailed = linkedSignal<string | null, boolean>({
+    source: this.value,
+    computation: () => false,
+  });
   /** Nothing to choose from (still loading, failed to load, or no saved documents yet). */
   protected readonly selectDisabled = computed(
     () =>
@@ -109,6 +145,29 @@ export class DocumentPicker {
     ];
   });
 
+  private readonly selectedDocument = computed(() => {
+    const id = this.value();
+    return id ? (this.options().find((doc) => doc.id === id) ?? null) : null;
+  });
+  protected readonly analysisModel = computed(() => {
+    const document = this.selectedDocument();
+    return document ? (this.analyzedModels().get(document.id) ?? document.analysisModel) : null;
+  });
+  protected readonly analysisState = computed<DocumentAnalysisState | null>(() => {
+    const document = this.selectedDocument();
+    if (!document) {
+      return null;
+    }
+    if (this.analysisTarget() === document.id) {
+      return 'running';
+    }
+    const model = this.analysisModel();
+    if (model === null) {
+      return 'missing';
+    }
+    return model === this.expectedModel() ? 'done' : 'outdated';
+  });
+
   protected reload(): void {
     this.savedDocuments.reload();
   }
@@ -128,7 +187,7 @@ export class DocumentPicker {
 
   private discardUpload(document: StoredDocument): void {
     this.stopAnalysis();
-    this.analysisDeferred.set(false);
+    this.analysisFailed.set(false);
     this.uploadedDocument.set(null);
     this.uploadError.set(null);
     this.uploadedDocuments.update((list) => list.filter((doc) => doc.id !== document.id));
@@ -141,10 +200,13 @@ export class DocumentPicker {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.analysisRequest?.unsubscribe());
 
-    // Choosing something else clears the "couldn't be analyzed" message of the discarded file.
+    // Choosing another Document (or none) ends the request that was analysing the previous one.
     effect(() => {
-      if (this.value()) {
-        untracked(() => this.uploadError.set(null));
+      if (this.analysisTarget() === null) {
+        untracked(() => {
+          this.analysisRequest?.unsubscribe();
+          this.analysisRequest = null;
+        });
       }
     });
 
@@ -157,34 +219,62 @@ export class DocumentPicker {
     });
   }
 
+  /** A saved Document the server refused is deleted like a rejected upload; not awaited. */
+  private deleteRejected(documentId: string): void {
+    this.documentsApi.delete(documentId).subscribe({
+      next: () => this.savedDocuments.reload(),
+      error: () => undefined,
+    });
+  }
+
   private stopAnalysis(): void {
     this.analysisRequest?.unsubscribe();
     this.analysisRequest = null;
-    this.analysisRunning.set(false);
+    this.analysisTarget.set(null);
   }
 
-  /** No retry: a rejected Document is discarded like a user remove, anything else is deferred. */
-  private analyze(document: StoredDocument): void {
+  /** "Analyze now" on a Document that has no analysis yet. */
+  protected analyzeSelected(): void {
+    const document = this.selectedDocument();
+    if (document && !this.analyzing()) {
+      this.analyze(document.id);
+    }
+  }
+
+  private analyze(documentId: string): void {
     this.stopAnalysis();
-    this.analysisDeferred.set(false);
-    this.analysisRunning.set(true);
-    this.analysisRequest = this.documentsApi.analyzeDocument(document.id).subscribe({
-      next: () => this.stopAnalysis(),
-      error: (err: unknown) => {
-        const error = toApiError(err);
-        if (error.status !== 422 && error.code !== 'INPUT_REJECTED') {
+    this.analysisFailed.set(false);
+    this.analysisTarget.set(documentId);
+    this.analysisRequest = this.documentsApi
+      .analyzeDocument(documentId, this.analysisSettings())
+      .subscribe({
+        next: (analysis) => {
           this.stopAnalysis();
-          this.analysisDeferred.set(true);
-          return;
-        }
-        const reason = error.message.replace(/\.$/, '');
-        this.value.set(null);
-        this.discardUpload(document);
-        this.uploadError.set(
-          `This document couldn't be analyzed: ${reason}. Please upload a different file.`,
-        );
-      },
-    });
+          this.analyzedModels.update((models) => new Map(models).set(documentId, analysis.model));
+        },
+        error: (err: unknown) => {
+          const error = toApiError(err);
+          this.stopAnalysis();
+          if (error.status !== 422 && error.code !== 'INPUT_REJECTED') {
+            this.analysisFailed.set(true);
+            return;
+          }
+          const reason = error.message.replace(/\.$/, '');
+          const upload = this.uploadedDocument();
+          this.value.set(null);
+          if (upload?.id === documentId) {
+            this.discardUpload(upload);
+            this.uploadError.set(
+              `This document couldn't be analyzed: ${reason}. Please upload a different file.`,
+            );
+          } else {
+            this.deleteRejected(documentId);
+            this.uploadError.set(
+              `This document couldn't be analyzed: ${reason}. It was removed from your saved documents; choose a different one.`,
+            );
+          }
+        },
+      });
   }
 
   protected async setSaved(saved: boolean): Promise<void> {
@@ -209,7 +299,7 @@ export class DocumentPicker {
     }
 
     this.uploadError.set(null);
-    this.uploading.set(true);
+    this.uploadInProgress.set(true);
     try {
       // A job description is usually specific to one role, so it isn't kept unless asked.
       const save = this.type() !== 'job_description';
@@ -218,11 +308,11 @@ export class DocumentPicker {
       this.uploadedDocument.set(document);
       this.value.set(document.id);
       this.savedDocuments.reload();
-      this.analyze(document);
+      this.analyze(document.id);
     } catch (err) {
       this.uploadError.set(toApiError(err).message);
     } finally {
-      this.uploading.set(false);
+      this.uploadInProgress.set(false);
     }
   }
 }

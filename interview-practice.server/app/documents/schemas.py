@@ -20,7 +20,18 @@ class DocumentPublic(ApiModel):
     name: str
     source_filename: str
     saved: bool
+    analysis_model: str | None
     created_at: datetime
+
+
+class DocumentAnalysisPublic(ApiModel):
+    """Response of `PUT /api/documents/:id/analysis`."""
+
+    model: str
+    domain: str | None
+    company_name: str | None
+    skills: list[str]
+    likely_topics: list[str]
 
 
 class DocumentListQuery(ApiModel):

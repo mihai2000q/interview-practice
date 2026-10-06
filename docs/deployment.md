@@ -60,7 +60,8 @@ One template, one real file, one exception:
     these pieces at runtime (`postgresql://{user}:{password}@{host}:{port}/{db}`),
     otherwise the same credentials end up typed twice.
   - **`CLIENT_HOST`** / **`CLIENT_PORT`**: the server-side CORS allowed-origin is built
-    from these as `http://CLIENT_HOST:CLIENT_PORT` and passed to `flask-cors`. Only
+    from these as `http://CLIENT_HOST:CLIENT_PORT` and passed to `flask-cors`; unset, they
+    default to `localhost` and `8002`. Only
     actually matters for local dev (`http://localhost:8002`, a different origin from
     a local `flask run --port 8001`, the same `SERVER_PORT` Compose uses) — inside
     Docker Compose, the browser only ever talks to nginx's single origin (see the
@@ -77,6 +78,11 @@ One template, one real file, one exception:
     Requires the backend's OpenRouter client to read this from config rather than
     hardcoding the real URL — a small, cheap change worth making regardless of whether
     `mock-llm` gets used.
+  - **`PORTRAIT_GENERATION_ENABLED`**: defaults to `true`. Set it to `false` (also `0`, `no`,
+    `off`) to skip the persona portrait, which is slow and billed: `PUT
+    /api/interviews/:id/persona-image` then returns `personaImageUrl: null` without calling
+    the model. It reaches
+    the `server` container through its `env_file`, like the other `.env` values.
 - **`OPENROUTER_API_KEY`** is the one exception — deliberately **not** in `.env.dev`/`.env`
   or any other file in this repo. It stays wherever it already lives on each developer's
   own machine (shell environment). `docker-compose.yml` declares it as a Compose

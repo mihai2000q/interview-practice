@@ -6,7 +6,7 @@
   hlmCollapsible
 >
   <div hlmCardHeader>
-    <h3 hlmCardTitle id="application-heading">
+    <h2 hlmCardTitle id="application-heading">
       <button
         class="group/trigger flex w-full cursor-pointer items-center gap-2 text-left"
         hlmCollapsibleTrigger
@@ -18,7 +18,7 @@
           name="lucideChevronDown"
         />
       </button>
-    </h3>
+    </h2>
     <p hlmCardDescription>Practice on its own, or add a stage to an existing application.</p>
   </div>
 
@@ -40,7 +40,7 @@
             </label>
           </div>
 
-          <div hlmField orientation="horizontal">
+          <div class="flex-wrap gap-y-0 md:flex-nowrap" hlmField orientation="horizontal">
             <hlm-radio
               [disabled]="existingUnavailable()"
               inputId="application-existing"
@@ -48,43 +48,43 @@
             >
               <hlm-radio-indicator indicator />
             </hlm-radio>
-            <label class="flex-none! font-normal" for="application-existing" hlmFieldLabel>
+            <label class="font-normal md:flex-none!" for="application-existing" hlmFieldLabel>
               Next stage of an existing application
               @if (existingHint(); as hint) {
                 <span class="text-muted-foreground">({{ hint }})</span>
               }
             </label>
-            <div
-              [attr.inert]="existing() ? null : ''"
-              [class]="
-                existing()
-                  ? 'translate-x-0 opacity-100'
-                  : 'pointer-events-none -translate-x-3 opacity-0'
-              "
-              class="min-w-0 flex-1 transition-[opacity,translate] duration-300 ease-out"
-            >
-              <hlm-select
-                (valueChange)="onApplicationChange($event)"
-                [disabled]="selectDisabled()"
-                [itemToString]="applicationName"
-                [value]="interviewForm().applicationId().value()"
-                class="ml-2"
+            <!-- Collapses sideways when the row is horizontal (md+), downwards when it is stacked. -->
+            <div [expanded]="existing()" class="min-w-0 basis-full md:basis-auto" hlmCollapsible>
+              <div
+                class="md:transition-[width,opacity] md:data-[state=closed]:h-auto md:data-[state=closed]:w-0 md:data-[state=open]:h-auto md:data-[state=open]:w-(--brn-collapsible-content-width)"
+                hlmCollapsibleContent
               >
-                <hlm-select-trigger class="w-80 data-[size=default]:h-7">
-                  <hlm-select-value [placeholder]="placeholder()" />
-                </hlm-select-trigger>
-                <hlm-select-content *hlmSelectPortal>
-                  @for (application of applications.value() ?? []; track application.id) {
-                    <hlm-select-item [value]="application.id">
-                      {{ application.companyName }} — {{ application.jobTitle }}
-                    </hlm-select-item>
-                  }
-                </hlm-select-content>
-              </hlm-select>
-              <hlm-field-error
-                [errors]="interviewForm().applicationId().errors()"
-                [visible]="interviewForm().applicationId().touched()"
-              />
+                <div class="pt-2 md:pt-0">
+                  <hlm-select
+                    (valueChange)="onApplicationChange($event)"
+                    [disabled]="selectDisabled()"
+                    [itemToString]="applicationName"
+                    [value]="interviewForm().applicationId().value()"
+                    class="ml-2"
+                  >
+                    <hlm-select-trigger class="w-full data-[size=default]:h-7 sm:w-80">
+                      <hlm-select-value [placeholder]="placeholder()" />
+                    </hlm-select-trigger>
+                    <hlm-select-content *hlmSelectPortal>
+                      @for (application of applications.value() ?? []; track application.id) {
+                        <hlm-select-item [value]="application.id">
+                          {{ applicationLabel(application) }}
+                        </hlm-select-item>
+                      }
+                    </hlm-select-content>
+                  </hlm-select>
+                  <hlm-field-error
+                    [errors]="interviewForm().applicationId().errors()"
+                    [visible]="interviewForm().applicationId().touched()"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

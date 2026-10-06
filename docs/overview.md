@@ -79,9 +79,9 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
 - Exact visual layout of the interviewer sidebar's now-finalized content list (portrait,
   name/title, tone badge, company name, question progress, Abandon), and of the main-page
   phase indicator label.
-- **Nice to have: per-prompt cost tracking** (export-only, see `architecture.md`) and
-  **voice replies** (browser-native `SpeechRecognition`, see `architecture.md`) — both
-  design-resolved, neither built yet.
+- **Nice to have: per-prompt cost tracking** (export-only, see `architecture.md`) —
+  design-resolved, not built yet. (The interviewer's voice and dictated replies are built;
+  see `architecture.md`.)
 - Exact wording/trigger sensitivity of the JobApplication progress summary's narrative
   (e.g. how much data before it says "doing great as usual" vs staying neutral) — see
   `architecture.md`'s Progress summary section.

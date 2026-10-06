@@ -4,6 +4,7 @@ import { map, Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import { mapApiError } from '@app/core/api/api-error';
 import {
+  AnalysisSettings,
   DocumentAnalysis,
   documentAnalysisSchema,
   DocumentType,
@@ -35,8 +36,9 @@ export class DocumentsApi {
     );
   }
 
-  analyzeDocument(id: string): Observable<DocumentAnalysis> {
-    return this.http.put<unknown>(`${this.url}/${id}/analysis`, null).pipe(
+  /** With the interview's `jdAnalysis` override the result is the one that interview will reuse. */
+  analyzeDocument(id: string, settings?: AnalysisSettings): Observable<DocumentAnalysis> {
+    return this.http.put<unknown>(`${this.url}/${id}/analysis`, settings ?? null).pipe(
       map((response) => documentAnalysisSchema.parse(response)),
       mapApiError(),
     );

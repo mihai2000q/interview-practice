@@ -16,8 +16,8 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    client_host = os.environ.get("CLIENT_HOST")
-    client_port = os.environ.get("CLIENT_PORT")
+    client_host = os.environ.get("CLIENT_HOST", "localhost")
+    client_port = os.environ.get("CLIENT_PORT", "8002")
     CORS(app, origins=[f"http://{client_host}:{client_port}"])
 
     db.init_app(app)
@@ -27,9 +27,5 @@ def create_app() -> Flask:
     app.register_blueprint(documents_bp)
     app.register_blueprint(applications_bp)
     app.register_blueprint(interviews_bp)
-
-    @app.route("/")
-    def hello_world() -> str:
-        return "Hello World!"
 
     return app

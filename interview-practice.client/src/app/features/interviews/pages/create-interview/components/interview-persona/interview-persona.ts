@@ -10,11 +10,12 @@ import {
   INTERVIEWER_ROLES,
   INTERVIEWER_TONES,
   labelOf,
-  ROLE_DEFAULTS,
-} from '@app/features/interviews/pages/create-interview/models/create-interview.options';
+} from '@app/features/interviews/models/interview.options';
+import { ROLE_DEFAULTS } from '@app/features/interviews/pages/create-interview/models/create-interview.defaults';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmAvatarImports } from '@spartan-ng/helm/avatar';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
+import { VoiceToggle } from '@app/features/interviews/components/voice-toggle/voice-toggle';
 
 @Component({
   providers: [provideIcons({ lucideUserCog, lucideLightbulb })],
@@ -33,6 +34,7 @@ import { HlmSwitchImports } from '@spartan-ng/helm/switch';
     HlmFieldGroup,
     HlmAvatarImports,
     HlmSwitchImports,
+    VoiceToggle,
   ],
   selector: 'app-interview-persona',
   templateUrl: './interview-persona.html',

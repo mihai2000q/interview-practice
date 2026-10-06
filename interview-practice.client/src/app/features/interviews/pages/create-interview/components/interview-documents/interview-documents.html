@@ -1,26 +1,29 @@
 <section aria-labelledby="documents-heading" hlmCard>
   <div hlmCardHeader>
-    <h3 class="flex items-center gap-2" hlmCardTitle id="documents-heading">
+    <h2 class="flex items-center gap-2" hlmCardTitle id="documents-heading">
       <ng-icon class="mb-0.5" name="lucideFileText" />
       Documents
-    </h3>
+    </h2>
   </div>
 
   <div hlmCardContent>
     <div class="grid gap-4 sm:grid-cols-3" hlmFieldGroup>
       <app-document-picker
+        [analysisSettings]="analysisSettings()"
         [extraDocuments]="jobDescriptionDocs()"
         [formField]="interviewForm().jobDescriptionId"
         label="Job description"
         type="job_description"
       />
       <app-document-picker
+        [analysisSettings]="analysisSettings()"
         [extraDocuments]="cvDocs()"
         [formField]="interviewForm().cvId"
         label="CV"
         type="cv"
       />
       <app-document-picker
+        [analysisSettings]="analysisSettings()"
         [extraDocuments]="coverLetterDocs()"
         [formField]="interviewForm().coverLetterId"
         label="Cover letter"

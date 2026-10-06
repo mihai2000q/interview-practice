@@ -1,0 +1,54 @@
+<hlm-popover (stateChanged)="onStateChange($event)" align="start">
+  <button class="text-muted-foreground" hlmBtn hlmPopoverTrigger size="sm" variant="ghost">
+    <ng-icon name="lucideLightbulb" />
+    Suggested questions
+  </button>
+  <hlm-popover-content class="w-96 max-w-[calc(100vw-2rem)]" *hlmPopoverPortal="let ctx">
+    <div hlmPopoverHeader>
+      <h2 hlmPopoverTitle>Questions you could ask</h2>
+      <p hlmPopoverDescription>Pick one to edit and send, or ignore them.</p>
+    </div>
+
+    @if (loading()) {
+      <div aria-busy="true" class="flex flex-col gap-2" role="status">
+        <span class="sr-only">Thinking of questions…</span>
+        @for (row of [1, 2, 3, 4, 5]; track row) {
+          <div class="h-9" hlmSkeleton></div>
+        }
+      </div>
+    } @else if (error(); as message) {
+      <div class="flex flex-col items-start gap-2">
+        <p class="text-destructive" role="alert">{{ message }}</p>
+        @if (retryable()) {
+          <button (click)="load()" hlmBtn size="sm" variant="outline">Try again</button>
+        }
+      </div>
+    } @else if (suggestions(); as items) {
+      <ul class="flex flex-col gap-1">
+        @for (suggestion of items; track suggestion.id) {
+          <li>
+            <button
+              (click)="pick(suggestion.text, ctx.close)"
+              [disabled]="usedSet().has(suggestion.text)"
+              class="h-auto w-full justify-between gap-3 whitespace-normal py-2 text-left font-normal"
+              hlmBtn
+              variant="ghost"
+            >
+              {{ suggestion.text }}
+              @if (usedSet().has(suggestion.text)) {
+                <span class="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                  <ng-icon name="lucideCheck" />
+                  Asked
+                </span>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+      <button (click)="load()" class="self-start" hlmBtn size="xs" variant="ghost">
+        <ng-icon name="lucideRefreshCw" />
+        New suggestions
+      </button>
+    }
+  </hlm-popover-content>
+</hlm-popover>

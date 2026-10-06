@@ -1,23 +1,22 @@
 <section aria-labelledby="interview-persona-heading" hlmCard>
   <div hlmCardHeader>
-    <h3 class="flex items-center gap-2" hlmCardTitle id="interview-persona-heading">
+    <h2 class="flex items-center gap-2" hlmCardTitle id="interview-persona-heading">
       <ng-icon class="mb-0.5" name="lucideUserCog" />
       Interview Persona
-    </h3>
+    </h2>
   </div>
 
   <div hlmCardContent>
     <div hlmFieldGroup>
-      <div class="flex flex-row gap-6">
+      <div class="flex flex-col gap-6 sm:flex-row">
         <div hlmField>
           <label for="interviewer-role" hlmFieldLabel>Role</label>
           <hlm-select
             (valueChange)="onRoleChange($event)"
             [formField]="interviewForm().interviewerRole"
             [itemToString]="interviewerRoleLabel"
-            id="interviewer-role"
           >
-            <hlm-select-trigger class="w-full">
+            <hlm-select-trigger buttonId="interviewer-role" class="w-full">
               <hlm-select-value />
             </hlm-select-trigger>
             <hlm-select-content *hlmSelectPortal>
@@ -29,26 +28,32 @@
             </hlm-select-content>
           </hlm-select>
         </div>
-        <div hlmField>
-          <span hlmFieldLabel id="tone-label">Tone</span>
-          <div
-            [formField]="interviewForm().tone"
-            [nullable]="false"
-            aria-labelledby="tone-label"
-            hlmToggleGroup
-            spacing="2"
-            variant="outline"
-          >
-            @for (tone of interviewerTones; track tone.value) {
-              <button [value]="tone.value" hlmToggleGroupItem>
-                {{ tone.label }}
-              </button>
-            }
+        <div class="flex w-full flex-row flex-wrap gap-x-6 gap-y-4">
+          <div class="w-auto" hlmField>
+            <span hlmFieldLabel id="tone-label">Tone</span>
+            <div
+              [formField]="interviewForm().tone"
+              [nullable]="false"
+              aria-labelledby="tone-label"
+              hlmToggleGroup
+              spacing="2"
+              variant="outline"
+            >
+              @for (tone of interviewerTones; track tone.value) {
+                <button [value]="tone.value" hlmToggleGroupItem>
+                  {{ tone.label }}
+                </button>
+              }
+            </div>
+          </div>
+          <div class="w-auto" hlmField>
+            <span hlmFieldLabel>Voice</span>
+            <app-voice-toggle />
           </div>
         </div>
       </div>
 
-      <div class="px-8 py-4 bg-primary/10 rounded-xl" hlmField orientation="horizontal">
+      <div class="px-4 py-4 bg-primary/10 rounded-xl sm:px-8" hlmField orientation="horizontal">
         <hlm-avatar class="size-13 rounded-xl after:border-0">
           <span class="bg-yellow-400/10 rounded-xl after:border-0" hlmAvatarFallback>
             <ng-icon class="text-yellow-400" name="lucideLightbulb" size="20px" />

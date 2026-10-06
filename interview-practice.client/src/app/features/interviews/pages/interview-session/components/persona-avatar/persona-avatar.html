@@ -1,0 +1,7 @@
+<hlm-avatar>
+  @if (imageUrl(); as src) {
+    <!-- Eager: the avatar keeps the image out of the page until it has loaded, and a lazy one never would. -->
+    <img [ngSrc]="src" alt="" height="32" hlmAvatarImage loading="eager" width="32" />
+  }
+  <span class="text-xs font-medium" hlmAvatarFallback>{{ initials() }}</span>
+</hlm-avatar>

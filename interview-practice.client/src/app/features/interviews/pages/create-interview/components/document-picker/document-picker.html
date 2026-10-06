@@ -22,25 +22,9 @@
       </div>
     </div>
 
-    @if (analyzing()) {
-      <div
-        class="flex items-center gap-2 text-sm text-muted-foreground ml-2"
-        aria-live="polite"
-        role="status"
-      >
-        <hlm-spinner aria-hidden="true" />
-        Analyzing document…
-      </div>
-    }
-    @if (analysisDeferred()) {
-      <p class="ml-2 text-sm text-muted-foreground" aria-live="polite" role="status">
-        We couldn't analyze this document right now. We'll try again when you start the interview.
-      </p>
-    }
-
     <label
-      [aria-selected]="document.saved"
-      class="flex items-center gap-2 text-sm ml-2 text-muted-foreground aria-selected:text-gray-100/80"
+      [class.text-muted-foreground]="!document.saved"
+      class="ml-2 flex items-center gap-2 text-sm"
     >
       <hlm-checkbox (checkedChange)="setSaved($event)" [checked]="document.saved" />
       Save for later
@@ -72,6 +56,17 @@
         Upload new {{ label() }}
       </app-file-dropzone>
     }
+  }
+
+  @if (analysisState(); as state) {
+    <app-document-analysis-status
+      (analyzeNow)="analyzeSelected()"
+      [analysisModel]="analysisModel()"
+      [attemptFailed]="analysisFailed()"
+      [expectedModel]="expectedModel()"
+      [state]="state"
+      class="ml-2"
+    />
   }
 
   @if (savedDocuments.error()) {

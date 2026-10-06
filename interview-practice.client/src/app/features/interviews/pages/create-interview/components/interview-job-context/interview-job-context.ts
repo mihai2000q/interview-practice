@@ -6,7 +6,7 @@ import { HlmCard, HlmCardContent, HlmCardHeader, HlmCardTitle } from '@spartan-n
 import { HlmField, HlmFieldError, HlmFieldGroup, HlmFieldLabel } from '@spartan-ng/helm/field';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
-import { SENIORITIES } from '@app/features/interviews/pages/create-interview/models/create-interview.options';
+import { SENIORITIES } from '@app/features/interviews/models/interview.options';
 import { CreateInterviewModel } from '@app/features/interviews/pages/create-interview/models/create-interview.schema';
 
 @Component({

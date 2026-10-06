@@ -7,11 +7,19 @@ import {
 } from '@angular/forms/signals';
 import { z } from 'zod';
 import {
+  difficultySchema,
+  interviewerRoleSchema,
+  interviewTypeSchema,
+  responseStyleSchema,
+  senioritySchema,
+  toneSchema,
+} from '@app/features/interviews/models/interview.enums';
+import {
   COMPANY_NAME_MAX_LENGTH,
   JOB_TITLE_MAX_LENGTH,
   MAX_QUESTION_COUNT,
 } from '@app/features/interviews/interviews.constants';
-import { phaseSettingsOverrideSchema } from './phase-settings.schema';
+import { phaseSettingsOverrideSchema } from '@app/features/interviews/models/phase-settings.schema';
 
 export const createInterviewSchema = z
   .object({
@@ -19,17 +27,17 @@ export const createInterviewSchema = z
     applicationId: z.string().nullable(),
     jobTitle: z.string().trim().min(1, 'Enter a job title'),
     companyName: z.string().trim(),
-    seniority: z.enum(['junior', 'mid', 'senior']),
-    difficulty: z.enum(['easy', 'medium', 'hard']),
+    seniority: senioritySchema,
+    difficulty: difficultySchema,
     targetQuestionCount: z
       .number({ error: 'Enter a number of questions' })
       .int('Use a whole number')
       .min(1, 'At least 1 question')
       .max(MAX_QUESTION_COUNT, `At most ${MAX_QUESTION_COUNT} questions`),
-    tone: z.enum(['strict', 'neutral', 'friendly']),
-    responseStyle: z.enum(['concise', 'detailed']),
-    interviewerRole: z.enum(['recruiter', 'technical_screener', 'hr', 'hiring_manager']),
-    interviewType: z.enum(['technical', 'behavioral']),
+    tone: toneSchema,
+    responseStyle: responseStyleSchema,
+    interviewerRole: interviewerRoleSchema,
+    interviewType: interviewTypeSchema,
     jobDescriptionId: z.string().nullable(),
     cvId: z.string().nullable(),
     coverLetterId: z.string().nullable(),
@@ -43,12 +51,6 @@ export const createInterviewSchema = z
 
 /** Form state for Create Interview */
 export type CreateInterviewModel = z.infer<typeof createInterviewSchema>;
-export type Tone = CreateInterviewModel['tone'];
-export type Seniority = CreateInterviewModel['seniority'];
-export type Difficulty = CreateInterviewModel['difficulty'];
-export type ResponseStyle = CreateInterviewModel['responseStyle'];
-export type InterviewType = CreateInterviewModel['interviewType'];
-export type InterviewerRole = CreateInterviewModel['interviewerRole'];
 
 /** Starting values for a blank form. */
 export function initialCreateInterviewModel(): CreateInterviewModel {

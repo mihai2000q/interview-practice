@@ -47,6 +47,11 @@ class Document(Base):
         passive_deletes=True,
     )
 
+    @property
+    def analysis_model(self) -> str | None:
+        """The model that produced its cached analysis, or None if it has none."""
+        return self.analysis.model if self.analysis is not None else None
+
 
 class DocumentAnalysis(Base):
     """What phase 1 extracted from a Document, cached for reuse (ADR 0012)."""

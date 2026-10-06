@@ -229,8 +229,8 @@ judging output quality.
 - Real RAG/vector database for JD/CV context ([ADR 0004](./adr/0004-job-description-context-is-not-rag.md)).
 - Automated testing, logging/observability, CI/CD, cloud hosting choice, horizontal
   scaling.
-- Voice input (speech-to-text) and TTS voice/rate tuning — designed (see
-  `architecture.md`) but not built this pass.
+- TTS voice/rate tuning and a per-message replay button — designed (see `architecture.md`)
+  but not built this pass.
 - Per-prompt cost tracking UI — designed (export-only) but not built this pass.
 - Exact visual/pixel design (icon choices, grouped-history collapse treatment, interviewer
   sidebar's finer layout) — left for whenever those screens actually get built.

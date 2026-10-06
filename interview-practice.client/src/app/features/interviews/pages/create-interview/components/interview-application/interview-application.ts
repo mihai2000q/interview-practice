@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, model, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, model } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FieldTree, FormField } from '@angular/forms/signals';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -35,7 +35,16 @@ export class InterviewApplication {
    */
   readonly selectedApplication = model<ApplicationSummary | null>(null);
   /** Expanded by the user, or by a failed submit that needs the application choice. */
-  protected readonly expanded = signal(false);
+  /** An invalid application choice, once touched, needs this card open so the error is seen. */
+  private readonly needsAttention = computed(() => {
+    const field = this.interviewForm().applicationId();
+    return field.touched() && field.errors().length > 0;
+  });
+  /** Opened by the candidate, or by `needsAttention`; it then stays open. */
+  protected readonly expanded = linkedSignal<boolean, boolean>({
+    source: this.needsAttention,
+    computation: (attention, previous) => attention || (previous?.value ?? false),
+  });
   /** "Existing" has nothing to pick from while loading, on error, or with no applications. */
   protected readonly existingUnavailable = computed(
     () =>
@@ -75,18 +84,15 @@ export class InterviewApplication {
   private readonly api = inject(ApplicationsApi);
   protected readonly applications = rxResource({ stream: () => this.api.list() });
 
-  constructor() {
-    effect(() => {
-      const field = this.interviewForm().applicationId();
-      if (field.touched() && field.errors().length > 0) {
-        this.expanded.set(true);
-      }
-    });
-  }
+  /** The company is optional: without one the label is just the job title. */
+  protected readonly applicationLabel = (application: ApplicationSummary): string =>
+    application.companyName
+      ? `${application.companyName} — ${application.jobTitle}`
+      : application.jobTitle;
 
   protected readonly applicationName = (id: unknown): string => {
     const application = (this.applications.value() ?? []).find((item) => item.id === id);
-    return application ? `${application.companyName} — ${application.jobTitle}` : '';
+    return application ? this.applicationLabel(application) : '';
   };
 
   /** Leaving "existing" releases the application: the pre-filled values stay, unlocked. */

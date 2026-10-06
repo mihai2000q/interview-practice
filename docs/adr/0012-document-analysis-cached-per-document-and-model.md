@@ -6,7 +6,7 @@ Document), together with the `model` that produced it. The analysis describes th
 Document, not the Interview: a CV's skills don't change between stages of the same
 `JobApplication`. So a later Interview that uses the same Document reuses the row, unless
 its `jd_analysis` model (override or default) differs from the stored one, in which case
-the Document is re-analysed and the row overwritten. One row per Document, not one per
+the Document is re-analyzed and the row overwritten. One row per Document, not one per
 (Document, model): alternating models re-runs the analysis each time, which is rare enough
 not to justify a wider key.
 
@@ -16,27 +16,28 @@ can't be cached per Document, and leaves the skills/topics nowhere for the later
 (the answer helpers read the analysis on every Q&A turn). The cost of caching is that
 phase 1 is split into up to three calls (run in parallel) with a prompt per Document type,
 and that the Interview's `domain` now comes from the job description's analysis (else the
-CV's) instead of being inferred from the job title as well; with no analysed Document,
+CV's) instead of being inferred from the job title as well; with no analyzed Document,
 phase 2 supplies it.
 
 The analysis is requested through its own endpoint, `PUT /api/documents/:id/analysis`
 (a `PUT` because it is idempotent), which the client calls right after an upload, not
 inside `POST /api/documents`: the upload stays fast and its "Uploading…" state stays
 honest, and the client can show "Analyzing document…" separately. The latency is hidden
-behind the candidate filling in the rest of the form. The client calls it only on upload:
-a saved Document, or one pre-filled by an Application, was analysed when it was uploaded,
-and a Document that somehow has no analysis is analysed by `POST /api/interviews` at submit.
-The endpoint uses the default `jd_analysis` model; an Interview that overrides that model
-finds a mismatch at submit and re-analyses then, so the speed-up applies only when the
-model wasn't changed.
+behind the candidate filling in the rest of the form. The endpoint takes the Interview's
+`jd_analysis` override as an optional body (default model without it). For a Document the
+candidate picks rather than uploads, the client calls it only on request: the API reports
+the model that made each Document's analysis, the client compares it with the model the form
+will use, and offers "Analyze now" when it is missing or from another model. If the
+candidate doesn't, `POST /api/interviews` analyzes the Document at submit, so the speed-up
+applies only when the model wasn't changed after the analysis.
 
-There is no separate cancel or retry. The attachment stays visible while the analysis
-runs, and the only way to stop it is to remove the attachment: the client abandons the
-request and deletes the Document. A failure is handled by who is at fault: if the Document
+There is no separate cancel. The attachment stays visible while the analysis runs, and the
+way to stop it is to remove the attachment (the client abandons the request and deletes the
+Document) or to pick another Document. A failure is handled by who is at fault: if the Document
 itself is rejected (`422`), the client deletes it and tells the candidate to use a different
 file, back at the dropzone; for any other failure (`502`/`503`/`504`, network), which is not
-the Document's fault, the client keeps it with a notice, and the analysis runs again at
-submit. Abandoning
+the Document's fault, the client keeps it, shows it as not analyzed with a button to try
+again, and otherwise the analysis runs at submit. Abandoning
 a request is client-side only: the server can't interrupt a running LLM call, so it
 finishes and caches the result (a deleted Document takes its analysis with it). A submit
 that overlaps a still-running analysis can duplicate the call, and whichever commits first

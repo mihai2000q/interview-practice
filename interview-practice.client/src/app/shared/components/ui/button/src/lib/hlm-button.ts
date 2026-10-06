@@ -22,7 +22,7 @@ import { HlmButtonSpinner } from './hlm-button-spinner';
 import { injectBrnButtonConfig } from './hlm-button.token';
 
 export const buttonVariants = cva(
-  "focus-visible:border-ring focus-visible:ring-ring/50 data-[matches-spartan-invalid=true]:ring-destructive/20 dark:data-[matches-spartan-invalid=true]:ring-destructive/40 data-[matches-spartan-invalid=true]:border-destructive dark:data-[matches-spartan-invalid=true]:border-destructive/50 rounded-md border border-transparent bg-clip-padding text-sm font-medium focus-visible:ring-3 active:not-aria-[haspopup]:scale-93 data-[matches-spartan-invalid=true]:ring-3 [&_ng-icon:not([class*='text-'])]:text-[length:--spacing(4)] group/button cursor-pointer inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_ng-icon]:pointer-events-none [&_ng-icon]:shrink-0",
+  "focus-visible:border-ring focus-visible:ring-ring/50 data-[matches-spartan-invalid=true]:ring-destructive/20 dark:data-[matches-spartan-invalid=true]:ring-destructive/40 data-[matches-spartan-invalid=true]:border-destructive dark:data-[matches-spartan-invalid=true]:border-destructive/50 rounded-md border border-transparent bg-clip-padding text-sm font-medium focus-visible:ring-3 active:not-aria-[haspopup]:not-data-loading:scale-93 data-[matches-spartan-invalid=true]:ring-3 [&_ng-icon:not([class*='text-'])]:text-[length:--spacing(4)] group/button cursor-pointer inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_ng-icon]:pointer-events-none [&_ng-icon]:shrink-0",
   {
     variants: {
       variant: {
@@ -69,7 +69,6 @@ export type ButtonVariants = VariantProps<typeof buttonVariants>;
     '[attr.aria-busy]': 'loading() || null',
     '[attr.data-loading]': 'loading() || null',
     '[attr.data-loading-phase]': '_loadingPhase()',
-    '(click)': 'onClick($event)',
   },
 })
 export class HlmButton {
@@ -106,7 +105,18 @@ export class HlmButton {
         }
       });
     });
+    // While loading, a click does nothing, whoever listens for it. A capture listener runs before
+    // every other listener on the button (a `(click)` written on the same element included), which
+    // a host `(click)` binding does not: that one ran after it and so was too late to stop it.
+    const swallowClicksWhileLoading = (event: Event) => {
+      if (this.loading()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+    this._host.addEventListener('click', swallowClicksWhileLoading, { capture: true });
     inject(DestroyRef).onDestroy(() => {
+      this._host.removeEventListener('click', swallowClicksWhileLoading, { capture: true });
       clearTimeout(this._leaveTimer);
       this._spinner?.destroy();
     });
@@ -120,13 +130,6 @@ export class HlmButton {
 
   setClass(classes: string): void {
     this._additionalClasses.set(classes);
-  }
-
-  protected onClick(event: Event): void {
-    if (this.loading()) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }
   }
 
   /**

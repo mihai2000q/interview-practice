@@ -2,9 +2,6 @@
 for use (precedence, rendering), and the extraction contract against a fake model. No
 database: Documents and analyses are built unsaved."""
 
-import json
-
-import httpx
 import pytest
 
 from app.llm.openrouter import CompletionSettings, OpenRouterClient
@@ -16,6 +13,7 @@ from app.services.document_analysis.extraction import (
     build_messages,
     extract,
 )
+from tests.support import chat_response, fake_client
 
 JD, CV, COVER = (
     DocumentType.job_description,
@@ -31,7 +29,7 @@ def document(
     company: str | None = None,
     skills: list[str] | None = None,
     topics: list[str] | None = None,
-    analysed: bool = True,
+    analyzed: bool = True,
 ) -> Document:
     doc = Document(
         type=document_type,
@@ -40,7 +38,7 @@ def document(
         source_filename="f.pdf",
         file_path="x",
     )
-    if analysed:
+    if analyzed:
         doc.analysis = DocumentAnalysis(
             model="m",
             domain=domain,
@@ -97,8 +95,8 @@ def test_no_documents_resolve_to_nothing() -> None:
     )
 
 
-def test_documents_that_were_not_analysed_resolve_to_nothing() -> None:
-    result = context(jd=document(JD, analysed=False), cv=document(CV, analysed=False))
+def test_documents_that_were_not_analyzed_resolve_to_nothing() -> None:
+    result = context(jd=document(JD, analyzed=False), cv=document(CV, analyzed=False))
     assert result == JobContext(None, None, "", "")
 
 
@@ -136,15 +134,7 @@ def test_brackets_in_an_analysis_cannot_close_the_fence() -> None:
 
 
 def fake_model(reply: dict[str, object]) -> OpenRouterClient:
-    def handle(request: httpx.Request) -> httpx.Response:
-        body = {"choices": [{"message": {"content": json.dumps(reply)}}]}
-        return httpx.Response(200, json=body)
-
-    return OpenRouterClient(
-        base_url="https://llm.test",
-        api_key=lambda: "k",
-        transport=httpx.MockTransport(handle),
-    )
+    return fake_client(lambda request: chat_response(reply))
 
 
 def run_extract(document_type: DocumentType, reply: dict[str, object]):

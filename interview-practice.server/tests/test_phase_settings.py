@@ -80,7 +80,7 @@ def test_a_field_left_unset_falls_back_to_the_default() -> None:
 
 def test_an_empty_model_falls_back_to_the_default() -> None:
     config = phase_config(
-        GenerationPhase.ask_back, [row(GenerationPhase.ask_back, model="")]
+        GenerationPhase.evaluation, [row(GenerationPhase.evaluation, model="")]
     )
     assert config.model == DEFAULT_MODEL
 

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Flask backend for the `interview-practice` repo, managed with `uv`. Early stage: an application factory and the SQLAlchemy models exist, but there are no routes or tests yet. See `../CLAUDE.md` for the repo layout.
+Flask backend for the `interview-practice` repo, managed with `uv`. Early stage: an application factory, the SQLAlchemy models, the documents, applications and interviews APIs, and DB-free unit tests exist. See `../CLAUDE.md` for the repo layout.
 
 ## Commands
 
@@ -13,14 +13,14 @@ uv run flask --app app.app run --debug # dev server with auto-reload/debugger
 uv run ruff check .                    # lint
 uv run ruff format .                   # format
 uv run mypy app                        # type check (strict mode)
-uv run pytest                          # run tests (no tests exist yet)
+uv run pytest                          # run tests (DB-free unit tests)
 scripts/db.sh migrate "message"        # generate a migration (review it, then upgrade)
 scripts/db.sh upgrade                  # apply pending migrations (also: downgrade, current, history)
 uv add <package>                       # add a runtime dependency
 uv add --dev <package>                 # add a dev dependency
 ```
 
-There is no `tests/` directory yet; `[tool.ruff.lint.per-file-ignores]` and `[tool.mypy] exclude` in `pyproject.toml` already anticipate one.
+Tests live in `tests/` and need no database: models are built unsaved and the LLM client talks to a fake transport. Shared helpers (`fake_client`, `chat_response`, `build_interview`) are in `tests/support.py`; use them rather than rebuilding a client or an Interview in each file.
 
 ## Architecture and conventions
 
@@ -30,6 +30,7 @@ There is no `tests/` directory yet; `[tool.ruff.lint.per-file-ignores]` and `[to
 - `static/` and `templates/` exist but are empty, following default Flask conventions for static assets and Jinja templates.
 - `create_app()` is built; the Blueprints (one per domain area) are not yet. Extensions (`db`, `migrate`) live in `app/extensions.py`, models in `app/models/`. See `../docs/architecture.md` and `../docs/api-design.md` before adding routes, so each domain area gets its own Blueprint, registered in `create_app()`, rather than growing `app.py` monolithically.
 - `Dockerfile`/`.dockerignore` exist for the Docker Compose deployment — see `../docs/deployment.md`.
+- Route functions are named `<http method>_<resource>`: `get_documents`, `post_interviews`, `get_interview_by_id`, `put_interview_opening`. They are never the same as a use case's name (use cases start with an action verb), so a route never shadows an import.
 - Spelling is American English in code, comments and docs (`analyze`, `analyzed`, `behavior`). `analysis`/`analyses` stay as the nouns.
 - Ruff (`[tool.ruff]`, `[tool.ruff.lint]` in `pyproject.toml`): target `py312`, line length 88, rule set `E, W, F, I, B, C90, UP, SIM, RUF`.
 - Mypy (`[tool.mypy]`): `strict = true`, `disallow_untyped_defs = true`, `warn_return_any = true` — new functions need full type annotations. `migrations` and `tests` are excluded.

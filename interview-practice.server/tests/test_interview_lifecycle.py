@@ -13,6 +13,7 @@ from app.services.interview_lifecycle import (
     is_stale,
     turn_in_progress,
 )
+from tests.support import build_interview
 
 NOW = datetime(2026, 10, 4, 12, 0, tzinfo=UTC)
 
@@ -23,7 +24,7 @@ def interview(
     status: InterviewStatus = InterviewStatus.in_progress,
     turn_started_ago: timedelta | None = None,
 ) -> Interview:
-    return Interview(
+    return build_interview(
         status=status,
         last_activity_at=NOW - idle,
         turn_started_at=None if turn_started_ago is None else NOW - turn_started_ago,

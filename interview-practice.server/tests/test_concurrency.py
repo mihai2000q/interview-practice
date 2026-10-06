@@ -7,7 +7,7 @@ from collections.abc import Iterator
 import pytest
 from flask import Flask, current_app
 
-from app.llm.concurrency import background, fan_out
+from app.llm.concurrency import fan_out
 
 
 @pytest.fixture
@@ -68,30 +68,3 @@ def test_an_error_is_raised_at_once_without_waiting_for_the_rest(app: Flask) -> 
 def test_the_error_of_whichever_job_fails_first_is_raised(app: Flask) -> None:
     with pytest.raises(RuntimeError, match="quick"):
         fan_out([failing("late", after=0.4), failing("quick")])
-
-
-# -- background ------------------------------------------------------------------------
-
-
-def test_a_background_job_returns_its_result(app: Flask) -> None:
-    job = background(slow(0.1, "done"))
-    assert job.result() == "done"
-    job.abandon()  # harmless after the result
-
-
-def test_a_background_job_has_the_app_context(app: Flask) -> None:
-    job = background(lambda: str(current_app.config["MARKER"]))
-    assert job.result() == "from-config"
-
-
-def test_a_background_error_surfaces_on_result(app: Flask) -> None:
-    job = background(failing("late"))
-    with pytest.raises(RuntimeError, match="late"):
-        job.result()
-
-
-def test_abandoning_does_not_wait_for_the_job(app: Flask) -> None:
-    job = background(slow(1.0, "ignored"))
-    started = time.perf_counter()
-    job.abandon()
-    assert time.perf_counter() - started < 0.3

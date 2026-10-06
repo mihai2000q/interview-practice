@@ -8,6 +8,7 @@ from app.interviews.use_cases.get_ask_back_suggestions.suggestions import (
 from app.llm.factory import get_llm_client
 from app.llm.phase_settings import phase_config
 from app.models import GenerationPhase, MessagePhase
+from app.services.preferences import load_preferences
 
 
 def get_ask_back_suggestions(interview_id: uuid.UUID) -> list[str]:
@@ -24,6 +25,6 @@ def get_ask_back_suggestions(interview_id: uuid.UUID) -> list[str]:
             code="NOT_IN_ASK_BACK_PHASE",
         )
     model, settings = phase_config(
-        GenerationPhase.coaching_helpers, interview.phase_settings
+        GenerationPhase.coaching_helpers, interview.phase_settings, load_preferences()
     )
     return suggest_questions(get_llm_client(), model, settings, interview)

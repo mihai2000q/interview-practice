@@ -14,6 +14,7 @@ from app.models import (
     Message,
     MessagePhase,
 )
+from app.services.preferences import load_preferences
 
 
 @dataclass(frozen=True)
@@ -47,7 +48,7 @@ def _run_and_store_exchange(interview_id: uuid.UUID, content: str) -> Exchange:
     # Ask the model before storing anything, so a failed exchange leaves nothing behind
     # and the candidate can simply send the reply again.
     model, settings = phase_config(
-        GenerationPhase.live_conversation, interview.phase_settings
+        GenerationPhase.live_conversation, interview.phase_settings, load_preferences()
     )
     outcome = run_exchange(get_llm_client(), model, settings, interview, content)
 

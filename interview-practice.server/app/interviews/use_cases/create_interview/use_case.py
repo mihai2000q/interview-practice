@@ -33,6 +33,7 @@ from app.models import (
     JobApplication,
 )
 from app.services.document_analysis import analyze_job_documents
+from app.services.preferences import load_preferences
 
 
 def create_interview(body: InterviewCreate) -> Interview:
@@ -40,14 +41,15 @@ def create_interview(body: InterviewCreate) -> Interview:
     phase_settings = (
         body.phase_settings_override.to_rows() if body.phase_settings_override else []
     )
-    ensure_judge_differs_from_interviewer(phase_settings)
+    preferences = load_preferences()
+    ensure_judge_differs_from_interviewer(phase_settings, preferences)
     client = get_llm_client()
 
     documents = _load_documents(body)
     with timed("analysis"):
         context = analyze_job_documents(
             client,
-            *phase_config(GenerationPhase.jd_analysis, phase_settings),
+            *phase_config(GenerationPhase.jd_analysis, phase_settings, preferences),
             job_description=documents.job_description,
             cv=documents.cv,
             cover_letter=documents.cover_letter,
@@ -55,7 +57,7 @@ def create_interview(body: InterviewCreate) -> Interview:
     with timed("plan"):
         plan = plan_interview(
             client,
-            *phase_config(GenerationPhase.question_plan, phase_settings),
+            *phase_config(GenerationPhase.question_plan, phase_settings, preferences),
             body,
             context,
         )

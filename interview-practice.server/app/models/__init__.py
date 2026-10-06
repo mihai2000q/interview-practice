@@ -7,6 +7,7 @@ from app.models.interview_question import InterviewCategory, InterviewQuestion
 from app.models.interviewer_review import InterviewerReview
 from app.models.job_application import JobApplication
 from app.models.message import Message, MessagePhase, MessageRole
+from app.models.preference_phase_settings import PreferencePhaseSettings
 
 __all__ = [
     "Difficulty",
@@ -26,6 +27,7 @@ __all__ = [
     "Message",
     "MessagePhase",
     "MessageRole",
+    "PreferencePhaseSettings",
     "ResponseStyle",
     "StarCompleteness",
     "Verdict",

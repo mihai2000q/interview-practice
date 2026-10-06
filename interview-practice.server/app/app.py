@@ -10,6 +10,7 @@ from app.documents import documents_bp
 from app.errors.handlers import register_error_handlers
 from app.extensions import db, migrate
 from app.interviews import interviews_bp
+from app.preferences import preferences_bp
 from config import Config
 
 
@@ -29,5 +30,6 @@ def create_app() -> Flask:
     app.register_blueprint(applications_bp)
     app.register_blueprint(interviews_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(preferences_bp)
 
     return app

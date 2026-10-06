@@ -12,5 +12,7 @@ Enforced by excluding the colliding model from the judge-model picker everywhere
 appears (Preferences, per-interview advanced settings), with a backend validation check as
 a safety net for anything that bypasses the UI (`app/llm/phase_settings.py`, raising
 `409 JUDGE_MODEL_COLLISION`). The check resolves each phase's model the same way the
-phases themselves do, so overrides and defaults can't disagree. The same rule for the
-global Preferences pair is not built yet: it comes with the Preferences feature.
+phases themselves do, so overrides and defaults can't disagree. The same rule
+is enforced on the global Preferences defaults (`PATCH /api/preferences`), checked on the
+defaults as they will be after the update, and `POST /api/interviews` checks the Interview's
+overrides layered over them.

@@ -29,7 +29,7 @@ surprising.
 | `/interviews/new` | Create Interview. Candidate sets up a session: role, documents, difficulty/tone. |
 | `/interviews/:id` | Interview Session. The live, multi-turn chat with the AI interviewer (a persistent Q&A/Ask-Back phase label above the transcript), alongside a right-side interviewer sidebar (persona portrait/name/title, tone badge, company name if set, question progress, Abandon action). |
 | `/interviews/:id/results` | Results. The STAR evaluation and verdict for a finished (or abandoned) interview, the transcript, and — in a separate, dev-facing section — the Interviewer Review of the AI interviewer. |
-| `/preferences` | Preferences. Tabbed: Model & Prompts (model/temperature/system-prompt tuning) and Documents (manage all saved CVs/cover letters/JDs). Reached via the sidebar, deliberately kept separate from the candidate-facing flow. |
+| `/preferences` | Preferences. Tabbed: Model & Prompts (per-phase model/temperature/max-tokens/reasoning-effort defaults) and Documents (manage all saved CVs/cover letters/JDs). Reached via the sidebar, deliberately kept separate from the candidate-facing flow. |
 
 ## Workflow
 

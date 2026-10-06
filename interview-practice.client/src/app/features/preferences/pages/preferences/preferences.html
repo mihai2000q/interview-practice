@@ -1,0 +1,28 @@
+<main class="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-8">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-2xl font-semibold tracking-tight">Preferences</h1>
+    <p class="text-muted-foreground">
+      Tune how the interviewer's models behave, and manage the documents you have saved.
+    </p>
+  </header>
+
+  <hlm-tabs class="gap-4" tab="models">
+    <hlm-tabs-list aria-label="Preferences" class="w-fit">
+      <button hlmTabsTrigger="models">
+        <ng-icon aria-hidden="true" name="lucideSlidersHorizontal" />
+        Model &amp; Prompts
+      </button>
+      <button hlmTabsTrigger="documents">
+        <ng-icon aria-hidden="true" name="lucideFileText" />
+        Documents
+      </button>
+    </hlm-tabs-list>
+
+    <div hlmTabsContent="models">
+      <app-model-defaults />
+    </div>
+    <div hlmTabsContent="documents">
+      <app-document-library />
+    </div>
+  </hlm-tabs>
+</main>

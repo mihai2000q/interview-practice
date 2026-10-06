@@ -13,6 +13,7 @@ import {
   lucideCircleX,
   lucideEllipsis,
   lucidePlus,
+  lucideSettings,
   lucideTrash2,
 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -64,6 +65,7 @@ import {
       lucideCircleX,
       lucideEllipsis,
       lucidePlus,
+      lucideSettings,
       lucideTrash2,
     }),
   ],

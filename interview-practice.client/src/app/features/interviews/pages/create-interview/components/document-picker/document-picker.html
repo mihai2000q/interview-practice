@@ -23,8 +23,8 @@
     </div>
 
     <label
-      [aria-selected]="document.saved"
-      class="flex items-center gap-2 text-sm ml-2 text-muted-foreground aria-selected:text-gray-100/80"
+      [class.text-muted-foreground]="!document.saved"
+      class="ml-2 flex items-center gap-2 text-sm"
     >
       <hlm-checkbox (checkedChange)="setSaved($event)" [checked]="document.saved" />
       Save for later

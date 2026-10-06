@@ -1,30 +1,5 @@
-import {
-  CreateInterviewModel,
-  createInterviewSchema,
-  Difficulty,
-  InterviewerRole,
-  ResponseStyle,
-  Tone,
-} from './create-interview.schema';
-import { PhaseSettingsOverride } from './phase-settings.schema';
-
-export interface CreateInterviewRequest {
-  jobTitle: string;
-  companyName?: string;
-  seniority: string;
-  difficulty: Difficulty;
-  targetQuestionCount: number;
-  tone: Tone;
-  interviewType: string;
-  interviewerRole: InterviewerRole;
-  responseStyle: ResponseStyle;
-  coachingHelpersEnabled: boolean;
-  jobDescriptionId: string | null;
-  cvId: string | null;
-  coverLetterId: string | null;
-  jobApplication: { id: string } | { createNew: true } | null;
-  phaseSettingsOverride?: PhaseSettingsOverride;
-}
+import { CreateInterviewRequest } from '@app/features/interviews/models/create-interview.api';
+import { CreateInterviewModel, createInterviewSchema } from './create-interview.schema';
 
 function jobApplication(model: CreateInterviewModel): CreateInterviewRequest['jobApplication'] {
   switch (model.applicationMode) {

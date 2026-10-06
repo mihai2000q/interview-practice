@@ -10,8 +10,8 @@ import {
   INTERVIEWER_ROLES,
   INTERVIEWER_TONES,
   labelOf,
-  ROLE_DEFAULTS,
-} from '@app/features/interviews/pages/create-interview/models/create-interview.options';
+} from '@app/features/interviews/models/interview.options';
+import { ROLE_DEFAULTS } from '@app/features/interviews/pages/create-interview/models/create-interview.defaults';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmAvatarImports } from '@spartan-ng/helm/avatar';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';

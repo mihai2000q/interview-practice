@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, computed, DestroyRef, inject, input } from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
@@ -6,15 +7,18 @@ import {
   DEFAULT_INTERVIEW_MODEL,
   DEFAULT_MAX_TOKENS,
   DEFAULT_TEMPERATURE,
+  compactPhaseSettings,
   INTERVIEW_MODELS,
   JUDGE_MODELS,
+  MAX_TOKENS_RANGE,
   Phase,
   PHASE_LABELS,
   PHASES,
   PhaseSettings,
   PhaseSettingsOverride,
   REASONING_EFFORTS,
-} from '@app/features/interviews/pages/create-interview/models/phase-settings.schema';
+  TEMPERATURE_RANGE,
+} from '@app/features/interviews/models/phase-settings.schema';
 import { CreateInterviewModel } from '@app/features/interviews/pages/create-interview/models/create-interview.schema';
 import {
   HlmCard,
@@ -30,8 +34,12 @@ import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmSlider } from '@spartan-ng/helm/slider';
 
+/** The section's collapse takes this long; scrolling to its end waits for it. */
+const COLLAPSE_TRANSITION_MS = 300;
+const SCROLL_DELAY_MS = COLLAPSE_TRANSITION_MS + 20;
+
 @Component({
-  selector: 'app-phase-settings',
+  selector: 'app-phase-model-overrides',
   providers: [provideIcons({ lucideChevronDown, lucideWrench })],
   imports: [
     HlmLabelImports,
@@ -48,17 +56,18 @@ import { HlmSlider } from '@spartan-ng/helm/slider';
     HlmSlider,
     HlmCollapsibleImports,
   ],
-  templateUrl: './phase-settings.html',
+  templateUrl: './phase-model-overrides.html',
 })
-export class PhaseSettingsOverrides {
+export class PhaseModelOverrides {
   readonly interviewForm = input.required<FieldTree<CreateInterviewModel>>();
-  /** Stand-in for the Preferences model until Preferences exists. */
-  readonly defaultInterviewModel = input(DEFAULT_INTERVIEW_MODEL);
   protected readonly phases = PHASES;
   protected readonly phaseLabels = PHASE_LABELS;
   protected readonly reasoningEfforts = REASONING_EFFORTS;
   protected readonly defaultTemperature = DEFAULT_TEMPERATURE;
   protected readonly defaultMaxTokens = DEFAULT_MAX_TOKENS;
+  protected readonly temperatureRange = TEMPERATURE_RANGE;
+  protected readonly maxTokensRange = MAX_TOKENS_RANGE;
+  private readonly document = inject(DOCUMENT);
   private scrollTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly field = computed(() => this.interviewForm().phaseSettings());
   private readonly value = computed(() => this.field().value());
@@ -71,15 +80,19 @@ export class PhaseSettingsOverrides {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.scrollTimer));
   }
 
-  /** Opening the section grows the page; scroll to the bottom once the 300ms transition is done. */
+  /** Opening the section grows the page; scroll to the bottom once the transition is done. */
   protected onExpandedChange(expanded: boolean): void {
     clearTimeout(this.scrollTimer);
     if (!expanded) {
       return;
     }
     this.scrollTimer = setTimeout(
-      () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }),
-      320,
+      () =>
+        this.document.defaultView?.scrollTo({
+          top: this.document.documentElement.scrollHeight,
+          behavior: 'smooth',
+        }),
+      SCROLL_DELAY_MS,
     );
   }
 
@@ -96,7 +109,7 @@ export class PhaseSettingsOverrides {
   }
 
   protected setEffort(phase: Phase, raw: unknown): void {
-    this.set(phase, { reasoningEffort: this.textOrUndefined(raw) });
+    this.set(phase, { reasoningEffort: REASONING_EFFORTS.find((effort) => effort === raw) });
   }
 
   protected setTemperature(phase: Phase, values: number[]): void {
@@ -117,7 +130,7 @@ export class PhaseSettingsOverrides {
     return value === undefined ? undefined : Number(value.toFixed(2));
   }
 
-  private set(phase: Phase, change: Partial<Record<keyof PhaseSettings, unknown>>): void {
+  private set(phase: Phase, change: Partial<PhaseSettings>): void {
     const field = this.field();
     field.value.update((current) => this.applyChange(current, phase, change));
     field.markAsDirty();
@@ -131,14 +144,12 @@ export class PhaseSettingsOverrides {
   private applyChange(
     settings: PhaseSettingsOverride,
     phase: Phase,
-    change: Partial<Record<keyof PhaseSettings, unknown>>,
+    change: Partial<PhaseSettings>,
   ): PhaseSettingsOverride {
-    const merged = Object.entries({ ...settings[phase], ...change }).filter(
-      ([, value]) => value !== undefined,
-    );
+    const merged = compactPhaseSettings({ ...settings[phase], ...change });
     const next: PhaseSettingsOverride = { ...settings };
-    if (merged.length > 0) {
-      next[phase] = Object.fromEntries(merged) as PhaseSettings;
+    if (merged) {
+      next[phase] = merged;
     } else {
       delete next[phase];
     }
@@ -152,8 +163,8 @@ export class PhaseSettingsOverrides {
    */
   private interviewerModels(settings: PhaseSettingsOverride): Set<string> {
     return new Set([
-      settings.questionPlan?.model ?? this.defaultInterviewModel(),
-      settings.liveConversation?.model ?? this.defaultInterviewModel(),
+      settings.questionPlan?.model ?? DEFAULT_INTERVIEW_MODEL,
+      settings.liveConversation?.model ?? DEFAULT_INTERVIEW_MODEL,
     ]);
   }
 
@@ -163,9 +174,9 @@ export class PhaseSettingsOverrides {
     if (!judge?.model || !this.interviewerModels(settings).has(judge.model)) {
       return settings;
     }
-    const rest = Object.fromEntries(Object.entries(judge).filter(([key]) => key !== 'model'));
+    const rest = compactPhaseSettings({ ...judge, model: undefined });
     const next = { ...settings };
-    if (Object.keys(rest).length > 0) {
+    if (rest) {
       next.interviewerReview = rest;
     } else {
       delete next.interviewerReview;

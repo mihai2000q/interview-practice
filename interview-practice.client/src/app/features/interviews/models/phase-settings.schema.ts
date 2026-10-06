@@ -34,13 +34,29 @@ export const DEFAULT_TEMPERATURE = 0.7;
 export const DEFAULT_MAX_TOKENS = 1024;
 export const REASONING_EFFORTS = ['minimal', 'low', 'medium', 'high'] as const;
 
+/** The sliders' limits; the schema below accepts exactly these. */
+export const TEMPERATURE_RANGE = { min: 0, max: 2, step: 0.1 } as const;
+export const MAX_TOKENS_RANGE = { min: 128, max: 8192, step: 128 } as const;
+
 export const phaseSettingsSchema = z.object({
   model: z.string().optional(),
-  temperature: z.number().min(0).max(2).optional(),
+  temperature: z.number().min(TEMPERATURE_RANGE.min).max(TEMPERATURE_RANGE.max).optional(),
   maxTokens: z.number().int().positive().optional(),
   reasoningEffort: z.enum(REASONING_EFFORTS).optional(),
 });
 export type PhaseSettings = z.infer<typeof phaseSettingsSchema>;
+
+/** `settings` without its unset fields, or `undefined` when none is set. */
+export function compactPhaseSettings(settings: PhaseSettings): PhaseSettings | undefined {
+  const { model, temperature, maxTokens, reasoningEffort } = settings;
+  const set: PhaseSettings = {
+    ...(model !== undefined && { model }),
+    ...(temperature !== undefined && { temperature }),
+    ...(maxTokens !== undefined && { maxTokens }),
+    ...(reasoningEffort !== undefined && { reasoningEffort }),
+  };
+  return Object.keys(set).length > 0 ? set : undefined;
+}
 
 /** Per-phase LLM overrides; an absent phase or field falls back to the Preferences default. */
 export const phaseSettingsOverrideSchema = z.partialRecord(z.enum(PHASES), phaseSettingsSchema);

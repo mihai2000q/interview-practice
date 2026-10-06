@@ -8,10 +8,10 @@ import { HlmField, HlmFieldGroup, HlmFieldLabel } from '@spartan-ng/helm/field';
 import { HlmToggleGroup, HlmToggleGroupItem } from '@spartan-ng/helm/toggle-group';
 import {
   DIFFICULTIES,
-  DIFFICULTY_DEFAULTS,
   INTERVIEW_TYPES,
   RESPONSE_STYLES,
-} from '@app/features/interviews/pages/create-interview/models/create-interview.options';
+} from '@app/features/interviews/models/interview.options';
+import { DIFFICULTY_DEFAULTS } from '@app/features/interviews/pages/create-interview/models/create-interview.defaults';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmSlider } from '@spartan-ng/helm/slider';
 import { MAX_QUESTION_COUNT } from '@app/features/interviews/interviews.constants';

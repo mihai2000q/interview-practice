@@ -6,9 +6,9 @@ import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 
 /**
- * `running`: being analysed. `done`: analysed by the model the interview will use. `missing`: no
- * analysis. `outdated`: analysed by another model than the interview will use, which the server
- * redoes at creation. In the last two the candidate can analyse it now instead (faster later).
+ * `running`: being analyzed. `done`: analyzed by the model the interview will use. `missing`: no
+ * analysis. `outdated`: analyzed by another model than the interview will use, which the server
+ * redoes at creation. In the last two the candidate can analyze it now instead (faster later).
  */
 export type DocumentAnalysisState = 'running' | 'done' | 'missing' | 'outdated';
 
@@ -23,9 +23,9 @@ export class DocumentAnalysisStatus {
   readonly state = input.required<DocumentAnalysisState>();
   /** The model that made the Document's analysis, if it has one. */
   readonly analysisModel = input<string | null>(null);
-  /** The model the interview will analyse with. */
+  /** The model the interview will analyze with. */
   readonly expectedModel = input.required<string>();
-  /** The last attempt to analyse it failed for a reason that isn't the Document's. */
+  /** The last attempt to analyze it failed for a reason that isn't the Document's. */
   readonly attemptFailed = input(false);
   readonly analyzeNow = output();
 

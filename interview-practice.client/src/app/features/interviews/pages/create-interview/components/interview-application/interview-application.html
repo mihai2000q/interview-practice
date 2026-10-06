@@ -6,7 +6,7 @@
   hlmCollapsible
 >
   <div hlmCardHeader>
-    <h3 hlmCardTitle id="application-heading">
+    <h2 hlmCardTitle id="application-heading">
       <button
         class="group/trigger flex w-full cursor-pointer items-center gap-2 text-left"
         hlmCollapsibleTrigger
@@ -18,7 +18,7 @@
           name="lucideChevronDown"
         />
       </button>
-    </h3>
+    </h2>
     <p hlmCardDescription>Practice on its own, or add a stage to an existing application.</p>
   </div>
 
@@ -74,7 +74,7 @@
                     <hlm-select-content *hlmSelectPortal>
                       @for (application of applications.value() ?? []; track application.id) {
                         <hlm-select-item [value]="application.id">
-                          {{ application.companyName }} — {{ application.jobTitle }}
+                          {{ applicationLabel(application) }}
                         </hlm-select-item>
                       }
                     </hlm-select-content>

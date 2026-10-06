@@ -8,7 +8,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { HlmCard, HlmCardContent, HlmCardHeader, HlmCardTitle } from '@spartan-ng/helm/card';
 import { HlmFieldGroup } from '@spartan-ng/helm/field';
 import { CreateInterviewModel } from '@app/features/interviews/pages/create-interview/models/create-interview.schema';
-import { DocumentPicker } from '@app/features/interviews/pages/create-interview/components/document-picker/document-picker';
+import { DocumentPicker } from '../document-picker/document-picker';
 import { lucideFileText } from '@ng-icons/lucide';
 
 @Component({
@@ -32,8 +32,10 @@ export class InterviewDocuments {
   readonly application = input<ApplicationSummary | null>(null);
 
   private readonly pickers = viewChildren(DocumentPicker);
-  /** True while any of the three Documents is being analysed. */
+  /** True while any of the three Documents is being analyzed. */
   readonly analyzing = computed(() => this.pickers().some((picker) => picker.analyzing()));
+  /** True while any of the three files is still being sent. */
+  readonly uploading = computed(() => this.pickers().some((picker) => picker.uploading()));
 
   /** The `jdAnalysis` override, which decides which model the documents' analysis must come from. */
   protected readonly analysisSettings = computed(

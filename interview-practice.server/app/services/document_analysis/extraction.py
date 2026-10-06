@@ -6,6 +6,7 @@ derived from untrusted text and feeds later prompts and the database.
 """
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from pydantic import BaseModel
 
@@ -30,60 +31,65 @@ Reply with a single JSON object and nothing else, with exactly these keys:
 Never invent facts; use null or an empty list when the document doesn't say.\
 """
 
-_KEY_DESCRIPTIONS = {
-    "domain": (
-        '- "domain": {what}, as a short lowercase label of at most four words, such '
+
+class _Field(StrEnum):
+    """The keys the model can be asked for."""
+
+    domain = "domain"
+    skills = "skills"
+    likely_topics = "likely_topics"
+    company_name = "company_name"
+
+
+_DESCRIPTIONS = {
+    _Field.domain: (
+        '- "domain": {phrase}, as a short lowercase label of at most four words, such '
         'as "backend engineering", "data science" or "product management".'
     ),
-    "skills": (
+    _Field.skills: (
         '- "skills": up to {max_skills} concrete skills, tools or technologies '
-        "{whose}, most important first."
+        "{phrase}, most important first."
     ),
-    "likely_topics": ('- "likely_topics": up to {max_topics} {what}.'),
-    "company_name": ('- "company_name": {what}, otherwise null.'),
+    _Field.likely_topics: '- "likely_topics": up to {max_topics} {phrase}.',
+    _Field.company_name: '- "company_name": {phrase}, otherwise null.',
 }
 
 
 @dataclass(frozen=True)
 class _Spec:
-    """What to extract from one type of Document, and how to phrase the request."""
+    """What to extract from one type of Document: the keys asked for, each with the
+    phrase that completes its description."""
 
     kind: str
-    keys: dict[str, dict[str, str]]
+    phrases: dict[_Field, str]
 
 
 _SPECS = {
     DocumentType.job_description: _Spec(
         "a job description",
         {
-            "domain": {"what": "the field of the role"},
-            "skills": {"whose": "the role calls for"},
-            "likely_topics": {
-                "what": "subjects an interviewer for this role would probe"
-            },
-            "company_name": {
-                "what": "the hiring company's name if the document names it"
-            },
+            _Field.domain: "the field of the role",
+            _Field.skills: "the role calls for",
+            _Field.likely_topics: "subjects an interviewer for this role would probe",
+            _Field.company_name: "the hiring company's name if the document names it",
         },
     ),
     DocumentType.cv: _Spec(
         "a candidate's CV",
         {
-            "domain": {"what": "the field the candidate works in"},
-            "skills": {"whose": "the candidate lists or clearly uses"},
-            "likely_topics": {
-                "what": "parts of the candidate's experience an interviewer would probe"
-            },
+            _Field.domain: "the field the candidate works in",
+            _Field.skills: "the candidate lists or clearly uses",
+            _Field.likely_topics: (
+                "parts of the candidate's experience an interviewer would probe"
+            ),
         },
     ),
     DocumentType.cover_letter: _Spec(
         "a candidate's cover letter",
         {
-            "company_name": {
-                "what": (
-                    "the company the candidate is applying to, if the letter names it"
-                )
-            }
+            _Field.company_name: (
+                "the company the candidate is applying to, if the letter names it"
+            )
         },
     ),
 }
@@ -109,10 +115,10 @@ class Extracted:
 def build_messages(document_type: DocumentType, text: str) -> list[ChatMessage]:
     spec = _SPECS[document_type]
     keys = "\n".join(
-        _KEY_DESCRIPTIONS[key].format(
-            max_skills=MAX_SKILLS, max_topics=MAX_TOPICS, **fields
+        _DESCRIPTIONS[key].format(
+            phrase=phrase, max_skills=MAX_SKILLS, max_topics=MAX_TOPICS
         )
-        for key, fields in spec.keys.items()
+        for key, phrase in spec.phrases.items()
     )
     system = _SYSTEM_PROMPT.format(kind=spec.kind, keys=keys)
     return [ChatMessage("system", system), ChatMessage("user", fence("document", text))]
@@ -134,21 +140,23 @@ def extract(
     reply = client.chat_structured(
         _AnalysisReply, model, build_messages(document_type, text), settings
     )
-    asked = _SPECS[document_type].keys
+    asked = _SPECS[document_type].phrases
 
     # Bounded and tidied because it is derived from untrusted text and feeds later
     # prompts and the database. Keys that weren't asked for are dropped.
     company = (reply.company_name or "").strip()
-    if "company_name" not in asked or company.lower() in _NOT_A_COMPANY:
+    if _Field.company_name not in asked or company.lower() in _NOT_A_COMPANY:
         company = ""
-    domain = (reply.domain or "").strip().lower() if "domain" in asked else ""
+    domain = (reply.domain or "").strip().lower() if _Field.domain in asked else ""
     return Extracted(
         domain=domain[:MAX_DOMAIN_CHARS] or None,
         company_name=company[:MAX_COMPANY_CHARS] or None,
-        skills=_clean_list(reply.skills, MAX_SKILLS) if "skills" in asked else [],
+        skills=(
+            _clean_list(reply.skills, MAX_SKILLS) if _Field.skills in asked else []
+        ),
         likely_topics=(
             _clean_list(reply.likely_topics, MAX_TOPICS)
-            if "likely_topics" in asked
+            if _Field.likely_topics in asked
             else []
         ),
     )

@@ -6,6 +6,7 @@ from app.llm.phase_settings import (
     PhaseConfig,
     ensure_judge_differs_from_interviewer,
     ensure_model_allowed,
+    ensure_reasoning_effort_allowed,
     phase_defaults,
 )
 from app.llm.schemas import PhaseSettings, PhaseSettingsOverride
@@ -28,8 +29,12 @@ def update_preferences(
     if not changes:
         raise BadRequestError("Provide at least one phase to update.")
     for phase, settings in changes.items():
-        if settings is not None and settings.model is not None:
+        if settings is None:
+            continue
+        if settings.model is not None:
             ensure_model_allowed(phase, settings.model)
+        if settings.reasoning_effort is not None:
+            ensure_reasoning_effort_allowed(settings.reasoning_effort)
 
     rows = {row.phase: row for row in load_preferences()}
     for phase, settings in changes.items():

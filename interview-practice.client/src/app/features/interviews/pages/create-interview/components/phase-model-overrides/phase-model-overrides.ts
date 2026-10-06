@@ -43,6 +43,9 @@ import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 const COLLAPSE_TRANSITION_MS = 300;
 const SCROLL_DELAY_MS = COLLAPSE_TRANSITION_MS + 20;
 
+/** The phases whose output is the interviewer the judge scores (ADR 0009). */
+const INTERVIEWER_PHASES = ['questionPlan', 'liveConversation'] as const;
+
 @Component({
   selector: 'app-phase-model-overrides',
   providers: [provideIcons({ lucideChevronDown, lucideInfo, lucideWrench })],
@@ -191,8 +194,10 @@ export class PhaseModelOverrides {
 
   /**
    * Applies one edit to a phase and returns the next overrides: unset (`undefined`) values are
-   * removed, a phase left with nothing set is removed entirely, and a judge that now collides
-   * with the interview model is cleared.
+   * removed and a phase left with nothing set is removed entirely. The judge rule (ADR 0009) is
+   * then restored: an edit to an interview phase clears a judge that now collides with it, and an
+   * edit to the judge (resetting it to "Default" can bring back one the interview models already
+   * use) clears the interview model overrides that collide with it.
    */
   private applyChange(
     settings: PhaseSettingsOverride,
@@ -206,7 +211,9 @@ export class PhaseModelOverrides {
     } else {
       delete next[phase];
     }
-    return this.dropCollidingJudge(next);
+    return phase === 'interviewerReview'
+      ? this.dropCollidingInterviewers(next)
+      : this.dropCollidingJudge(next);
   }
 
   /**
@@ -215,24 +222,43 @@ export class PhaseModelOverrides {
    * The server enforces the same rule (`app/interviews/model_rules.py`) as a safety net.
    */
   private interviewerModels(settings: PhaseSettingsOverride): Set<string> {
-    return new Set([
-      settings.questionPlan?.model ?? this.preferences.phase('questionPlan').model,
-      settings.liveConversation?.model ?? this.preferences.phase('liveConversation').model,
-    ]);
+    return new Set(
+      INTERVIEWER_PHASES.map(
+        (phase) => settings[phase]?.model ?? this.preferences.phase(phase).model,
+      ),
+    );
   }
 
   /** Clears the judge's model (and the judge entry, if nothing else is set) when it now collides. */
   private dropCollidingJudge(settings: PhaseSettingsOverride): PhaseSettingsOverride {
-    const judge = settings.interviewerReview;
-    if (!judge?.model || !this.interviewerModels(settings).has(judge.model)) {
-      return settings;
-    }
-    const rest = compactPhaseSettings({ ...judge, model: undefined });
+    const model = settings.interviewerReview?.model;
+    return model && this.interviewerModels(settings).has(model)
+      ? this.withoutModel(settings, 'interviewerReview')
+      : settings;
+  }
+
+  /**
+   * Clears the model overrides of the interview phases that run on the judge's model. Only the
+   * overrides can collide: the Preferences defaults never do, so a cleared phase falls back to a
+   * model other than the judge's.
+   */
+  private dropCollidingInterviewers(settings: PhaseSettingsOverride): PhaseSettingsOverride {
+    const judge =
+      settings.interviewerReview?.model ?? this.preferences.phase('interviewerReview').model;
+    return INTERVIEWER_PHASES.reduce(
+      (next, phase) => (next[phase]?.model === judge ? this.withoutModel(next, phase) : next),
+      settings,
+    );
+  }
+
+  /** `settings` without the model of `phase`, and without the phase itself if nothing else is set. */
+  private withoutModel(settings: PhaseSettingsOverride, phase: Phase): PhaseSettingsOverride {
+    const rest = compactPhaseSettings({ ...settings[phase], model: undefined });
     const next = { ...settings };
     if (rest) {
-      next.interviewerReview = rest;
+      next[phase] = rest;
     } else {
-      delete next.interviewerReview;
+      delete next[phase];
     }
     return next;
   }

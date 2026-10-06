@@ -35,7 +35,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 
 | Status | When | Example `code` |
 |---|---|---|
-| 400 | Pydantic validation failure (malformed/missing fields, a value over its length limit), a Document id of the wrong type for its slot, or a model Preferences does not allow for a phase (`MODEL_NOT_ALLOWED`, `details` = `{phase, model, allowed}`) | `VALIDATION_ERROR` (for a validation failure, `details` = `{"errors": [...]}`, one entry per failing field: Pydantic's `type`, `loc`, `msg` and `input`) |
+| 400 | Pydantic validation failure (malformed/missing fields, a value over its length limit), a Document id of the wrong type for its slot, or a model Preferences does not allow for a phase (`MODEL_NOT_ALLOWED`, `details` = `{phase, model, allowed}`), or a reasoning effort it does not allow (`REASONING_EFFORT_NOT_ALLOWED`) | `VALIDATION_ERROR` (for a validation failure, `details` = `{"errors": [...]}`, one entry per failing field: Pydantic's `type`, `loc`, `msg` and `input`) |
 | 404 | Resource doesn't exist, including a Document id sent in a request body (`POST /api/interviews`) that matches no Document | `NOT_FOUND` |
 | 413 | Upload exceeds the size limit (`MAX_UPLOAD_MB`, default 10) | `FILE_TOO_LARGE` |
 | 422 | Well-formed request, but the uploaded file can't be used (not a readable PDF, encrypted, or no extractable text) | `UNPROCESSABLE_FILE` |
@@ -238,7 +238,10 @@ text. The review is a dev-facing extra: if the judge's call fails, the Evaluatio
 stored and returned, the review is simply missing, and it is not retried by later calls.
 
 `409 INTERVIEW_NOT_ENDED` while the Interview is `in_progress`, `409 NOTHING_TO_EVALUATE` if
-the candidate never sent a message (an abandoned Interview with only the opening), `404` for an
+the candidate never sent a message (an abandoned Interview with only the opening),
+`409 JUDGE_MODEL_COLLISION` if Preferences changed since the Interview was created so that the
+judge now resolves to an interviewer model ([ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md);
+nothing is generated, and it works again once the Preferences are fixed), `404` for an
 unknown Interview, `502`/`503`/`504` when the Evaluation's model call fails (nothing is
 stored; the client retries).
 
@@ -407,6 +410,8 @@ resource, same as `GET`.
   `gpt-5-nano` or `gpt-4o-mini` for the five candidate-facing phases; `google/gemini-2.5-flash`,
   `google/gemini-3.5-flash-lite`, `gpt-5-mini`, `gpt-5-nano` or `typesafe/jev-1.13` for
   `interviewerReview` (see `architecture.md`).
+- `400 REASONING_EFFORT_NOT_ALLOWED` if a `reasoningEffort` is not `minimal`, `low`, `medium`
+  or `high` (`details` = `{reasoningEffort, allowed}`).
 - `409 JUDGE_MODEL_COLLISION` if the result would give `interviewerReview` the same model as
   `questionPlan` or `liveConversation` ([ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md)).
   It is checked on the defaults *as they will be*, so both models can be swapped in one

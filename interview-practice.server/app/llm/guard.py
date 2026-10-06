@@ -188,11 +188,6 @@ def _views(text: str) -> list[str]:
     return list(dict.fromkeys([spaced, joined, collapsed, leet]))
 
 
-def normalize(text: str) -> str:
-    """The primary normalized form (invisible characters read as spaces)."""
-    return _views(text)[0]
-
-
 def check_text(text: str, *, max_length: int) -> None:
     """Raise `InputRejectedError` (422) if `text` is too long or looks like injection.
 

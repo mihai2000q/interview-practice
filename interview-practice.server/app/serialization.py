@@ -1,8 +1,13 @@
 from collections.abc import Iterable
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StringConstraints
 from pydantic.alias_generators import to_camel
+
+# Free text in a request: trimmed, 1 to 200 characters.
+ShortText = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+]
 
 
 class ApiModel(BaseModel):

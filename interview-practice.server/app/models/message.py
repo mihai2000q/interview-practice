@@ -44,3 +44,9 @@ class Message(Base):
     )
 
     interview: Mapped[Interview] = relationship(back_populates="messages")
+
+    @property
+    def is_question(self) -> bool:
+        """An interviewer's Q&A question (follow-ups included), as opposed to a
+        candidate message or the ask-back phase."""
+        return self.role is MessageRole.interviewer and self.phase is MessagePhase.qa

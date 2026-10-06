@@ -14,6 +14,7 @@ from app.llm.guard import MAX_MESSAGE_CHARS, guarded
 from app.llm.schemas import PhaseSettings
 from app.models import (
     Difficulty,
+    Evaluation,
     GenerationPhase,
     InterviewPhaseSettings,
     InterviewStatus,
@@ -255,3 +256,27 @@ class InterviewerReviewPublic(ApiModel):
                 "pacing": review.score_pacing,
             },
         }
+
+
+class InterviewSummary(ApiModel):
+    """`GET /api/interviews` list item: enough to draw a history entry.
+
+    `verdict` is read off the stored Evaluation; it is `null` until one exists.
+    """
+
+    id: uuid.UUID
+    job_title: str
+    company_name: str | None
+    interviewer_role: str
+    status: InterviewStatus
+    verdict: Verdict | None = Field(
+        validation_alias="evaluation", serialization_alias="verdict"
+    )
+    job_application_id: uuid.UUID | None
+    created_at: datetime
+    ended_at: datetime | None
+
+    @field_validator("verdict", mode="before")
+    @classmethod
+    def _verdict_of_evaluation(cls, value: object) -> object:
+        return value.verdict if isinstance(value, Evaluation) else value

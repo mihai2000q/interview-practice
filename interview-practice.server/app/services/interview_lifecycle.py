@@ -8,7 +8,7 @@ the time as an argument; `settle_stale` applies them to the database.
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from app.extensions import db
 from app.models import Interview, InterviewStatus
@@ -78,3 +78,18 @@ def settle_stale(interviews: Iterable[Interview]) -> None:
         )
     if attempted:
         db.session.commit()
+
+
+def settle_all_stale() -> None:
+    """Close every stale Interview in the database, for readers of many at once.
+
+    Only `in_progress` Interviews past the staleness window are loaded (a small set), so
+    a list or an aggregate can then be read in one query and agree with `settle_stale`.
+    """
+    candidates = db.session.scalars(
+        select(Interview).where(
+            Interview.status == InterviewStatus.in_progress,
+            Interview.last_activity_at < datetime.now(UTC) - STALE_AFTER,
+        )
+    )
+    settle_stale(candidates)

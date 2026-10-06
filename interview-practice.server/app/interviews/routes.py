@@ -11,6 +11,7 @@ from app.interviews.schemas import (
     InterviewDetail,
     InterviewerReviewPublic,
     InterviewPublic,
+    InterviewSummary,
     MessageCreate,
     MessageExchange,
     MessagePublic,
@@ -28,15 +29,21 @@ from app.interviews.use_cases.get_evaluation import get_evaluation
 from app.interviews.use_cases.get_interview import get_interview
 from app.interviews.use_cases.get_interviewer_review import get_interviewer_review
 from app.interviews.use_cases.get_persona_image import get_persona_image
+from app.interviews.use_cases.list_interviews import list_interviews
 from app.interviews.use_cases.open_interview import open_interview
 from app.interviews.use_cases.send_message import send_message
-from app.serialization import to_json
+from app.serialization import to_json, to_json_list
 
 
 @interviews_bp.post("")
 def post_interviews() -> ResponseReturnValue:
     body = InterviewCreate.model_validate(request.get_json(silent=True) or {})
     return jsonify(to_json(InterviewPublic, create_interview(body))), 201
+
+
+@interviews_bp.get("")
+def get_interviews() -> ResponseReturnValue:
+    return jsonify(to_json_list(InterviewSummary, list_interviews()))
 
 
 @interviews_bp.get("/<uuid:interview_id>")

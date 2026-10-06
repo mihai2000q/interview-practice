@@ -129,6 +129,20 @@ generation is switched off (`PORTRAIT_GENERATION_ENABLED=false`). A failure of t
 service is a `502`/`503`/`504` that affects nothing else; the client keeps its fallback
 avatar and may retry. Two calls at once may both generate an image, but only one is kept.
 
+### `GET /api/interviews`
+
+Every Interview, newest first (`createdAt` descending), as a summary — what the history
+sidebar needs to draw each entry without opening it: `{id, jobTitle, companyName,
+interviewerRole, status, verdict, jobApplicationId, createdAt, endedAt}`. `companyName` is
+the Interview's resolved company (or `null`), `jobApplicationId` is `null` for a standalone
+Interview, `endedAt` is `null` while it is `in_progress`, and `verdict` (`"hire"` |
+`"no_hire"`) is `null` until an `Evaluation` exists — it is read, never generated here (the
+Results page makes it, see ADR 0014). Stale `in_progress` Interviews are closed as they are
+read, as everywhere else ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)),
+so a dead session never shows as running. Response `200`, an empty array when there are none.
+The client groups the entries under their Application with `GET /api/applications`
+(entries with `jobApplicationId: null` are listed on their own).
+
 ### `GET /api/interviews/:id`
 
 Fetch an Interview plus its `Message`s (ordered by `sequence`), for rendering the session
@@ -359,9 +373,39 @@ Partial update of the same. Pydantic's `model_validator` enforces
 `judgeModel` equal to `interviewModel` fails with `409 JUDGE_MODEL_COLLISION` before
 anything is saved.
 
-## Dashboard data
+## `dashboard` blueprint — `/api/dashboard`
 
-`GET /api/dashboard` — aggregate counts for the Home page (total interviews practiced,
-hire/no-hire trend) rather than making the client crunch a full Interview list itself. Not
-owned by any single blueprint above; exact placement (its own tiny blueprint vs. a loose
-route) is an implementation detail, not a design decision.
+### `GET /api/dashboard`
+
+Aggregate numbers for the Home page, so the client does not crunch a full Interview list
+itself. Its own tiny blueprint. Response `200`:
+
+```json
+{
+  "totalInterviews": 12,
+  "byStatus": { "inProgress": 1, "completed": 9, "abandoned": 2 },
+  "outcomes": { "hire": 5, "noHire": 3, "awaitingEvaluation": 2 },
+  "recent": [
+    {
+      "id": "…", "jobTitle": "Senior Engineer", "companyName": "Acme",
+      "status": "completed", "verdict": "hire", "endedAt": "2026-10-06T09:10:00Z"
+    }
+  ]
+}
+```
+
+- `totalInterviews` counts every Interview ever created; `byStatus` splits it (the three
+  always add up to the total). Stale `in_progress` Interviews are closed first
+  ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)), so the counts
+  agree with the history list.
+- `outcomes.hire` / `outcomes.noHire` count stored `Evaluation`s by `verdict`.
+  `outcomes.awaitingEvaluation` counts Interviews that have ended and in which the candidate
+  sent at least one message, but have no `Evaluation` yet — results are only made when the
+  Results page is opened ([ADR 0014](./adr/0014-results-are-generated-on-demand-by-an-idempotent-put.md)),
+  so this is the "go and open your results" number. An abandoned Interview with nothing to
+  grade (`NOTHING_TO_EVALUATE`) is in none of the three outcomes.
+- `recent` is the (up to) 5 Interviews that ended most recently, newest `endedAt` first, each
+  `{id, jobTitle, companyName, status, verdict, endedAt}` with `verdict` `null` when it has no
+  `Evaluation`. This is the "trend" the Home page draws.
+- All counts are `0` and `recent` is `[]` when there is nothing yet (the Home page then shows
+  its onboarding state). The endpoint only reads: it never generates an `Evaluation`.

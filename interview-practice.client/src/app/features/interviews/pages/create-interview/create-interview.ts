@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { form, submit } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { HlmBreadcrumbImports } from '@spartan-ng/helm/breadcrumb';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
@@ -27,7 +26,6 @@ import { InterviewDocuments } from './components/interview-documents/interview-d
   imports: [
     RouterLink,
     PhaseModelOverrides,
-    HlmBreadcrumbImports,
     HlmButtonImports,
     HlmTooltipImports,
     InterviewApplication,

@@ -63,11 +63,16 @@ reasoning behind decisions only gestured at here.
 Split so the topbar and sidebar each own a distinct job, rather than both offering
 navigation:
 
-- **Topbar** — present on every route, unconditional: just the app name/logo, left-aligned,
-  linking Home (passes through the leave-confirmation guard below when mid-flow). This is
-  the *only* place Home navigation lives — neither sidebar duplicates it. No "Abandon"
-  action here — see the Interviewer sidebar below for why that never belonged on the
-  topbar in the first place.
+- **Topbar** — present on every route, unconditional, and sticky. On the left the app mark
+  and name linking Home (passes through the leave-confirmation guard below when mid-flow),
+  which is the first step of a **breadcrumb trail** saying where the candidate is: each route
+  declares its own trail ("New interview", "Interview", "Interview › Results"), earlier steps
+  link back, the current page does not. On the right, tools that apply everywhere: a
+  **light/dark theme toggle** (remembered in the browser; dark by default). It is the *only*
+  place Home navigation lives — neither sidebar duplicates it. Deliberately *not* here: an
+  "Abandon" action — see the Interviewer sidebar below for why that never belonged on the
+  topbar — nor the "+ New Interview" CTA and the Preferences link, which the History sidebar
+  owns for the reason given there.
 - **History sidebar** (left) — visible only on Home and Results, hidden on Create Interview
   and Interview Session (keeps those flows free of distraction and of the temptation to
   jump into an unrelated past result mid-task). Anchored to the top: a **"+ New Interview"**

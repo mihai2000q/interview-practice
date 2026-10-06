@@ -8,6 +8,7 @@ from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import Base, uuid_pk
+from app.models.application_progress import is_outdated
 
 if TYPE_CHECKING:
     from app.models.document import Document
@@ -57,8 +58,6 @@ class JobApplication(Base):
     @property
     def progress_outdated(self) -> bool:
         """Whether the stored score and summary should be remade now (ADR 0015)."""
-        from app.applications.shared import is_outdated  # lazy: avoids an import cycle
-
         return is_outdated(
             self.progress_basis,
             [i.evaluation.id for i in self.interviews if i.evaluation is not None],

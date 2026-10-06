@@ -9,7 +9,6 @@ import pytest
 
 from app.app import create_app
 from app.applications.schemas import ApplicationProgress
-from app.applications.shared import MIN_EVALUATIONS, is_outdated, progress_basis
 from app.applications.use_cases.generate_progress.summary import (
     MAX_SUMMARY_CHARS,
     build_messages,
@@ -26,6 +25,11 @@ from app.models import (
     JobApplication,
     StarCompleteness,
     Verdict,
+)
+from app.models.application_progress import (
+    MIN_EVALUATIONS,
+    is_outdated,
+    progress_basis,
 )
 from app.serialization import to_json
 from tests.support import build_interview, chat_response, fake_client

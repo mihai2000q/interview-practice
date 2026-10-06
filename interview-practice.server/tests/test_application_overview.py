@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 
 from app.app import create_app
 from app.applications.schemas import ApplicationOverview
-from app.applications.shared import progress_basis
 from app.models import Evaluation, JobApplication, Verdict
+from app.models.application_progress import progress_basis
 from app.serialization import to_json
 from tests.support import build_interview
 

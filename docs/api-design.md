@@ -84,8 +84,9 @@ Create Interview submission. Request:
   the client never re-sends the file.
 - `jobApplication` — `null` for a fully standalone Interview (no `JobApplication` at
   all); `{id}` to add this Interview as the next stage of an existing one (pre-fills
-  `companyName`/`jobTitle`/documents from it, per `workflow.md`); `{createNew: true}`
-  creates a fresh `JobApplication` from this request's `companyName`/`jobTitle` and
+  `companyName`/`jobTitle`/documents from it, per `workflow.md`; the request's `seniority`
+  is ignored and the Application's is used); `{createNew: true}`
+  creates a fresh `JobApplication` from this request's `companyName`/`jobTitle`/`seniority` and
   attaches this Interview as its first stage. If `companyName` is absent, the
   Application's company is read from the job description or cover letter (left null if
   neither names one).

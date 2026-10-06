@@ -51,7 +51,11 @@ def create_interview(body: InterviewCreate) -> Interview:
     client = get_llm_client()
 
     documents = _load_documents(body)
-    previous_questions = _previous_questions(body)
+    existing = _existing_application(body)
+    if existing:
+        # The Application's level wins over the request's: it doesn't change per stage.
+        body = body.model_copy(update={"seniority": existing.seniority})
+    previous_questions = _previous_questions(existing)
     with timed("analysis"):
         context = analyze_job_documents(
             client,
@@ -68,7 +72,7 @@ def create_interview(body: InterviewCreate) -> Interview:
             context,
             previous_questions,
         )
-    application = _resolve_application(body, plan, documents)
+    application = _resolve_application(body, existing, plan, documents)
     interview = _build_interview(body, plan, application, documents, phase_settings)
 
     db.session.add(interview)
@@ -112,15 +116,22 @@ def _load_document(
 MAX_PREVIOUS_QUESTIONS = 100
 
 
-def _previous_questions(body: InterviewCreate) -> list[str]:
-    """The planned questions of the completed stages of the chosen Application, oldest
-    first, so a new stage doesn't ask them again. Empty for a standalone Interview or a
-    new Application; an unknown Application is a 404 before any model is called."""
+def _existing_application(body: InterviewCreate) -> JobApplication | None:
+    """The chosen existing Application; an unknown one is a 404 before any model is
+    called. None for a standalone Interview or a new Application."""
     if not isinstance(body.job_application, ExistingJobApplication):
-        return []
+        return None
     application = db.session.get(JobApplication, body.job_application.id)
     if application is None:
         raise NotFoundError("Application not found.")
+    return application
+
+
+def _previous_questions(application: JobApplication | None) -> list[str]:
+    """The planned questions of the Application's completed stages, oldest first, so a
+    new stage doesn't ask them again."""
+    if application is None:
+        return []
     questions = [
         question.question
         for stage in application.interviews
@@ -131,14 +142,14 @@ def _previous_questions(body: InterviewCreate) -> list[str]:
 
 
 def _resolve_application(
-    body: InterviewCreate, plan: InterviewPlan, documents: _Documents
+    body: InterviewCreate,
+    existing: JobApplication | None,
+    plan: InterviewPlan,
+    documents: _Documents,
 ) -> JobApplication | None:
-    """None for a standalone Interview, an existing JobApplication, or a new one."""
-    if isinstance(body.job_application, ExistingJobApplication):
-        application = db.session.get(JobApplication, body.job_application.id)
-        if application is None:
-            raise NotFoundError("Application not found.")
-        return application
+    """None for a standalone Interview, the existing JobApplication, or a new one."""
+    if existing is not None:
+        return existing
     if body.job_application is None:
         return None
     application = JobApplication(

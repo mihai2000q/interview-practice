@@ -157,7 +157,10 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    as `InterviewQuestion` rows) — the assignment's
    "generate interviewer guidelines" optional task, folded into this same phase rather
    than a separate one. Seeded by `difficulty`, `domain`, `seniority`, `interview_type`,
-   `interviewer_role`, `company_name`, and the JD/CV analysis output. Technique:
+   `interviewer_role`, `company_name`, and the JD/CV analysis output. A new stage under an
+   existing Application also gets the planned questions of that Application's **completed**
+   stages (fenced as data, question call only). It may revisit a few of them, reworded (at most a quarter of its questions, so none under 4), but never most or all.
+   Technique:
    **instruction/constraint-based prompting** — driven by the explicit structured inputs
    (difficulty/domain/seniority/analysis output) rather than worked examples, which is what
    actually distinguishes it from phase 4's few-shot prompt. The rubric is dev/interviewer

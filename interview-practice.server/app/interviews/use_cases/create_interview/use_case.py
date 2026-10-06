@@ -51,6 +51,7 @@ def create_interview(body: InterviewCreate) -> Interview:
     client = get_llm_client()
 
     documents = _load_documents(body)
+    previous_questions = _previous_questions(body)
     with timed("analysis"):
         context = analyze_job_documents(
             client,
@@ -65,6 +66,7 @@ def create_interview(body: InterviewCreate) -> Interview:
             *phase_config(GenerationPhase.question_plan, phase_settings, preferences),
             body,
             context,
+            previous_questions,
         )
     application = _resolve_application(body, plan, documents)
     interview = _build_interview(body, plan, application, documents, phase_settings)
@@ -104,6 +106,28 @@ def _load_document(
             f"expected a {expected.value} Document, got {document.type.value}."
         )
     return document
+
+
+# Enough to cover many stages; the prompt would only get long past it.
+MAX_PREVIOUS_QUESTIONS = 100
+
+
+def _previous_questions(body: InterviewCreate) -> list[str]:
+    """The planned questions of the completed stages of the chosen Application, oldest
+    first, so a new stage doesn't ask them again. Empty for a standalone Interview or a
+    new Application; an unknown Application is a 404 before any model is called."""
+    if not isinstance(body.job_application, ExistingJobApplication):
+        return []
+    application = db.session.get(JobApplication, body.job_application.id)
+    if application is None:
+        raise NotFoundError("Application not found.")
+    questions = [
+        question.question
+        for stage in application.interviews
+        if stage.status is InterviewStatus.completed
+        for question in stage.questions
+    ]
+    return list(dict.fromkeys(questions))[-MAX_PREVIOUS_QUESTIONS:]
 
 
 def _resolve_application(

@@ -1,7 +1,7 @@
 import { NgOptimizedImage } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBriefcase, lucideBuilding2 } from '@ng-icons/lucide';
+import { lucideBriefcase, lucideBuilding2, lucideTrendingUp } from '@ng-icons/lucide';
 import { HlmAvatarImports } from '@spartan-ng/helm/avatar';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmProgressImports } from '@spartan-ng/helm/progress';
@@ -9,8 +9,10 @@ import { HlmCard, HlmCardContent, HlmCardHeader, HlmCardTitle } from '@spartan-n
 import {
   INTERVIEWER_ROLES,
   INTERVIEWER_TONES,
+  SENIORITIES,
   interviewSettings,
   labelOf,
+  SENIORITY_ICON,
 } from '@app/features/interviews/models/interview.options';
 import { Interview } from '@app/features/interviews/models/interview.schema';
 import { initialsOf } from '@app/features/interviews/utils/initials';
@@ -28,7 +30,7 @@ import { initialsOf } from '@app/features/interviews/utils/initials';
     NgIcon,
     NgOptimizedImage,
   ],
-  providers: [provideIcons({ lucideBriefcase, lucideBuilding2 })],
+  providers: [provideIcons({ lucideBriefcase, lucideBuilding2, lucideTrendingUp })],
   templateUrl: './interviewer-panel.html',
 })
 export class InterviewerPanel {
@@ -38,6 +40,7 @@ export class InterviewerPanel {
   readonly questionsAsked = input.required<number>();
 
   private readonly roleLabel = labelOf(INTERVIEWER_ROLES);
+  private readonly seniorityLabel = labelOf(SENIORITIES);
   private readonly toneLabel = labelOf(INTERVIEWER_TONES);
   protected readonly initials = computed(() => initialsOf(this.interview().personaName));
   protected readonly role = computed(() => this.roleLabel(this.interview().interviewerRole));
@@ -53,6 +56,7 @@ export class InterviewerPanel {
     const interview = this.interview();
     return [
       { label: 'Position', value: interview.jobTitle, icon: 'lucideBriefcase' },
+      { label: 'Seniority', value: this.seniorityLabel(interview.seniority), icon: SENIORITY_ICON },
       ...(interview.companyName
         ? [{ label: 'Company', value: interview.companyName, icon: 'lucideBuilding2' }]
         : []),
@@ -61,7 +65,7 @@ export class InterviewerPanel {
   protected readonly details = computed(() => {
     const interview = this.interview();
     return [
-      ...interviewSettings(interview),
+      ...interviewSettings(interview).filter((setting) => setting.label !== 'Seniority'),
       { label: 'Coaching helpers', value: interview.coachingHelpersEnabled ? 'On' : 'Off' },
     ];
   });

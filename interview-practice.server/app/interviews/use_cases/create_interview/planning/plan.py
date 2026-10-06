@@ -8,7 +8,7 @@ long as the slowest of the three instead of one long reply. Any one failing fail
 plan, and the others are abandoned.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import partial
 from typing import cast
@@ -52,11 +52,24 @@ def plan_interview(
     settings: CompletionSettings,
     request: InterviewCreate,
     context: JobContext,
+    previous_questions: Sequence[str] = (),
 ) -> InterviewPlan:
-    """Run phase 2. The domain is asked of the model only when the context has none."""
+    """Run phase 2. The domain is asked of the model only when the context has none.
+
+    `previous_questions` are those of the finished stages of the same Application, which
+    the new question plan must not repeat.
+    """
     jobs: list[Callable[[], object]] = [
         partial(generate_persona, client, model, settings, request, context),
-        partial(generate_questions, client, model, settings, request, context),
+        partial(
+            generate_questions,
+            client,
+            model,
+            settings,
+            request,
+            context,
+            previous_questions,
+        ),
         partial(generate_criteria, client, model, settings, request, context),
     ]
     results = fan_out(jobs)

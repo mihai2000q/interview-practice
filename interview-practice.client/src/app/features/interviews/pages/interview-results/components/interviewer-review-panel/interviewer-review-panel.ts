@@ -4,7 +4,7 @@ import { lucideFlaskConical } from '@ng-icons/lucide';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { InterviewerReview } from '@app/features/interviews/models/evaluation.schema';
-import { ScoreGauge } from '../score-gauge/score-gauge';
+import { ScoreGauge } from '@app/shared/components/score-gauge/score-gauge';
 
 /**
  * The dev-facing review of the AI interviewer (not the candidate), set apart from the rest of the

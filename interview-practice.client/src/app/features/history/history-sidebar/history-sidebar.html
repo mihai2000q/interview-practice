@@ -61,20 +61,31 @@
                         </button>
                       </hlm-dropdown-menu>
                     </ng-template>
-                    <button
+                    <a
+                      #active="routerLinkActive"
+                      [closeMobileSidebarOnClick]="true"
                       [hlmContextMenuTrigger]="menu"
-                      class="group/trigger"
-                      hlmCollapsibleTrigger
+                      [isActive]="active.isActive"
+                      [routerLink]="['/applications', entry.application.id]"
+                      class="pe-14"
                       hlmSidebarMenuButton
-                      type="button"
+                      routerLinkActive
                     >
                       <ng-icon aria-hidden="true" name="lucideBuilding2" />
                       <span [attr.title]="groupLabel(entry)" class="min-w-0 flex-1 truncate">{{
                         groupLabel(entry)
                       }}</span>
+                    </a>
+                    <button
+                      [attr.aria-label]="'Show or hide the stages of ' + groupLabel(entry)"
+                      class="group/trigger end-7"
+                      hlmCollapsibleTrigger
+                      hlmSidebarMenuAction
+                      type="button"
+                    >
                       <ng-icon
                         aria-hidden="true"
-                        class="ml-auto transition-transform group-data-[state=closed]/trigger:-rotate-90"
+                        class="transition-transform group-data-[state=closed]/trigger:-rotate-90"
                         name="lucideChevronDown"
                       />
                     </button>

@@ -39,7 +39,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 | 404 | Resource doesn't exist, including a Document id sent in a request body (`POST /api/interviews`) that matches no Document | `NOT_FOUND` |
 | 413 | Upload exceeds the size limit (`MAX_UPLOAD_MB`, default 10) | `FILE_TOO_LARGE` |
 | 422 | Well-formed request, but the uploaded file can't be used (not a readable PDF, encrypted, or no extractable text) | `UNPROCESSABLE_FILE` |
-| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED`, `TURN_IN_PROGRESS`, `HELPERS_DISABLED`, `NOT_IN_ASK_BACK_PHASE`, `NOT_A_QUESTION`, `INTERVIEW_NOT_ENDED`, `NOTHING_TO_EVALUATE` |
+| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED`, `TURN_IN_PROGRESS`, `HELPERS_DISABLED`, `NOT_IN_ASK_BACK_PHASE`, `NOT_A_QUESTION`, `INTERVIEW_NOT_ENDED`, `NOTHING_TO_EVALUATE`, `NOT_ENOUGH_STAGES` |
 | 422 | The security guard (or the provider's moderation) refused the text: it looks like prompt injection or is over its length limit. `details` = `{reason}` (plus `field`, the request field, for the JSON bodies) with `reason` one of `prompt_injection` (+ `excerpt`, the matched wording, so the candidate can find it in a long document), `too_long` (+ `maxLength`), `moderation`; the message never names the rule that matched. Applies to `POST /api/documents` (the extracted text, max 50,000 characters; `too_long` possible), `POST /api/interviews` (the free-text fields, `prompt_injection` or `moderation` only: they are capped at 200 characters first, and a longer one is a `400 VALIDATION_ERROR`) and `POST /api/interviews/:id/messages` (the reply, max 2,000 characters; `too_long` possible). Nothing is persisted and no interview state changes, so the client keeps the user's input and lets them edit and resend | `INPUT_REJECTED` |
 | 502 | The model provider failed, was unreachable, or returned an unusable/contract-breaking response | `LLM_UPSTREAM_ERROR` |
 | 503 | The provider can't serve us right now (rate limit, credits, key); `details.retryAfterSeconds` when known | `LLM_UNAVAILABLE` |
@@ -347,7 +347,7 @@ that referenced the Document are kept and just lose the link (`ON DELETE SET NUL
 
 ### `GET /api/applications`
 
-List, newest first: `id`, `companyName`, `jobTitle`, the optional documents
+List, newest first: `id`, `companyName`, `jobTitle`, `seniority`, the optional documents
 `jobDescription`/`cv`/`coverLetter` — each `{id, name, analysisModel}` or `null`, so Create Interview can
 pre-fill a new stage and show an attached document by name even when it isn't `saved` — and
 `interviews` — each stage's `id`, `interviewerRole` and `status`, oldest first (a stage
@@ -358,10 +358,27 @@ an empty array when there are none.
 
 ### `GET /api/applications/:id`
 
-Application Overview page data: `companyName`, `jobTitle`, every stage (id,
-`interviewerRole`, `status`, link to its Results), plus `progressScore`/
-`progressSummary` once 2+ stages have an `Evaluation`. **Not built yet**: neither this route nor the
-progress summary exists, and the client has no Application Overview page; both are planned together.
+Application Overview page data: `id`, `companyName`, `jobTitle`, `seniority`, the documents
+`jobDescription`/`cv`/`coverLetter` (each `{id, name, analysisModel}` or `null`, as in the list),
+`progressScore`/`progressSummary` (both `null` until generated), `progressOutdated` (`true` when
+2+ stages have an Evaluation and the stored pair was not built from exactly those), `createdAt`, and `interviews` —
+every stage oldest first, each `{id, interviewerRole, status, verdict, createdAt, endedAt}`.
+`verdict` is read off the stored Evaluation and is `null` until one exists; the client links a
+stage to its Results (or, while `in_progress`, to the session). A stage that went stale is closed as
+it is read ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). `404` for an
+unknown Application.
+
+### `PUT /api/applications/:id/progress`
+
+Makes the progress summary if it is missing or outdated, and returns it:
+`{progressScore, progressSummary}`. Idempotent: when the Application's Evaluations still match
+the ones the stored pair was built from, it answers with it and calls no model. It only reads
+Evaluations that exist; the client first grades the ended stages that have none, through
+`PUT /api/interviews/:id/evaluation`
+([ADR 0015](./adr/0015-progress-summary-is-generated-on-demand-from-existing-evaluations.md)).
+`404` for an unknown Application, `409 NOT_ENOUGH_STAGES` with fewer than two Evaluations.
+The model call runs on the `evaluation` phase's Preferences settings; a failure (`502`/`504`)
+leaves any previous summary in place.
 
 ### `PATCH /api/applications/:id`
 

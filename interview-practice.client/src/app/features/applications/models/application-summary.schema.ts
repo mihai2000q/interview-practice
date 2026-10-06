@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   interviewerRoleSchema,
   interviewStatusSchema,
+  senioritySchema,
 } from '@app/features/interviews/models/interview.enums';
 
 export const applicationStageSchema = z.object({
@@ -25,6 +26,7 @@ export const applicationSummarySchema = z.object({
   id: z.string(),
   companyName: z.string().nullable(),
   jobTitle: z.string(),
+  seniority: senioritySchema,
   jobDescription: applicationDocumentSchema.nullable(),
   cv: applicationDocumentSchema.nullable(),
   coverLetter: applicationDocumentSchema.nullable(),

@@ -59,11 +59,13 @@ Groups multiple `interviews` rows as stages of the same real-world hiring pipeli
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `company_name` | `text`, nullable | null when the candidate gave none and none could be read from the job description / cover letter |
 | `job_title` | `text` | |
+| `seniority` | `text` | the candidate's level, taken from the Interview that creates the Application; it doesn't change between stages |
 | `job_description_document_id` | `uuid`, nullable, FK → `documents.id` | |
 | `cv_document_id` | `uuid`, nullable, FK → `documents.id` | |
 | `cover_letter_document_id` | `uuid`, nullable, FK → `documents.id` | |
-| `progress_score` | `integer`, nullable | 1-5 aggregate performance-trend rating; same scale as the `interviewer_reviews.score_*` columns |
+| `progress_score` | `integer`, nullable | 1-5 aggregate rating of the overall level across the stages graded so far; same scale as the `interviewer_reviews.score_*` columns |
 | `progress_summary` | `text`, nullable | narrative accompanying `progress_score`; both regenerated together once 2+ stages have an Evaluation — see domain-model.md |
+| `progress_basis` | `text`, nullable | fingerprint (hash of the sorted `evaluations.id`s) of what the stored score and summary were built from; the pair is outdated when it no longer matches — see ADR 0015. Null while `progress_score` is |
 | `created_at` | `timestamptz` | default now() |
 
 Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row with this

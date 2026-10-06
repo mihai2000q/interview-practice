@@ -21,6 +21,17 @@ export const routes: Routes = [
       import('./features/preferences/pages/preferences/preferences').then((m) => m.Preferences),
   },
   {
+    path: 'applications/:id',
+    data: {
+      ...crumbs(() => [{ label: 'Application' }]),
+      ...showsHistory(),
+    },
+    loadComponent: () =>
+      import('./features/applications/pages/application-overview/application-overview').then(
+        (m) => m.ApplicationOverviewPage,
+      ),
+  },
+  {
     path: 'interviews',
     loadChildren: () =>
       import('./features/interviews/interviews.routes').then((m) => m.INTERVIEWS_ROUTES),

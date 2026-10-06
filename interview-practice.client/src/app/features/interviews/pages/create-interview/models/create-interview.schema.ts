@@ -85,6 +85,7 @@ export function createInterviewValidation(path: SchemaPathTree<CreateInterviewMo
     );
   lockedByApplication(path.jobTitle);
   lockedByApplication(path.companyName);
+  lockedByApplication(path.seniority);
   lockedByApplication(path.jobDescriptionId);
   lockedByApplication(path.cvId);
   lockedByApplication(path.coverLetterId);

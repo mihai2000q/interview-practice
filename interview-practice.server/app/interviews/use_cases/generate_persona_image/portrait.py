@@ -1,16 +1,15 @@
 """The persona's portrait image (docs/architecture.md, "Persona image generation").
 
-Generated once at Create Interview time and stored on disk under `instance/`, so Results
-and the history sidebar can show it without another API call. The portrait is cosmetic:
-if generating it fails the Interview is still created, without one.
+Generated once, when the session page asks for it, and stored on disk under `instance/`,
+so Results and the history sidebar can show it without another API call. The portrait is
+cosmetic: nothing else waits for it.
 """
 
 import logging
 import uuid
 from pathlib import Path
 
-from app.errors.exceptions import ApiError
-from app.llm.openrouter import GeneratedImage, OpenRouterClient
+from app.llm.openrouter import GeneratedImage
 from app.paths import instance_dir
 
 logger = logging.getLogger(__name__)
@@ -34,28 +33,10 @@ def build_prompt(name: str, title: str, tone: str) -> str:
     )
 
 
-def generate_portrait(
-    client: OpenRouterClient, model: str, name: str, title: str, tone: str
-) -> GeneratedImage | None:
-    """The portrait, or None if the image service failed (logged, never raised).
-
-    Runs in a worker thread (see `app.llm.concurrency`): it uses only the client.
-    """
-    try:
-        return client.generate_image(model, build_prompt(name, title, tone))
-    except ApiError as exc:
-        logger.error("Persona portrait failed (%s): %s", exc.code, exc.message)
-        return None
-    except Exception:
-        # Cosmetic by contract: nothing here may fail the Interview.
-        logger.exception("Persona portrait failed unexpectedly")
-        return None
-
-
 def store_portrait(image: GeneratedImage) -> str | None:
     """Write the image under `instance/` and return its path relative to it.
 
-    None if it can't be written (full or read-only volume): the portrait is cosmetic.
+    None if it can't be written (full or read-only volume).
     """
     relative = _SUBDIR / f"{uuid.uuid4()}.{image.extension}"
     absolute = instance_dir() / relative

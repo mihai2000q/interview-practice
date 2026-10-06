@@ -1,8 +1,8 @@
 """initial
 
-Revision ID: b1d4ece64571
+Revision ID: 05e25d0a6d4f
 Revises: 
-Create Date: 2026-10-04 13:10:24.975262
+Create Date: 2026-10-06 16:46:07.000000
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'b1d4ece64571'
+revision = '05e25d0a6d4f'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -88,6 +88,7 @@ def upgrade():
     sa.Column('response_style', sa.Enum('concise', 'detailed', name='responsestyle'), server_default='concise', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
+    sa.CheckConstraint('target_question_count BETWEEN 1 AND 30', name='ck_target_question_count_1_30'),
     sa.ForeignKeyConstraint(['cover_letter_document_id'], ['documents.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['cv_document_id'], ['documents.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['job_application_id'], ['job_applications.id'], ondelete='CASCADE'),
@@ -139,6 +140,17 @@ def upgrade():
     sa.ForeignKeyConstraint(['interview_id'], ['interviews.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('interview_id', 'phase')
+    )
+    op.create_table('preference_phase_settings',
+    sa.Column('id', sa.Uuid(), server_default=sa.text('gen_random_uuid()'), nullable=False),
+    # shares the type that interview_phase_settings (created above) already made
+    sa.Column('phase', postgresql.ENUM('jd_analysis', 'question_plan', 'live_conversation', 'coaching_helpers', 'evaluation', 'interviewer_review', name='generationphase', create_type=False), nullable=False),
+    sa.Column('model', sa.String(), nullable=True),
+    sa.Column('temperature', sa.Float(), nullable=True),
+    sa.Column('max_tokens', sa.Integer(), nullable=True),
+    sa.Column('reasoning_effort', sa.String(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('phase')
     )
     op.create_table('interview_questions',
     sa.Column('id', sa.Uuid(), server_default=sa.text('gen_random_uuid()'), nullable=False),
@@ -193,6 +205,7 @@ def downgrade():
     op.drop_table('messages')
     op.drop_table('interviewer_reviews')
     op.drop_table('interview_questions')
+    op.drop_table('preference_phase_settings')
     op.drop_table('interview_phase_settings')
     op.drop_table('evaluations')
     op.drop_table('evaluation_criteria')

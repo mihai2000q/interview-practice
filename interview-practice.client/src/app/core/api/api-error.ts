@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { catchError, type MonoTypeOperatorFunction, throwError } from 'rxjs';
+import { catchError, type MonoTypeOperatorFunction, throwError, TimeoutError } from 'rxjs';
 import { z } from 'zod';
 
 const errorBodySchema = z.object({
@@ -39,6 +39,9 @@ export function toApiError(err: unknown): ApiError {
         0,
       );
     }
+  }
+  if (err instanceof TimeoutError) {
+    return new ApiError('TIMEOUT', 'The server took too long to answer. Please try again.', 0);
   }
   if (err instanceof z.ZodError) {
     return new ApiError('INVALID_RESPONSE', 'The server sent an unexpected response.', 0);

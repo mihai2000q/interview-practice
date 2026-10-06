@@ -9,7 +9,6 @@ import uuid
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.applications.shared import MIN_EVALUATIONS, progress_basis
 from app.applications.use_cases.generate_progress.summary import (
     ProgressDraft,
     build_messages,
@@ -21,6 +20,7 @@ from app.llm.factory import get_llm_client
 from app.llm.phase_settings import phase_config
 from app.llm.timing import timed
 from app.models import GenerationPhase, Interview, JobApplication
+from app.models.application_progress import MIN_EVALUATIONS, progress_basis
 from app.services.preferences import load_preferences
 
 

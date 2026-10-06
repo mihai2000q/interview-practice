@@ -131,7 +131,7 @@ def upgrade():
     op.create_table('interview_phase_settings',
     sa.Column('id', sa.Uuid(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('interview_id', sa.Uuid(), nullable=False),
-    sa.Column('phase', sa.Enum('jd_analysis', 'question_plan', 'live_conversation', 'ask_back', 'evaluation', 'interviewer_review', name='generationphase'), nullable=False),
+    sa.Column('phase', sa.Enum('jd_analysis', 'question_plan', 'live_conversation', 'coaching_helpers', 'evaluation', 'interviewer_review', name='generationphase'), nullable=False),
     sa.Column('model', sa.String(), nullable=True),
     sa.Column('temperature', sa.Float(), nullable=True),
     sa.Column('max_tokens', sa.Integer(), nullable=True),

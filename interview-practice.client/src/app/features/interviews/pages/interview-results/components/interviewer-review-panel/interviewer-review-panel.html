@@ -1,0 +1,49 @@
+<section
+  aria-labelledby="review-heading"
+  class="flex flex-col gap-6 rounded-xl border border-dashed bg-muted/30 p-6"
+>
+  <header class="flex flex-col gap-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <ng-icon aria-hidden="true" class="text-muted-foreground" name="lucideFlaskConical" />
+      <h2 class="text-lg font-semibold tracking-tight" id="review-heading">Interviewer review</h2>
+      <span hlmBadge variant="outline">For developers</span>
+    </div>
+    <p class="max-w-prose text-sm text-muted-foreground">
+      This grades the AI interviewer, not you: how good its questions were, how well it stayed in
+      character and how well it paced the conversation. It does not affect your verdict.
+    </p>
+  </header>
+
+  @if (review(); as review) {
+    <div class="grid gap-6 sm:grid-cols-3">
+      @for (gauge of gauges(); track gauge.label) {
+        <app-score-gauge [label]="gauge.label" [score]="gauge.score" />
+      }
+    </div>
+    <div class="flex flex-col gap-2 border-t border-dashed pt-4">
+      <h3 class="text-sm font-medium">Judge's reasoning</h3>
+      <p class="text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+        {{ review.reasoning }}
+      </p>
+      <p class="text-xs text-muted-foreground">
+        Scored from 1 to 5 by <code class="font-mono">{{ review.judgeModel }}</code
+        >, a different model from the one that ran the interview.
+      </p>
+    </div>
+  } @else if (error(); as message) {
+    <p class="text-sm text-destructive" role="alert">{{ message }}</p>
+  } @else if (loading()) {
+    <div aria-busy="true" role="status">
+      <span class="sr-only">Loading the interviewer review…</span>
+      <div class="grid gap-6 sm:grid-cols-3">
+        <div class="mx-auto size-32 rounded-full" hlmSkeleton></div>
+        <div class="mx-auto size-32 rounded-full" hlmSkeleton></div>
+        <div class="mx-auto size-32 rounded-full" hlmSkeleton></div>
+      </div>
+    </div>
+  } @else {
+    <p class="text-sm text-muted-foreground">
+      There is no review for this interview: the judge model could not produce one.
+    </p>
+  }
+</section>

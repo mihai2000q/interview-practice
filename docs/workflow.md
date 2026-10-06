@@ -108,6 +108,15 @@ different, independent judge model.
 
 ## 5. Results
 
-Shows the verdict, reasoning, improvement areas, the full transcript, and the interviewer's
-persona image. Any past interview remains reachable from the history sidebar and re-opens
-straight into its Results page.
+Shows the verdict, reasoning, the STAR breakdown, improvement areas, the full transcript
+(collapsed until opened), and the interviewer's persona image. The page makes the evaluation
+itself (`PUT .../evaluation`, idempotent) and so shows a waiting state the first time. An
+abandoned interview carries a caveat that the verdict rests on a partial conversation.
+
+Below all of that, in a clearly separated section, the page shows the dev-facing
+**Interviewer Review** (scores of 1 to 5 for question relevance, persona consistency and
+pacing, with the judge's reasoning). It grades the AI interviewer, not the candidate, and does
+not affect the verdict; if the judge's call failed there is simply no review to show.
+
+Any past interview remains reachable from the history sidebar and re-opens straight into its
+Results page.

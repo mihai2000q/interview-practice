@@ -1,0 +1,16 @@
+<section aria-labelledby="improve-heading" hlmCard>
+  <div hlmCardHeader>
+    <h2 class="text-base" hlmCardTitle id="improve-heading">What to work on</h2>
+    <p hlmCardDescription>Concrete things to practice before the next one.</p>
+  </div>
+  <div hlmCardContent>
+    <ul class="flex flex-col gap-3">
+      @for (suggestion of suggestions(); track $index) {
+        <li class="flex items-start gap-3 text-sm leading-relaxed">
+          <ng-icon aria-hidden="true" class="mt-0.5 shrink-0 text-primary" name="lucideLightbulb" />
+          <span>{{ suggestion }}</span>
+        </li>
+      }
+    </ul>
+  </div>
+</section>

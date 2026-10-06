@@ -103,7 +103,7 @@ navigation:
   leave-confirmation guard is only protecting unsaved form input, a different concern), so
   a topbar-level Abandon action never actually made sense there. Abandon here runs through
   the same guard/status-update path as quitting any other way (marks the Interview
-  `abandoned`, triggers Evaluation) — a deliberate, discoverable in-app affordance rather
+  `abandoned`; the Results page then asks for the Evaluation) — a deliberate, discoverable in-app affordance rather
   than something that only works if the candidate hits browser-back.
 - **Phase indicator** (main Interview Session content, not the sidebar) — a small
   persistent label pinned above the conversation transcript ("Q&A Phase" / "Ask-Back
@@ -307,8 +307,11 @@ default; it's a reflection/debugging tool for the developer.
   `google/gemini-2.5-flash-image`).
 - Persisted as `InterviewerReview` (see `domain-model.md` / `database-schema.md`), one per
   Interview.
-- **Trigger**: automatic, at the same point `Evaluation` runs (session end) — keeps the two
-  symmetric, and guarantees the data exists for retrospective review without a manual step.
+- **Trigger**: the same call as `Evaluation` (`PUT /api/interviews/:id/evaluation`, made by
+  the Results page once the Interview has ended), run **in parallel** with it, so no manual step
+  is needed and the candidate waits for the slower of the two, not both. Best effort: a
+  failed judge call leaves the review missing and never fails the Evaluation. See
+  [ADR 0014](./adr/0014-results-are-generated-on-demand-by-an-idempotent-put.md).
 - **Score shape**: `{ question_relevance, persona_consistency, pacing: 1-5 }` plus a
   `reasoning` text field — simple numeric scoring, not a full rubric.
 
@@ -522,13 +525,13 @@ Interview Session
     candidate asks 0+ questions (guard-checked) or declines
   → status = completed (or abandoned, if quit earlier)
   → ended_at set
-  → triggers Evaluation
+  → Results page asks for the Evaluation (PUT .../evaluation)
 
 [No graceful exit: Alt+F4 / process kill / crash / power loss — see ADR 0006]
   → status is left at in_progress, last_activity_at stops advancing
   → next time this Interview is read (history list, reopening it) and
     last_activity_at is older than the staleness timeout (TBD):
-    → status = abandoned, ended_at = last_activity_at, triggers Evaluation
+    → status = abandoned, ended_at = last_activity_at, then the same Evaluation request
     (same path as an explicit quit, just detected lazily instead of live)
 
 Evaluation

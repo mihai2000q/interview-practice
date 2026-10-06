@@ -2,7 +2,13 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 from app.llm.guard import MAX_MESSAGE_CHARS, guarded
 from app.llm.schemas import PhaseSettings
@@ -14,6 +20,8 @@ from app.models import (
     MessagePhase,
     MessageRole,
     ResponseStyle,
+    StarCompleteness,
+    Verdict,
 )
 from app.serialization import ApiModel, ShortText
 
@@ -180,3 +188,70 @@ class PersonaImage(ApiModel):
     """Response of `PUT /api/interviews/:id/persona-image`."""
 
     persona_image_url: str | None
+
+
+class StarBreakdown(ApiModel):
+    situation: str
+    task: str
+    action: str
+    result: str
+    completeness: StarCompleteness
+
+
+class EvaluationPublic(ApiModel):
+    """The Results page data: `GET`/`PUT /api/interviews/:id/evaluation`."""
+
+    verdict: Verdict
+    reasoning: str
+    improvement_suggestions: str
+    star_breakdown: StarBreakdown
+    incomplete: bool
+
+    @model_validator(mode="before")
+    @classmethod
+    def _nest_star_breakdown(cls, evaluation: Any) -> Any:
+        """The model keeps the STAR fields flat; the response groups them."""
+        if isinstance(evaluation, dict):
+            return evaluation
+        return {
+            "verdict": evaluation.verdict,
+            "reasoning": evaluation.reasoning,
+            "improvement_suggestions": evaluation.improvement_suggestions,
+            "incomplete": evaluation.incomplete,
+            "star_breakdown": {
+                "situation": evaluation.star_situation,
+                "task": evaluation.star_task,
+                "action": evaluation.star_action,
+                "result": evaluation.star_result,
+                "completeness": evaluation.star_completeness,
+            },
+        }
+
+
+class ReviewScores(ApiModel):
+    question_relevance: int
+    persona_consistency: int
+    pacing: int
+
+
+class InterviewerReviewPublic(ApiModel):
+    """`GET /api/interviews/:id/interviewer-review` (dev-facing)."""
+
+    judge_model: str
+    scores: ReviewScores
+    reasoning: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _nest_scores(cls, review: Any) -> Any:
+        if isinstance(review, dict):
+            return review
+        return {
+            "judge_model": review.judge_model,
+            "reasoning": review.reasoning,
+            "scores": {
+                "question_relevance": review.score_question_relevance,
+                "persona_consistency": review.score_persona_consistency,
+                "pacing": review.score_pacing,
+            },
+        }

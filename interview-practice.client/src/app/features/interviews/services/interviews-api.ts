@@ -1,13 +1,19 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { catchError, map, Observable, of, throwError } from 'rxjs';
 import { environment } from '@env/environment';
-import { mapApiError } from '@app/core/api/api-error';
+import { mapApiError, toApiError } from '@app/core/api/api-error';
 import { CreateInterviewRequest } from '../models/create-interview.api';
 import {
   CreateInterviewResponse,
   createInterviewResponseSchema,
 } from '../models/create-interview.api';
+import {
+  Evaluation,
+  evaluationSchema,
+  InterviewerReview,
+  interviewerReviewSchema,
+} from '../models/evaluation.schema';
 import {
   askBackSuggestionsSchema,
   Interview,
@@ -84,6 +90,29 @@ export class InterviewsApi {
     return this.http.post<unknown>(`${this.url}/${id}/abandon`, null).pipe(
       map((body) => interviewSchema.parse(body)),
       mapApiError(),
+    );
+  }
+
+  /**
+   * Makes the Evaluation of an ended Interview, and its InterviewerReview alongside it, from the
+   * transcript. Idempotent: once they exist the stored Evaluation comes back without a model call.
+   * A reasoning-model call, so it takes a while the first time.
+   */
+  generateEvaluation(id: string): Observable<Evaluation> {
+    return this.http.put<unknown>(`${this.url}/${id}/evaluation`, null).pipe(
+      map((body) => evaluationSchema.parse(body)),
+      mapApiError(),
+    );
+  }
+
+  /** `null` when there is no review: the judge's call failed, so none was stored. */
+  getInterviewerReview(id: string): Observable<InterviewerReview | null> {
+    return this.http.get<unknown>(`${this.url}/${id}/interviewer-review`).pipe(
+      map((body) => interviewerReviewSchema.parse(body)),
+      mapApiError(),
+      catchError((err: unknown) =>
+        toApiError(err).status === 404 ? of(null) : throwError(() => err),
+      ),
     );
   }
 

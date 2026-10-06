@@ -1,4 +1,142 @@
-<main class="mx-auto flex max-w-3xl flex-col gap-2 px-6 py-10">
-  <h1 class="text-2xl font-semibold tracking-tight">Results</h1>
-  <p class="text-muted-foreground">{{ id() }}</p>
+<main class="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
+  @if (evaluation(); as evaluation) {
+    <header class="flex items-center gap-4">
+      @if (interview(); as interview) {
+        <app-persona-avatar
+          [imageUrl]="personaImageUrl()"
+          [name]="interview.personaName"
+          class="shrink-0"
+          size="lg"
+        />
+        <div class="min-w-0">
+          <p class="text-sm text-muted-foreground">
+            Interview with {{ interview.personaName }} · {{ role() }}
+          </p>
+          <h1 class="text-2xl font-semibold tracking-tight">{{ subtitle() }}</h1>
+        </div>
+      } @else if (interviewLoading()) {
+        <div aria-hidden="true" class="size-16 shrink-0 rounded-xl" hlmSkeleton></div>
+        <div class="flex flex-col gap-2">
+          <div class="h-4 w-48" hlmSkeleton></div>
+          <div class="h-7 w-64" hlmSkeleton></div>
+        </div>
+      } @else {
+        <h1 class="text-2xl font-semibold tracking-tight">Your results</h1>
+      }
+    </header>
+
+    @if (interview()) {
+      <div class="-mt-2 flex flex-wrap items-center gap-2">
+        <span hlmBadge variant="secondary">{{ statusLabel() }}</span>
+        @for (fact of facts(); track fact) {
+          <span hlmBadge variant="outline">{{ fact }}</span>
+        }
+      </div>
+    }
+
+    <app-verdict-summary
+      [incomplete]="evaluation.incomplete"
+      [reasoning]="evaluation.reasoning"
+      [verdict]="evaluation.verdict"
+    />
+    <app-star-breakdown [breakdown]="evaluation.starBreakdown" />
+    <app-improvement-suggestions [text]="evaluation.improvementSuggestions" />
+
+    @if (interview(); as interview) {
+      <section
+        [(expanded)]="transcriptOpen"
+        [class.gap-0]="!transcriptOpen()"
+        aria-labelledby="transcript-heading"
+        hlmCard
+        hlmCollapsible
+      >
+        <div hlmCardHeader>
+          <h2 class="text-base" hlmCardTitle id="transcript-heading">Transcript</h2>
+          <p hlmCardDescription>The whole conversation, as it happened.</p>
+          <button hlmBtn hlmCardAction hlmCollapsibleTrigger size="sm" variant="outline">
+            {{ transcriptOpen() ? 'Hide transcript' : 'Show transcript' }}
+            <ng-icon
+              [class.rotate-180]="transcriptOpen()"
+              aria-hidden="true"
+              class="transition-transform"
+              name="lucideChevronDown"
+            />
+          </button>
+        </div>
+        <div hlmCollapsibleContent>
+          <div class="flex h-128 flex-col border-t">
+            <app-chat-transcript
+              [messages]="interview.messages"
+              [personaImageUrl]="personaImageUrl()"
+              [personaName]="interview.personaName"
+              [status]="interview.status"
+            />
+          </div>
+        </div>
+      </section>
+    } @else if (interviewError(); as message) {
+      <p
+        class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed px-4 py-3 text-sm"
+        role="alert"
+      >
+        <span>{{ message }} The transcript can't be shown.</span>
+        <button (click)="retryInterview()" hlmBtn size="sm" type="button" variant="outline">
+          Retry
+        </button>
+      </p>
+    }
+
+    <div class="flex flex-wrap gap-2">
+      <a hlmBtn routerLink="/interviews/new">
+        <ng-icon aria-hidden="true" name="lucidePlus" />
+        Practice again
+      </a>
+      <a hlmBtn routerLink="/" variant="outline">
+        <ng-icon aria-hidden="true" name="lucideHouse" />
+        Back home
+      </a>
+    </div>
+
+    <hlm-separator class="mt-4" />
+    <app-interviewer-review-panel
+      [error]="reviewError()"
+      [loading]="reviewLoading()"
+      [review]="review()"
+    />
+  } @else if (problem(); as problem) {
+    <div hlmEmpty>
+      <div hlmEmptyHeader>
+        <h1 hlmEmptyTitle>{{ problem.title }}</h1>
+        <p hlmEmptyDescription>{{ problem.description }}</p>
+      </div>
+      <div hlmEmptyContent>
+        @switch (problem.action) {
+          @case ('retry') {
+            <button (click)="retry()" hlmBtn>Try again</button>
+          }
+          @case ('session') {
+            <a [routerLink]="['/interviews', id()]" hlmBtn>Back to the interview</a>
+          }
+          @case ('new') {
+            <a hlmBtn routerLink="/interviews/new">Start a new interview</a>
+          }
+          @default {
+            <a hlmBtn routerLink="/" variant="outline">Back home</a>
+          }
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="flex w-full flex-col gap-6">
+      <header class="flex flex-col gap-1">
+        <h1 class="text-2xl font-semibold tracking-tight">Evaluating your interview…</h1>
+        <p class="text-muted-foreground" role="status">
+          Reading the whole conversation and grading your answers. This can take a little while.
+        </p>
+      </header>
+      <div aria-hidden="true" class="h-36" hlmSkeleton></div>
+      <div aria-hidden="true" class="h-56" hlmSkeleton></div>
+      <div aria-hidden="true" class="h-32" hlmSkeleton></div>
+    </div>
+  }
 </main>

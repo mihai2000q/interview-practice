@@ -7,13 +7,10 @@ import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmCard, HlmCardContent, HlmCardHeader, HlmCardTitle } from '@spartan-ng/helm/card';
 import {
-  DIFFICULTIES,
-  INTERVIEW_TYPES,
   INTERVIEWER_ROLES,
   INTERVIEWER_TONES,
+  interviewSettings,
   labelOf,
-  RESPONSE_STYLES,
-  SENIORITIES,
 } from '@app/features/interviews/models/interview.options';
 import { Interview } from '@app/features/interviews/models/interview.schema';
 import { initialsOf } from '@app/features/interviews/utils/initials';
@@ -64,10 +61,7 @@ export class InterviewerPanel {
   protected readonly details = computed(() => {
     const interview = this.interview();
     return [
-      { label: 'Seniority', value: labelOf(SENIORITIES)(interview.seniority) },
-      { label: 'Difficulty', value: labelOf(DIFFICULTIES)(interview.difficulty) },
-      { label: 'Type', value: labelOf(INTERVIEW_TYPES)(interview.interviewType) },
-      { label: 'Response style', value: labelOf(RESPONSE_STYLES)(interview.responseStyle) },
+      ...interviewSettings(interview),
       { label: 'Coaching helpers', value: interview.coachingHelpersEnabled ? 'On' : 'Off' },
     ];
   });

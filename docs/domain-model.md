@@ -275,7 +275,7 @@ given Interview (question relevance/quality, persona consistency, pacing) — di
 the candidate-facing `Evaluation` above. This is what actually satisfies the assignment's
 "LLM-as-a-judge to assess the performance of your prompt/model" optional task; `Evaluation`
 grades the *candidate*, `InterviewerReview` grades the *interviewer*. Runs automatically at
-the same trigger point as `Evaluation` (session end), keeping the two symmetric. See
+the same call as `Evaluation` (made once the session has ended, in parallel with it), keeping the two symmetric. See
 `architecture.md`.
 
 - `interview_id`: FK → Interview

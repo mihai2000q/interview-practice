@@ -1,0 +1,31 @@
+<section aria-labelledby="star-heading" hlmCard>
+  <div hlmCardHeader>
+    <h2 class="text-base" hlmCardTitle id="star-heading">STAR breakdown</h2>
+    <p hlmCardDescription>How your answers covered Situation, Task, Action and Result.</p>
+    <div class="flex items-center gap-2 pt-1" hlmCardAction>
+      <span aria-hidden="true" class="flex gap-1">
+        @for (color of segments(); track $index) {
+          <span [class]="color + ' h-1.5 w-6 rounded-full'"></span>
+        }
+      </span>
+      <span class="sr-only">STAR completeness:</span>
+      <span hlmBadge variant="outline">{{ completeness().label }}</span>
+    </div>
+  </div>
+  <dl class="grid gap-4 sm:grid-cols-2" hlmCardContent>
+    @for (item of letters(); track item.letter) {
+      <div class="flex flex-col gap-1.5 rounded-lg border bg-muted/30 p-4">
+        <dt class="flex items-center gap-2 text-sm font-semibold">
+          <span
+            aria-hidden="true"
+            class="flex size-6 items-center justify-center rounded-md bg-secondary text-xs text-secondary-foreground"
+          >
+            {{ item.letter }}
+          </span>
+          {{ item.name }}
+        </dt>
+        <dd class="text-sm leading-relaxed text-muted-foreground">{{ item.text }}</dd>
+      </div>
+    }
+  </dl>
+</section>

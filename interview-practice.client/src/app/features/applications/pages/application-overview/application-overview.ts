@@ -112,6 +112,16 @@ export class ApplicationOverviewPage {
   });
 
   constructor() {
+    // Another Application's refresh is none of this one's business: forget it, and let any run
+    // still going for the previous one finish without touching the card.
+    effect(() => {
+      this.id();
+      untracked(() => {
+        this.runs++;
+        this.refresh.set({ kind: 'idle' });
+      });
+    });
+
     // The summary is made on demand (ADR 0015): grade the finished stages that have no
     // Evaluation, then ask for the summary, whenever the page finds it missing or outdated.
     effect(() => {

@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
+import { z } from 'zod';
 import { catchError, map, Observable, of, throwError } from 'rxjs';
 import { environment } from '@env/environment';
 import { mapApiError, toApiError } from '@app/core/api/api-error';
@@ -8,6 +9,7 @@ import {
   CreateInterviewResponse,
   createInterviewResponseSchema,
 } from '../models/create-interview.api';
+import { InterviewSummary, interviewSummarySchema } from '../models/interview-summary.schema';
 import {
   Evaluation,
   evaluationSchema,
@@ -33,6 +35,14 @@ export class InterviewsApi {
   create(request: CreateInterviewRequest): Observable<CreateInterviewResponse> {
     return this.http.post<unknown>(this.url, request).pipe(
       map((body) => createInterviewResponseSchema.parse(body)),
+      mapApiError(),
+    );
+  }
+
+  /** Every Interview, newest first, without its messages: the history list. */
+  list(): Observable<InterviewSummary[]> {
+    return this.http.get<unknown>(this.url).pipe(
+      map((body) => z.array(interviewSummarySchema).parse(body)),
       mapApiError(),
     );
   }
@@ -84,6 +94,11 @@ export class InterviewsApi {
       map((body) => messageSchema.parse(body)),
       mapApiError(),
     );
+  }
+
+  /** Deletes the Interview with its transcript and results. Irreversible. */
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id}`).pipe(mapApiError());
   }
 
   abandon(id: string): Observable<Interview> {

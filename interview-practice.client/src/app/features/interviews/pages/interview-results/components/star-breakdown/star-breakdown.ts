@@ -5,7 +5,7 @@ import { Evaluation, StarCompleteness } from '@app/features/interviews/models/ev
 
 const COMPLETENESS: Record<StarCompleteness, { label: string; filled: number; color: string }> = {
   strong: { label: 'Strong', filled: 3, color: 'bg-success' },
-  partial: { label: 'Partial', filled: 2, color: 'bg-warning' },
+  partial: { label: 'Partial', filled: 2, color: 'bg-amber-500' },
   weak: { label: 'Weak', filled: 1, color: 'bg-destructive' },
 };
 

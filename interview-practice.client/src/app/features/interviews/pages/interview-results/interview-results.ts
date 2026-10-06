@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -17,6 +17,7 @@ import {
   interviewSettings,
   labelOf,
 } from '@app/features/interviews/models/interview.options';
+import { InterviewHistory } from '@app/features/history/interview-history';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
 import { ChatTranscript } from '@app/features/interviews/components/chat-transcript/chat-transcript';
 import { PersonaAvatar } from '@app/features/interviews/components/persona-avatar/persona-avatar';
@@ -142,6 +143,16 @@ export class InterviewResults {
   });
 
   protected readonly transcriptOpen = signal(false);
+
+  constructor() {
+    // The history lists this interview without a verdict until its evaluation exists.
+    const history = inject(InterviewHistory);
+    effect(() => {
+      if (this.evaluation()) {
+        untracked(() => history.refresh());
+      }
+    });
+  }
 
   protected retry(): void {
     this.evaluationResource.reload();

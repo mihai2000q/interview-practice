@@ -6,6 +6,14 @@
     <base href="/" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
     <link href="favicon.ico" rel="icon" type="image/x-icon" />
+    <script>
+      // Apply a saved light theme before the first paint (the page is dark by default).
+      try {
+        if (localStorage.getItem('theme') === 'light') {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch {}
+    </script>
   </head>
   <body>
     <app-root></app-root>

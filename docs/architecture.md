@@ -63,12 +63,19 @@ reasoning behind decisions only gestured at here.
 Split so the topbar and sidebar each own a distinct job, rather than both offering
 navigation:
 
-- **Topbar** — present on every route, unconditional: just the app name/logo, left-aligned,
-  linking Home (passes through the leave-confirmation guard below when mid-flow). This is
-  the *only* place Home navigation lives — neither sidebar duplicates it. No "Abandon"
-  action here — see the Interviewer sidebar below for why that never belonged on the
-  topbar in the first place.
-- **History sidebar** (left) — visible only on Home and Results, hidden on Create Interview
+- **Topbar** — present on every route, unconditional, and sticky. On the left the app mark
+  and name linking Home (passes through the leave-confirmation guard below when mid-flow),
+  which is the first step of a **breadcrumb trail** saying where the candidate is: each route
+  declares its own trail ("New interview", "Interview", "Interview › Results"), earlier steps
+  link back, the current page does not. On the right, tools that apply everywhere: a
+  **light/dark theme toggle** (remembered in the browser; dark by default). It is the *only*
+  place Home navigation lives — neither sidebar duplicates it. Deliberately *not* here: an
+  "Abandon" action — see the Interviewer sidebar below for why that never belonged on the
+  topbar — nor the "+ New Interview" CTA and the Preferences link, which the History sidebar
+  owns for the reason given there.
+- **History sidebar** (left) — built with Spartan's `sidebar`: a panel beside the page on wide
+  screens and a drawer on narrow ones, shown and hidden by a trigger at the left of the topbar
+  (only on the pages that have the sidebar). Visible only on Home and Results, hidden on Create Interview
   and Interview Session (keeps those flows free of distraction and of the temptation to
   jump into an unrelated past result mid-task). Anchored to the top: a **"+ New Interview"**
   CTA, and below it a **Preferences** link (icon *and* text, not either/or) to the
@@ -83,9 +90,11 @@ navigation:
     still opens straight into its own Results page. Exact grouped-list visual treatment
     (collapsible groups vs. a simple label prefix) is an open item — see `overview.md`.
   - The group header itself is clickable, opening `/applications/:id` (the Application
-    Overview page — see the Progress summary section below). Its context menu (**rename**,
-    **delete**) has two ways in: a kebab/menu icon that only reveals on hover (not
-    always-visible), and right-click, both opening the same menu. Delete cascades to every
+    Overview page — see the Progress summary section below). Its context menu has two ways
+    in: a kebab/menu icon that only reveals on hover (not always-visible, but always visible
+    on touch screens, which have neither hover nor right-click), and right-click, both
+    opening the same menu. It offers **delete** only — **rename** is a known limitation,
+    see `overview.md`. A standalone Interview's entry has the same menu. Delete cascades to every
     Interview under it — see
     [ADR 0008](./adr/0008-jobapplication-delete-cascades-to-interviews.md) — so the UI
     needs its own confirmation prompt here, separate from the leave-confirmation guard

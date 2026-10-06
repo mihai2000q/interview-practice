@@ -24,7 +24,7 @@ surprising.
 
 | Route | Purpose |
 |---|---|
-| `/` | Home. Lightweight dashboard: total interviews practiced, hire/no-hire trend, quick "+ New Interview" CTA; falls back to an onboarding empty state before any history exists. |
+| `/` | Home. The dashboard: interviews practiced, hire rate and results still awaiting an evaluation, a donut of hire vs no-hire outcomes, and the most recent results; a quick "+ New interview" CTA; an onboarding state before any interview exists. Shown with the history sidebar. |
 | `/applications/:id` | Application Overview. All stages of a `JobApplication` (status + link to each Interview's Results) plus its cross-stage progress summary once 2+ stages have an Evaluation. |
 | `/interviews/new` | Create Interview. Candidate sets up a session: role, documents, difficulty/tone. |
 | `/interviews/:id` | Interview Session. The live, multi-turn chat with the AI interviewer (a persistent Q&A/Ask-Back phase label above the transcript), alongside a right-side interviewer sidebar (persona portrait/name/title, tone badge, company name if set, question progress, Abandon action). |
@@ -58,6 +58,14 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
 [ADR 0005](./adr/0005-langchain-not-used.md).
 
 ## Known limitations
+
+- **History entries cannot be renamed.** The sidebar's context menu (right-click, or the `⋯`
+  button on hover) only offers **Delete**, for an Application (with all its Interviews) and
+  for a standalone Interview. An Application is labelled "Company — Job title" and a standalone
+  Interview by its job title; changing either means making a new interview. A separate,
+  editable `name` was considered and left out for time: it would need a column on both
+  `JobApplication` and `Interview`, endpoints to set it, and a decision about where else the
+  name shows (Home, Results).
 
 - **Prototype scope, no authentication.** No login, no per-user isolation, no access
   control — see [ADR 0002](./adr/0002-single-user-prototype-no-auth.md).

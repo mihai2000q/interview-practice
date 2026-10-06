@@ -129,6 +129,20 @@ generation is switched off (`PORTRAIT_GENERATION_ENABLED=false`). A failure of t
 service is a `502`/`503`/`504` that affects nothing else; the client keeps its fallback
 avatar and may retry. Two calls at once may both generate an image, but only one is kept.
 
+### `GET /api/interviews`
+
+Every Interview, newest first (`createdAt` descending), as a summary — what the history
+sidebar needs to draw each entry without opening it: `{id, jobTitle, companyName,
+interviewerRole, status, verdict, jobApplicationId, createdAt, endedAt}`. `companyName` is
+the Interview's resolved company (or `null`), `jobApplicationId` is `null` for a standalone
+Interview, `endedAt` is `null` while it is `in_progress`, and `verdict` (`"hire"` |
+`"no_hire"`) is `null` until an `Evaluation` exists — it is read, never generated here (the
+Results page makes it, see ADR 0014). Stale `in_progress` Interviews are closed as they are
+read, as everywhere else ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)),
+so a dead session never shows as running. Response `200`, an empty array when there are none.
+The client groups the entries under their Application with `GET /api/applications`
+(entries with `jobApplicationId: null` are listed on their own).
+
 ### `GET /api/interviews/:id`
 
 Fetch an Interview plus its `Message`s (ordered by `sequence`), for rendering the session
@@ -198,6 +212,17 @@ No body. The Interviewer-sidebar "Abandon interview" action. Marks `status: "aba
 `endedAt`, returns the Interview like `GET /api/interviews/:id` (`409 INTERVIEW_ALREADY_ENDED`
 if it already ended). Like a completed Interview, it is then evaluated by `PUT .../evaluation`
 (with `incomplete: true`).
+
+### `DELETE /api/interviews/:id`
+
+Deletes one Interview and everything hanging off it (`Message`s, question plan, evaluation
+criteria, phase settings, `Evaluation`, `InterviewerReview`), plus its stored persona portrait
+file (best effort, after the rows are gone). The sidebar offers it for a **standalone**
+Interview (one with no Application); for an Interview inside an Application the whole
+Application is deleted instead (`DELETE /api/applications/:id`), though the endpoint itself does
+not forbid deleting a single stage. The client confirms first; the API performs no
+confirmation step. Documents are not deleted. Response `204`, no body; `404` for an unknown
+Interview. Allowed in any status, including `in_progress`.
 
 ### `PUT /api/interviews/:id/evaluation`
 
@@ -336,13 +361,19 @@ Application Overview page data: `companyName`, `jobTitle`, every stage (id,
 
 ### `PATCH /api/applications/:id`
 
-`{"companyName": "string", "jobTitle": "string"}` — sidebar context-menu rename.
+`{"companyName": "string", "jobTitle": "string"}` — sidebar context-menu rename. **Not built**:
+renaming is a known limitation (see `overview.md`); the sidebar menu only deletes.
 
 ### `DELETE /api/applications/:id`
 
 Cascades to every Interview under it and everything hanging off each (see
 [ADR 0008](./adr/0008-jobapplication-delete-cascades-to-interviews.md)) — the client must
-confirm before calling this; the API itself performs no confirmation step.
+confirm before calling this; the API itself performs no confirmation step. The Documents the
+Application and its Interviews point at are **not** deleted (they are managed on their own),
+but each Interview's stored persona portrait file is removed from disk, best effort and after
+the rows are gone, so a missing file never fails the call. Response `204`, no body. `404` for
+an unknown Application. Deleting is also allowed while one of its Interviews is `in_progress`
+(the confirmation says so); a model call still running for it simply finds nothing to store.
 
 ## `preferences` blueprint — `/api/preferences`
 
@@ -359,9 +390,39 @@ Partial update of the same. Pydantic's `model_validator` enforces
 `judgeModel` equal to `interviewModel` fails with `409 JUDGE_MODEL_COLLISION` before
 anything is saved.
 
-## Dashboard data
+## `dashboard` blueprint — `/api/dashboard`
 
-`GET /api/dashboard` — aggregate counts for the Home page (total interviews practiced,
-hire/no-hire trend) rather than making the client crunch a full Interview list itself. Not
-owned by any single blueprint above; exact placement (its own tiny blueprint vs. a loose
-route) is an implementation detail, not a design decision.
+### `GET /api/dashboard`
+
+Aggregate numbers for the Home page, so the client does not crunch a full Interview list
+itself. Its own tiny blueprint. Response `200`:
+
+```json
+{
+  "totalInterviews": 12,
+  "byStatus": { "inProgress": 1, "completed": 9, "abandoned": 2 },
+  "outcomes": { "hire": 5, "noHire": 3, "awaitingEvaluation": 2 },
+  "recent": [
+    {
+      "id": "…", "jobTitle": "Senior Engineer", "companyName": "Acme",
+      "status": "completed", "verdict": "hire", "endedAt": "2026-10-06T09:10:00Z"
+    }
+  ]
+}
+```
+
+- `totalInterviews` counts every Interview ever created; `byStatus` splits it (the three
+  always add up to the total). Stale `in_progress` Interviews are closed first
+  ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)), so the counts
+  agree with the history list.
+- `outcomes.hire` / `outcomes.noHire` count stored `Evaluation`s by `verdict`.
+  `outcomes.awaitingEvaluation` counts Interviews that have ended and in which the candidate
+  sent at least one message, but have no `Evaluation` yet — results are only made when the
+  Results page is opened ([ADR 0014](./adr/0014-results-are-generated-on-demand-by-an-idempotent-put.md)),
+  so this is the "go and open your results" number. An abandoned Interview with nothing to
+  grade (`NOTHING_TO_EVALUATE`) is in none of the three outcomes.
+- `recent` is the (up to) 5 Interviews that ended most recently, newest `endedAt` first, each
+  `{id, jobTitle, companyName, status, verdict, endedAt}` with `verdict` `null` when it has no
+  `Evaluation`. This is the "trend" the Home page draws.
+- All counts are `0` and `recent` is `[]` when there is nothing yet (the Home page then shows
+  its onboarding state). The endpoint only reads: it never generates an `Evaluation`.

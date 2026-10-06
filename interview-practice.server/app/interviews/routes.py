@@ -11,6 +11,7 @@ from app.interviews.schemas import (
     InterviewDetail,
     InterviewerReviewPublic,
     InterviewPublic,
+    InterviewSummary,
     MessageCreate,
     MessageExchange,
     MessagePublic,
@@ -18,6 +19,7 @@ from app.interviews.schemas import (
 )
 from app.interviews.use_cases.abandon_interview import abandon_interview
 from app.interviews.use_cases.create_interview import create_interview
+from app.interviews.use_cases.delete_interview import delete_interview
 from app.interviews.use_cases.generate_evaluation import generate_evaluation
 from app.interviews.use_cases.generate_helper import generate_helper
 from app.interviews.use_cases.generate_persona_image import generate_persona_image
@@ -28,9 +30,10 @@ from app.interviews.use_cases.get_evaluation import get_evaluation
 from app.interviews.use_cases.get_interview import get_interview
 from app.interviews.use_cases.get_interviewer_review import get_interviewer_review
 from app.interviews.use_cases.get_persona_image import get_persona_image
+from app.interviews.use_cases.list_interviews import list_interviews
 from app.interviews.use_cases.open_interview import open_interview
 from app.interviews.use_cases.send_message import send_message
-from app.serialization import to_json
+from app.serialization import to_json, to_json_list
 
 
 @interviews_bp.post("")
@@ -39,9 +42,20 @@ def post_interviews() -> ResponseReturnValue:
     return jsonify(to_json(InterviewPublic, create_interview(body))), 201
 
 
+@interviews_bp.get("")
+def get_interviews() -> ResponseReturnValue:
+    return jsonify(to_json_list(InterviewSummary, list_interviews()))
+
+
 @interviews_bp.get("/<uuid:interview_id>")
 def get_interview_by_id(interview_id: uuid.UUID) -> ResponseReturnValue:
     return jsonify(to_json(InterviewDetail, get_interview(interview_id)))
+
+
+@interviews_bp.delete("/<uuid:interview_id>")
+def delete_interview_by_id(interview_id: uuid.UUID) -> ResponseReturnValue:
+    delete_interview(interview_id)
+    return "", 204
 
 
 @interviews_bp.post("/<uuid:interview_id>/messages")

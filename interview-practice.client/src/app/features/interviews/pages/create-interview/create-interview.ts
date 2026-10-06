@@ -7,7 +7,7 @@ import { toApiError } from '@app/core/api/api-error';
 import { ConfirmsLeaving } from '@app/core/guards/leave-confirmation-guard';
 import { PhaseModelOverrides } from './components/phase-model-overrides/phase-model-overrides';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
-import { ApplicationSummary } from '@app/features/applications/models/application-summary';
+import { ApplicationSummary } from '@app/features/applications/models/application-summary.schema';
 import { describeInputRejection } from './models/input-rejection';
 import { toCreateInterviewRequest } from './models/create-interview.request';
 import {

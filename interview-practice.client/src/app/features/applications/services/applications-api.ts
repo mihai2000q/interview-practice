@@ -1,9 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import { mapApiError } from '@app/core/api/api-error';
-import { ApplicationSummary } from '../models/application-summary';
+import {
+  ApplicationSummary,
+  applicationSummaryListSchema,
+} from '../models/application-summary.schema';
 
 @Service()
 export class ApplicationsApi {
@@ -11,7 +14,10 @@ export class ApplicationsApi {
   private readonly url = `${environment.apiUrl}/applications`;
 
   list(): Observable<ApplicationSummary[]> {
-    return this.http.get<ApplicationSummary[]>(this.url).pipe(mapApiError());
+    return this.http.get<unknown>(this.url).pipe(
+      map((body) => applicationSummaryListSchema.parse(body)),
+      mapApiError(),
+    );
   }
 
   /** Deletes the Application and every Interview under it, with their results. Irreversible. */

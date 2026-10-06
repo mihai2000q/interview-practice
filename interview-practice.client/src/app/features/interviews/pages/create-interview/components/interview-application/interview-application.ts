@@ -8,7 +8,7 @@ import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
-import { ApplicationSummary } from '@app/features/applications/models/application-summary';
+import { ApplicationSummary } from '@app/features/applications/models/application-summary.schema';
 import { ApplicationsApi } from '@app/features/applications/services/applications-api';
 import { CreateInterviewModel } from '@app/features/interviews/pages/create-interview/models/create-interview.schema';
 

@@ -20,7 +20,7 @@ import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
-import { ApplicationDocument } from '@app/features/applications/models/application-summary';
+import { ApplicationDocument } from '@app/features/applications/models/application-summary.schema';
 import {
   AnalysisSettings,
   DocumentType,

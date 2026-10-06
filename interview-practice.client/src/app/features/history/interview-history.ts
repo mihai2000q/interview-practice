@@ -4,7 +4,7 @@ import { firstValueFrom, Subject } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
 import { ApplicationsApi } from '@app/features/applications/services/applications-api';
-import { ApplicationSummary } from '@app/features/applications/models/application-summary';
+import { ApplicationSummary } from '@app/features/applications/models/application-summary.schema';
 import { InterviewSummary } from '@app/features/interviews/models/interview-summary.schema';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
 

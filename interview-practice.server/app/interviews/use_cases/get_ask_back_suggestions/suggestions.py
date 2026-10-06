@@ -123,7 +123,7 @@ def build_messages(interview: Interview) -> list[ChatMessage]:
         count=SUGGESTION_COUNT,
         name=interview.persona_name,
         title=interview.persona_title,
-        role=ROLE_GUIDANCE.get(interview.interviewer_role, interview.interviewer_role),
+        role=ROLE_GUIDANCE[interview.interviewer_role],
         examples=_EXAMPLES,
     )
     setup = (

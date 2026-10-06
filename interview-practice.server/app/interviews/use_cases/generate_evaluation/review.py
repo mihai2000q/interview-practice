@@ -13,6 +13,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from app.errors.exceptions import LlmUpstreamError
+from app.interviews.use_cases.generate_evaluation.evaluation import MAX_REASONING_CHARS
 from app.interviews.use_cases.generate_evaluation.transcript import (
     setup_block,
     transcript_block,
@@ -20,8 +21,6 @@ from app.interviews.use_cases.generate_evaluation.transcript import (
 from app.llm.guard import fence
 from app.llm.openrouter import ChatMessage, CompletionSettings, OpenRouterClient
 from app.models import Interview, InterviewStatus, MessagePhase, MessageRole
-
-MAX_REASONING_CHARS = 2_000
 
 _SYSTEM_PROMPT = """\
 You are an impartial reviewer of AI interviewers. You are given a mock job interview \

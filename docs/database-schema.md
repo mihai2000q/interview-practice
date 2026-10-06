@@ -81,9 +81,9 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `domain` | `text` | taken from the job description's (else the CV's) `document_analyses.domain` at creation; never entered by the candidate |
 | `seniority` | `text` | |
 | `difficulty` | `enum(easy, medium, hard)` | |
-| `tone` | `text` | strict / neutral / friendly (a fixed set in the client form); plain text rather than a DB enum so adding a tone needs no migration |
+| `tone` | `text` | strict / neutral / friendly (a fixed set in the client form and the API's `Tone`); plain text rather than a DB enum so adding a tone needs no migration |
 | `interview_type` | `text` | e.g. technical/behavioral; plain text for future extensibility (e.g. "mixed") |
-| `interviewer_role` | `text` | e.g. recruiter/hr/hiring_manager; plain text, same extensibility reasoning as `tone` |
+| `interviewer_role` | `text` | recruiter / technical_screener / hr / hiring_manager (the API's `InterviewerRole`); plain text, same extensibility reasoning as `tone` |
 | `target_question_count` | `integer` | soft cap, seeded by difficulty; 1–30 (`CHECK`) |
 | `status` | `enum(in_progress, completed, abandoned)` | |
 | `turn_started_at` | `timestamptz`, nullable | set while a Q&A turn is being processed so a second reply is refused (`409 TURN_IN_PROGRESS`); cleared when the turn commits or fails; ignored once older than 5 minutes — see ADR 0013 |

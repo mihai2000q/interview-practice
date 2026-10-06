@@ -8,13 +8,13 @@ from app.extensions import db
 from app.interviews.shared import get_interview_or_404
 from app.interviews.use_cases.generate_persona_image.portrait import (
     build_prompt,
-    delete_portrait,
     store_portrait,
 )
 from app.llm.factory import get_llm_client
 from app.llm.phase_settings import DEFAULT_IMAGE_MODEL
 from app.llm.timing import timed
 from app.models import Interview
+from app.services.portrait_files import remove_portrait_files
 
 
 def generate_persona_image(interview_id: uuid.UUID) -> str | None:
@@ -51,10 +51,10 @@ def generate_persona_image(interview_id: uuid.UUID) -> str | None:
         ).scalar_one_or_none()
         db.session.commit()
     except BaseException:
-        delete_portrait(path)
+        remove_portrait_files([path])
         raise
     if stored is None:
-        delete_portrait(path)
+        remove_portrait_files([path])
     refreshed = db.session.get(Interview, interview_id, populate_existing=True)
     if refreshed is None:  # the Interview was deleted while the image was made
         raise NotFoundError("Interview not found.")

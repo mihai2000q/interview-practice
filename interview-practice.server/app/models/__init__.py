@@ -1,7 +1,14 @@
 from app.models.document import Document, DocumentAnalysis, DocumentType
 from app.models.evaluation import Evaluation, StarCompleteness, Verdict
 from app.models.evaluation_criterion import EvaluationCriterion
-from app.models.interview import Difficulty, Interview, InterviewStatus, ResponseStyle
+from app.models.interview import (
+    Difficulty,
+    Interview,
+    InterviewerRole,
+    InterviewStatus,
+    ResponseStyle,
+    Tone,
+)
 from app.models.interview_phase_settings import GenerationPhase, InterviewPhaseSettings
 from app.models.interview_question import InterviewCategory, InterviewQuestion
 from app.models.interviewer_review import InterviewerReview
@@ -23,6 +30,7 @@ __all__ = [
     "InterviewQuestion",
     "InterviewStatus",
     "InterviewerReview",
+    "InterviewerRole",
     "JobApplication",
     "Message",
     "MessagePhase",
@@ -30,5 +38,6 @@ __all__ = [
     "PreferencePhaseSettings",
     "ResponseStyle",
     "StarCompleteness",
+    "Tone",
     "Verdict",
 ]

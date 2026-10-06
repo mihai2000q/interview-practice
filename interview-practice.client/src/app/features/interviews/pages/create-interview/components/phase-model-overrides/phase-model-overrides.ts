@@ -189,10 +189,13 @@ export class PhaseModelOverrides {
     field.markAsDirty();
     const reset = PHASES.filter((other) => edited[other]?.model !== next[other]?.model);
     if (reset.length > 0) {
-      const named = reset.map((other) => `${PHASE_LABELS[other]} (${edited[other]?.model})`);
+      const named = reset.map(
+        (other) =>
+          `${PHASE_LABELS[other]} (${edited[other]?.model} → ${this.modelIn(next, other) ?? 'default'})`,
+      );
       toast.info(
-        `${new Intl.ListFormat('en').format(named)}: model set back to its default, because ` +
-          `the judge can't use a model that runs the interview.`,
+        `The judge and the interviewer can't share a model, so these went back to the default ` +
+          `model: ${new Intl.ListFormat('en').format(named)}.`,
       );
     }
   }
@@ -221,10 +224,14 @@ export class PhaseModelOverrides {
    * known until they are loaded).
    */
   private judgeRuleModels(settings: PhaseSettingsOverride): JudgeRuleModels {
-    return resolveRuleModels(
-      (phase) =>
-        settings[phase]?.model ??
-        (this.preferences.ready() ? this.preferences.phase(phase).model : undefined),
+    return resolveRuleModels((phase) => this.modelIn(settings, phase));
+  }
+
+  /** The model `phase` runs on under `settings`, `undefined` while the default is not known. */
+  private modelIn(settings: PhaseSettingsOverride, phase: Phase): string | undefined {
+    return (
+      settings[phase]?.model ??
+      (this.preferences.ready() ? this.preferences.phase(phase).model : undefined)
     );
   }
 

@@ -11,7 +11,7 @@ from app.llm.phase_settings import (
 )
 from app.llm.schemas import PhaseSettings, PhaseSettingsOverride
 from app.models import GenerationPhase, PreferencePhaseSettings
-from app.services.preferences import load_preferences
+from app.services.preferences import load_preferences, lock_preferences
 
 
 def update_preferences(
@@ -36,6 +36,7 @@ def update_preferences(
         if settings.reasoning_effort is not None:
             ensure_reasoning_effort_allowed(settings.reasoning_effort)
 
+    lock_preferences()
     rows = {row.phase: row for row in load_preferences()}
     for phase, settings in changes.items():
         _apply(phase, settings, rows)

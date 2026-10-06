@@ -1,9 +1,23 @@
 """The Preferences defaults that every LLM phase falls back to."""
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.extensions import db
 from app.models import PreferencePhaseSettings
+
+# An arbitrary key naming the Preferences' update lock, "pref" in hex.
+_UPDATE_LOCK_KEY = 0x70726566
+
+
+def lock_preferences() -> None:
+    """Wait until no other update of the Preferences is running, and keep others out
+    until this transaction ends.
+
+    Updating is read, check the judge rule, write: two updates at once would each check
+    against rows the other is about to change, and could both insert the row of a phase
+    that has none yet. Take it before `load_preferences()`.
+    """
+    db.session.execute(select(func.pg_advisory_xact_lock(_UPDATE_LOCK_KEY)))
 
 
 def load_preferences() -> list[PreferencePhaseSettings]:

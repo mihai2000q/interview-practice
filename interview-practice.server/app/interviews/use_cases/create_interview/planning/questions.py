@@ -37,7 +37,11 @@ starting with an opening question. Each has a category, "technical" or "behavior
 {skew} Difficulty is {difficulty}. Calibrate depth to the seniority. The interviewer's \
 role: {role} Ground technical questions in the skills and topics given; never invent \
 facts about the candidate, and only probe experience that the candidate analysis \
-lists.{company}{previous}
+lists. Every question must be one that interviewer would realistically ask given \
+their position: a recruiter or HR interviewer asks about background, motivation, how \
+the candidate works with a team, salary and logistics, never low-level technical \
+details. This overrides the category mix: for such a role, "technical" means \
+high-level questions about the candidate's skills and experience.{company}{previous}
 
 JSON keys:
 - "questions": [{{"category": "technical" | "behavioral", "question": string}}]\

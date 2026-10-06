@@ -6,6 +6,7 @@ import {
   Seniority,
   Tone,
 } from './interview.enums';
+import type { Interview } from './interview.schema';
 
 /** Maps a select value to its label */
 export function labelOf(options: readonly { value: string; label: string }[]) {
@@ -46,3 +47,15 @@ export const INTERVIEWER_TONES: readonly { value: Tone; label: string }[] = [
   { value: 'neutral', label: 'Neutral' },
   { value: 'friendly', label: 'Friendly' },
 ];
+
+/** How an Interview was set up (seniority, difficulty, type, response style), as label/value rows. */
+export function interviewSettings(
+  interview: Pick<Interview, 'seniority' | 'difficulty' | 'interviewType' | 'responseStyle'>,
+): { label: string; value: string }[] {
+  return [
+    { label: 'Seniority', value: labelOf(SENIORITIES)(interview.seniority) },
+    { label: 'Difficulty', value: labelOf(DIFFICULTIES)(interview.difficulty) },
+    { label: 'Type', value: labelOf(INTERVIEW_TYPES)(interview.interviewType) },
+    { label: 'Response style', value: labelOf(RESPONSE_STYLES)(interview.responseStyle) },
+  ];
+}

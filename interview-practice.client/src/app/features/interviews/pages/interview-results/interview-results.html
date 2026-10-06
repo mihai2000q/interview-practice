@@ -2,20 +2,12 @@
   @if (evaluation(); as evaluation) {
     <header class="flex items-center gap-4">
       @if (interview(); as interview) {
-        <hlm-avatar class="size-16 shrink-0 rounded-xl after:rounded-xl">
-          @if (personaImageUrl(); as src) {
-            <img
-              [ngSrc]="src"
-              alt=""
-              class="rounded-xl"
-              height="64"
-              hlmAvatarImage
-              priority
-              width="64"
-            />
-          }
-          <span class="rounded-xl text-lg" hlmAvatarFallback>{{ initials() }}</span>
-        </hlm-avatar>
+        <app-persona-avatar
+          [imageUrl]="personaImageUrl()"
+          [name]="interview.personaName"
+          class="shrink-0"
+          size="lg"
+        />
         <div class="min-w-0">
           <p class="text-sm text-muted-foreground">
             Interview with {{ interview.personaName }} · {{ role() }}

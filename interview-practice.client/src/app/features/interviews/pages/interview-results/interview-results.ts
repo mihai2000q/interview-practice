@@ -1,10 +1,8 @@
-import { NgOptimizedImage } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronDown, lucideHouse, lucidePlus } from '@ng-icons/lucide';
-import { HlmAvatarImports } from '@spartan-ng/helm/avatar';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -13,17 +11,15 @@ import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { ApiError, toApiError } from '@app/core/api/api-error';
+import { valueOrUndefined } from '@app/core/api/resource-value';
 import {
-  DIFFICULTIES,
-  INTERVIEW_TYPES,
   INTERVIEWER_ROLES,
+  interviewSettings,
   labelOf,
-  RESPONSE_STYLES,
-  SENIORITIES,
 } from '@app/features/interviews/models/interview.options';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
-import { initialsOf } from '@app/features/interviews/utils/initials';
-import { ChatTranscript } from '../interview-session/components/chat-transcript/chat-transcript';
+import { ChatTranscript } from '@app/features/interviews/components/chat-transcript/chat-transcript';
+import { PersonaAvatar } from '@app/features/interviews/components/persona-avatar/persona-avatar';
 import { ImprovementSuggestions } from './components/improvement-suggestions/improvement-suggestions';
 import { InterviewerReviewPanel } from './components/interviewer-review-panel/interviewer-review-panel';
 import { StarBreakdown } from './components/star-breakdown/star-breakdown';
@@ -65,7 +61,6 @@ function problemOf(error: ApiError): Problem {
   selector: 'app-interview-results',
   imports: [
     ChatTranscript,
-    HlmAvatarImports,
     HlmBadge,
     HlmButtonImports,
     HlmCardImports,
@@ -76,7 +71,7 @@ function problemOf(error: ApiError): Problem {
     ImprovementSuggestions,
     InterviewerReviewPanel,
     NgIcon,
-    NgOptimizedImage,
+    PersonaAvatar,
     RouterLink,
     StarBreakdown,
     VerdictSummary,
@@ -104,15 +99,9 @@ export class InterviewResults {
     stream: ({ params }) => this.api.getInterviewerReview(params),
   });
 
-  protected readonly evaluation = computed(() =>
-    this.evaluationResource.hasValue() ? this.evaluationResource.value() : undefined,
-  );
-  protected readonly interview = computed(() =>
-    this.interviewResource.hasValue() ? this.interviewResource.value() : undefined,
-  );
-  protected readonly review = computed(() =>
-    this.reviewResource.hasValue() ? this.reviewResource.value() : undefined,
-  );
+  protected readonly evaluation = computed(() => valueOrUndefined(this.evaluationResource));
+  protected readonly interview = computed(() => valueOrUndefined(this.interviewResource));
+  protected readonly review = computed(() => valueOrUndefined(this.reviewResource));
   protected readonly interviewLoading = this.interviewResource.isLoading;
   /** Without the Interview the portrait, settings and transcript are missing: say so. */
   protected readonly interviewError = computed(() => {
@@ -131,7 +120,6 @@ export class InterviewResults {
   protected readonly personaImageUrl = computed(() =>
     this.interview()?.personaImageUrl ? this.api.personaImageUrl(this.id()) : null,
   );
-  protected readonly initials = computed(() => initialsOf(this.interview()?.personaName ?? ''));
   protected readonly role = computed(() =>
     labelOf(INTERVIEWER_ROLES)(this.interview()?.interviewerRole),
   );
@@ -141,14 +129,7 @@ export class InterviewResults {
   /** The Interview's settings, as the short chips under the heading. */
   protected readonly facts = computed(() => {
     const interview = this.interview();
-    return interview
-      ? [
-          labelOf(SENIORITIES)(interview.seniority),
-          labelOf(DIFFICULTIES)(interview.difficulty),
-          labelOf(INTERVIEW_TYPES)(interview.interviewType),
-          labelOf(RESPONSE_STYLES)(interview.responseStyle),
-        ]
-      : [];
+    return interview ? interviewSettings(interview).map((setting) => setting.value) : [];
   });
   protected readonly subtitle = computed(() => {
     const interview = this.interview();

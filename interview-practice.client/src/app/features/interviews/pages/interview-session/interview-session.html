@@ -1,5 +1,5 @@
 <main class="mx-auto grid max-w-6xl gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-  @if (interview(); as interview) {
+  @if (store.interview(); as interview) {
     <section
       aria-labelledby="chat-heading"
       class="flex h-[calc(100dvh-6.5rem)] min-h-120 flex-col overflow-hidden rounded-xl border bg-card"
@@ -9,34 +9,34 @@
           Interview with {{ interview.personaName }}
         </h1>
         <div class="flex shrink-0 items-center gap-2">
-          @if (!ended()) {
+          @if (!store.ended()) {
             <app-voice-toggle />
           }
-          <span class="h-8 px-4 text-sm" hlmBadge variant="outline">{{ phaseLabel() }}</span>
+          <span class="h-8 px-4 text-sm" hlmBadge variant="outline">{{ store.phaseLabel() }}</span>
         </div>
       </header>
 
       <app-chat-transcript
-        [animatedMessageId]="animatedMessageId()"
-        [helperPendingIds]="helperPending()"
-        [interviewerTyping]="interviewerTyping()"
+        [animatedMessageId]="store.animatedMessageId()"
+        [helperPendingIds]="store.helperPending()"
+        [interviewerTyping]="store.interviewerTyping()"
         [messages]="interview.messages"
-        [pendingReply]="pendingReply()"
-        (typed)="lastMessageShown.set(true)"
+        [pendingReply]="store.pendingReply()"
+        (typed)="store.lastMessageShown.set(true)"
         [status]="interview.status"
-        [personaImageUrl]="personaImageUrl()"
+        [personaImageUrl]="store.personaImageUrl()"
         [personaName]="interview.personaName"
       />
 
       <footer class="flex flex-col gap-2 border-t p-3 sm:p-4">
-        @if (sendError(); as message) {
+        @if (store.sendError(); as message) {
           <p class="text-sm text-destructive" role="alert">{{ message }}</p>
         }
-        @if (openingError(); as message) {
+        @if (store.openingError(); as message) {
           <p class="flex items-center gap-2 text-sm text-destructive" role="alert">
             {{ message }}
             <button
-              (click)="retryOpening()"
+              (click)="store.retryOpening()"
               class="h-auto p-0"
               hlmBtn
               size="xs"
@@ -47,24 +47,24 @@
             </button>
           </p>
         }
-        @if (ended() && lastMessageShown()) {
+        @if (store.ended() && store.lastMessageShown()) {
           <a [routerLink]="['/interviews', interview.id, 'results']" class="self-center" hlmBtn
             >View results</a
           >
         } @else {
-          @if (inAskBack()) {
+          @if (store.inAskBack()) {
             <div class="flex flex-wrap items-center gap-1">
-              @if (suggestionsAvailable()) {
+              @if (store.suggestionsAvailable()) {
                 <app-ask-back-suggestions
                   (picked)="onSuggestionPicked($event)"
-                  (unavailable)="onSuggestionsUnavailable()"
+                  (unavailable)="store.reload()"
                   [interviewId]="interview.id"
-                  [used]="usedSuggestions()"
+                  [used]="store.usedSuggestions()"
                 />
               }
               <button
-                (click)="declineQuestions()"
-                [disabled]="replyBlocked()"
+                (click)="store.decline()"
+                [disabled]="store.replyBlocked()"
                 class="text-muted-foreground"
                 hlmBtn
                 size="sm"
@@ -77,11 +77,11 @@
             </div>
           }
           <app-chat-composer
-            [draft]="draft()"
-            (draftChange)="onDraftChange($event)"
-            [busy]="replyBlocked() || ended()"
-            [placeholder]="placeholder()"
-            (send)="onSend($event)"
+            [draft]="store.draft()"
+            (draftChange)="store.changeDraft($event)"
+            [busy]="store.replyBlocked() || store.ended()"
+            [placeholder]="store.placeholder()"
+            (send)="store.send($event)"
           />
         }
       </footer>
@@ -90,14 +90,14 @@
     <aside aria-label="Interview information" class="flex flex-col gap-4 lg:self-start">
       <app-interviewer-panel
         [interview]="interview"
-        [personaImageUrl]="personaImageUrl()"
-        [questionsAsked]="questionsAsked()"
+        [personaImageUrl]="store.personaImageUrl()"
+        [questionsAsked]="store.questionsAsked()"
       />
-      @if (!ended()) {
+      @if (!store.ended()) {
         <app-abandon-interview (abandoned)="onAbandoned()" [interviewId]="interview.id" />
       }
     </aside>
-  } @else if (loadError(); as error) {
+  } @else if (store.loadError(); as error) {
     <div class="lg:col-span-2" hlmEmpty>
       <div hlmEmptyHeader>
         <h1 hlmEmptyTitle>

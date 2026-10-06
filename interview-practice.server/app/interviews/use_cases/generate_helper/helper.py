@@ -1,10 +1,10 @@
 """Answer helpers: the optional coaching-hint card shown with each Q&A question.
 
-A second LLM call chained after the interviewer's question (docs/architecture.md,
-"Answer helpers"). It sees the exact question plus the candidate's CV, cover letter
-and the job description's analysis, as plain context injection (ADR 0004). The
-no-fabrication rule is stated as an absolute. The hint is a nicety, so a failed call
-leaves the card out instead of failing the turn.
+Its own LLM call, made after the question exists (docs/architecture.md, "Answer
+helpers"). It sees the exact question plus the candidate's CV, cover letter and the
+job description's analysis, as plain context injection (ADR 0004). The no-fabrication
+rule is stated as an absolute. The hint is a nicety, so a failed call leaves the card
+out instead of raising.
 """
 
 import logging
@@ -69,7 +69,7 @@ def build_messages(interview: Interview, question: str) -> list[ChatMessage]:
     return [ChatMessage("system", _SYSTEM_PROMPT), ChatMessage("user", user)]
 
 
-def generate_helper(
+def write_helper(
     client: OpenRouterClient,
     model: str,
     settings: CompletionSettings,

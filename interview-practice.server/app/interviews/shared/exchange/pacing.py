@@ -24,10 +24,7 @@ class ExchangeKind(Enum):
 
 def questions_asked(interview: Interview) -> int:
     """Interviewer messages in the Q&A phase so far (follow-ups count)."""
-    return sum(
-        m.role is MessageRole.interviewer and m.phase is MessagePhase.qa
-        for m in interview.messages
-    )
+    return sum(m.is_question for m in interview.messages)
 
 
 def decide_kind(interview: Interview, *, has_reply: bool) -> ExchangeKind:

@@ -21,11 +21,14 @@ export class ResultsCache {
   private readonly evaluations = new Map<string, Evaluation>();
   private readonly interviews = new Map<string, Interview>();
   private readonly reviews = new Map<string, InterviewerReview>();
+  /** Deleted Interviews: an answer still on its way for one of them must not be kept. */
+  private readonly removed = new Set<string>();
 
   constructor() {
     // A deleted Interview must not keep answering from here: its results page has to 404.
     this.history.interviewsRemoved$.pipe(takeUntilDestroyed()).subscribe((ids) => {
       for (const id of ids) {
+        this.removed.add(id);
         this.evaluations.delete(id);
         this.interviews.delete(id);
         this.reviews.delete(id);
@@ -82,7 +85,7 @@ export class ResultsCache {
       ? of(hit as R)
       : load().pipe(
           tap((value) => {
-            if (value && isFinal(value)) {
+            if (value && isFinal(value) && !this.removed.has(id)) {
               cache.set(id, value);
             }
           }),

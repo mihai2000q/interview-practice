@@ -411,7 +411,8 @@ resource, same as `GET`.
   `google/gemini-3.5-flash-lite`, `gpt-5-mini`, `gpt-5-nano` or `typesafe/jev-1.13` for
   `interviewerReview` (see `architecture.md`).
 - `400 REASONING_EFFORT_NOT_ALLOWED` if a `reasoningEffort` is not `minimal`, `low`, `medium`
-  or `high` (`details` = `{reasoningEffort, allowed}`).
+  or `high` (`details` = `{reasoningEffort, allowed}`). `POST /api/interviews` and
+  `PUT /api/documents/<id>/analysis` answer it too, for the `reasoningEffort` of their overrides.
 - `409 JUDGE_MODEL_COLLISION` if the result would give `interviewerReview` the same model as
   `questionPlan` or `liveConversation` ([ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md)).
   It is checked on the defaults *as they will be*, so both models can be swapped in one

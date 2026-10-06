@@ -23,9 +23,10 @@ import {
   TEMPERATURE_RANGE,
 } from '@app/features/interviews/models/phase-settings.schema';
 import {
-  INTERVIEWER_PHASES,
+  collidingPhases,
   isModelTaken,
   JudgeRuleModels,
+  resolveRuleModels,
   takenNote,
 } from '@app/features/interviews/models/judge-rule';
 import { PhasePreferences } from '@app/features/preferences/models/preferences.schema';
@@ -124,8 +125,9 @@ export class PhaseModelOverrides {
     return this.preferences.phase(phase);
   }
 
+  /** Without the Preferences the default's model is not known: it is not shown as the built-in one. */
   protected defaultModelLabel(phase: Phase): string {
-    return `Default (${this.defaultOf(phase).model})`;
+    return this.preferences.ready() ? `Default (${this.defaultOf(phase).model})` : 'Default';
   }
 
   /** "Default", with the value a Preference gives it if there is one. */
@@ -187,9 +189,10 @@ export class PhaseModelOverrides {
     field.markAsDirty();
     const reset = PHASES.filter((other) => edited[other]?.model !== next[other]?.model);
     if (reset.length > 0) {
+      const named = reset.map((other) => `${PHASE_LABELS[other]} (${edited[other]?.model})`);
       toast.info(
-        `${reset.map((other) => PHASE_LABELS[other]).join(' and ')}: model set back to its ` +
-          `default, because the judge can't use a model that runs the interview.`,
+        `${new Intl.ListFormat('en').format(named)}: model set back to its default, because ` +
+          `the judge can't use a model that runs the interview.`,
       );
     }
   }
@@ -213,29 +216,35 @@ export class PhaseModelOverrides {
     return next;
   }
 
-  /** The models in effect for `settings`: an override, else the Preferences default. */
+  /**
+   * The models in effect for `settings`: an override, else the Preferences default (which is not
+   * known until they are loaded).
+   */
   private judgeRuleModels(settings: PhaseSettingsOverride): JudgeRuleModels {
-    const modelOf = (phase: Phase) => settings[phase]?.model ?? this.preferences.phase(phase).model;
-    return { judge: modelOf('interviewerReview'), interviewers: INTERVIEWER_PHASES.map(modelOf) };
+    return resolveRuleModels(
+      (phase) =>
+        settings[phase]?.model ??
+        (this.preferences.ready() ? this.preferences.phase(phase).model : undefined),
+    );
   }
 
   /**
    * The pickers don't offer a colliding model, but a "Default" can bring one back: the judge's
    * back to a Preferences model an interviewer override already uses, or an interviewer's back to
    * a Preferences model the judge override uses. The phase that was not edited gives way, so the
-   * choice just made stands (ADR 0009).
+   * choice just made stands (ADR 0009). An override that gives way falls back to a Preferences
+   * model, which can collide with yet another override, so this goes on until none does.
    */
   private restoreJudgeRule(settings: PhaseSettingsOverride, edited: Phase): PhaseSettingsOverride {
-    const { judge, interviewers } = this.judgeRuleModels(settings);
-    if (!interviewers.includes(judge)) {
-      return settings;
-    }
-    return edited === 'interviewerReview'
-      ? INTERVIEWER_PHASES.reduce(
-          (next, phase) => (next[phase]?.model === judge ? this.withoutModel(next, phase) : next),
-          settings,
+    const colliding = collidingPhases(this.judgeRuleModels(settings));
+    // The judge gives way first, as it is the one that has to move off the interviewer's model.
+    const giveWay = colliding.length
+      ? (['interviewerReview', ...colliding] as const).find(
+          (phase) => phase !== edited && settings[phase]?.model !== undefined,
         )
-      : this.withoutModel(settings, 'interviewerReview');
+      : undefined;
+    // Each step removes a model override, so this ends.
+    return giveWay ? this.restoreJudgeRule(this.withoutModel(settings, giveWay), edited) : settings;
   }
 
   /** `settings` without the model of `phase`, and without the phase itself if nothing else is set. */

@@ -30,7 +30,7 @@ import { VerdictSummary } from './components/verdict-summary/verdict-summary';
 interface Problem {
   title: string;
   description: string;
-  action: 'retry' | 'session' | 'new' | 'home';
+  action: 'retry' | 'session' | 'new' | 'preferences' | 'home';
 }
 
 function problemOf(error: ApiError): Problem {
@@ -46,6 +46,13 @@ function problemOf(error: ApiError): Problem {
         title: 'Nothing to evaluate',
         description: "You didn't reply to the interviewer, so there is nothing to grade.",
         action: 'new',
+      };
+    case 'JUDGE_MODEL_COLLISION':
+      // The Preferences changed since the interview was made; trying again fails the same way.
+      return {
+        title: "The judge can't use this model",
+        description: error.message,
+        action: 'preferences',
       };
     default:
       return error.status === 404

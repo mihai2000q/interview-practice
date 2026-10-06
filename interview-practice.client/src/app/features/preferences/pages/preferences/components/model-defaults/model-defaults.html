@@ -49,27 +49,31 @@
               @if (isCustomized(phase)) {
                 <span class="text-muted-foreground" hlmBadge variant="outline">Customized</span>
               }
-              <button
-                (click)="reset(phase)"
-                [attr.aria-label]="
-                  'Reset ' +
-                  phaseLabels[phase] +
-                  ' to its built-in defaults' +
-                  (resetNote(phase) ? '. ' + resetNote(phase) : '')
-                "
-                [disabled]="!canReset(phase)"
+              <!-- A disabled button gets no pointer events, so the tooltip sits on this wrapper. -->
+              <span
                 [hlmTooltip]="resetNote(phase) ?? ''"
                 [tooltipDisabled]="!resetNote(phase)"
-                class="ml-auto"
-                hlmBtn
+                class="ml-auto inline-flex"
                 position="top"
-                size="xs"
-                type="button"
-                variant="ghost"
               >
-                <ng-icon aria-hidden="true" name="lucideRotateCcw" />
-                Reset
-              </button>
+                <button
+                  (click)="reset(phase)"
+                  [attr.aria-label]="
+                    'Reset ' +
+                    phaseLabels[phase] +
+                    ' to its built-in defaults' +
+                    (resetNote(phase) ? '. ' + resetNote(phase) : '')
+                  "
+                  [disabled]="!canReset(phase)"
+                  hlmBtn
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ng-icon aria-hidden="true" name="lucideRotateCcw" />
+                  Reset
+                </button>
+              </span>
             </legend>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">

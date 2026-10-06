@@ -20,7 +20,8 @@ export function builtInPreferences(phase: Phase): PhasePreferences {
  * The saved Preferences, read once and shared: the Preferences page edits them, and Create
  * Interview shows them as the defaults an Interview starts from. Until they are loaded (or if
  * that failed) every phase reads as its built-in defaults, which is only what the server uses
- * when nothing was customized: a page that shows or depends on the defaults waits for `ready`.
+ * when nothing was customized: a page that shows or depends on the defaults checks `ready`, and
+ * does not present the built-in ones as the saved ones.
  */
 @Service()
 export class PreferencesStore {

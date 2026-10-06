@@ -16,10 +16,11 @@ import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
 import {
-  INTERVIEWER_PHASES,
+  collidingPhases,
   isInterviewerPhase,
   isModelTaken,
   JudgeRuleModels,
+  resolveRuleModels,
   takenNote,
 } from '@app/features/interviews/models/judge-rule';
 import {
@@ -244,8 +245,7 @@ export class ModelDefaults {
    * no interviewer phase can use (ADR 0009).
    */
   private withoutCollidingJudge(preferences: Preferences): Preferences {
-    const { judge, interviewers } = judgeRuleModels(preferences);
-    return interviewers.includes(judge)
+    return collidingPhases(judgeRuleModels(preferences)).length > 0
       ? {
           ...preferences,
           interviewerReview: { ...preferences.interviewerReview, model: DEFAULT_JUDGE_MODEL },
@@ -255,8 +255,5 @@ export class ModelDefaults {
 }
 
 function judgeRuleModels(preferences: Preferences): JudgeRuleModels {
-  return {
-    judge: preferences.interviewerReview.model,
-    interviewers: INTERVIEWER_PHASES.map((phase) => preferences[phase].model),
-  };
+  return resolveRuleModels((phase) => preferences[phase].model);
 }

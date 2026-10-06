@@ -23,8 +23,8 @@ export class DocumentAnalysisStatus {
   readonly state = input.required<DocumentAnalysisState>();
   /** The model that made the Document's analysis, if it has one. */
   readonly analysisModel = input<string | null>(null);
-  /** The model the interview will analyze with. */
-  readonly expectedModel = input.required<string>();
+  /** The model the interview will analyze with; `undefined` while the Preferences are unknown. */
+  readonly expectedModel = input.required<string | undefined>();
   /** The last attempt to analyze it failed for a reason that isn't the Document's. */
   readonly attemptFailed = input(false);
   readonly analyzeNow = output();

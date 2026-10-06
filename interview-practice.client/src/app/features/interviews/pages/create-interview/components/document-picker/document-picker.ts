@@ -103,9 +103,14 @@ export class DocumentPicker {
   /** Models that analyzed Documents in this session; the lists loaded earlier don't know yet. */
   private readonly analyzedModels = signal<ReadonlyMap<string, string>>(new Map());
   private readonly preferences = inject(PreferencesStore);
-  /** The model the interview will analyze with: the override, else the Preferences default. */
+  /**
+   * The model the interview will analyze with: the override, else the Preferences default.
+   * `undefined` when that is not known, as the Preferences could not be loaded.
+   */
   protected readonly expectedModel = computed(
-    () => this.analysisSettings()?.model ?? this.preferences.phase('jdAnalysis').model,
+    () =>
+      this.analysisSettings()?.model ??
+      (this.preferences.ready() ? this.preferences.phase('jdAnalysis').model : undefined),
   );
   /** The last attempt to analyze the chosen Document failed for a reason that isn't its own. */
   protected readonly analysisFailed = linkedSignal<string | null, boolean>({
@@ -166,7 +171,8 @@ export class DocumentPicker {
     if (model === null) {
       return 'missing';
     }
-    return model === this.expectedModel() ? 'done' : 'outdated';
+    const expected = this.expectedModel();
+    return expected === undefined || model === expected ? 'done' : 'outdated';
   });
 
   protected reload(): void {

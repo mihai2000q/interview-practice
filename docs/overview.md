@@ -24,7 +24,7 @@ surprising.
 
 | Route | Purpose |
 |---|---|
-| `/` | Home. Lightweight dashboard: total interviews practiced, hire/no-hire trend, quick "+ New Interview" CTA; falls back to an onboarding empty state before any history exists. |
+| `/` | Home. The dashboard: interviews practiced, hire rate and results still awaiting an evaluation, a donut of hire vs no-hire outcomes, and the most recent results; a quick "+ New interview" CTA; an onboarding state before any interview exists. Shown with the history sidebar. |
 | `/applications/:id` | Application Overview. All stages of a `JobApplication` (status + link to each Interview's Results) plus its cross-stage progress summary once 2+ stages have an Evaluation. |
 | `/interviews/new` | Create Interview. Candidate sets up a session: role, documents, difficulty/tone. |
 | `/interviews/:id` | Interview Session. The live, multi-turn chat with the AI interviewer (a persistent Q&A/Ask-Back phase label above the transcript), alongside a right-side interviewer sidebar (persona portrait/name/title, tone badge, company name if set, question progress, Abandon action). |

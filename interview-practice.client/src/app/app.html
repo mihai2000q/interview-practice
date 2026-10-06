@@ -1,3 +1,15 @@
 <app-topbar />
-<router-outlet />
+<!-- One outlet, always: moving it when the sidebar comes and goes would build the page twice. -->
+<hlm-sidebar-wrapper class="min-h-[calc(100svh-57px)]">
+  @if (route.hasHistory()) {
+    @defer {
+      <app-history-sidebar />
+    } @placeholder {
+      <div aria-hidden="true" class="hidden w-(--sidebar-width) shrink-0 border-r md:block"></div>
+    }
+  }
+  <div class="min-w-0 flex-1">
+    <router-outlet />
+  </div>
+</hlm-sidebar-wrapper>
 <hlm-toaster />

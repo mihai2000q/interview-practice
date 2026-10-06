@@ -1,3 +1,66 @@
-<main class="mx-auto flex max-w-3xl flex-col gap-2 px-6 py-10">
-  <h1 class="text-2xl font-semibold tracking-tight">Home</h1>
+<main class="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-8">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-semibold tracking-tight">
+        {{ empty() ? 'Welcome' : 'Welcome back' }}
+      </h1>
+      <p class="text-muted-foreground">How your interview practice is going.</p>
+    </div>
+    <a hlmBtn routerLink="/interviews/new">
+      <ng-icon aria-hidden="true" name="lucidePlus" />
+      New interview
+    </a>
+  </header>
+
+  @if (dashboard(); as dashboard) {
+    @if (empty()) {
+      <app-home-onboarding />
+    } @else {
+      <section aria-label="Overview" class="grid gap-4 sm:grid-cols-3">
+        @for (stat of stats(); track stat.label) {
+          <app-stat-tile [hint]="stat.hint" [label]="stat.label" [value]="stat.value" />
+        }
+      </section>
+
+      <div class="grid items-stretch gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <section aria-labelledby="outcomes-heading" hlmCard>
+          <div hlmCardHeader>
+            <h2 class="text-base" hlmCardTitle id="outcomes-heading">Outcomes</h2>
+            <p hlmCardDescription>How your evaluated interviews ended.</p>
+          </div>
+          <div class="flex flex-1 items-center justify-center" hlmCardContent>
+            <app-outcome-donut
+              [hire]="dashboard.outcomes.hire"
+              [noHire]="dashboard.outcomes.noHire"
+            />
+          </div>
+        </section>
+
+        <app-recent-results [items]="dashboard.recent" />
+      </div>
+    }
+  } @else if (error(); as message) {
+    <div hlmEmpty>
+      <div hlmEmptyHeader>
+        <h2 hlmEmptyTitle>Could not load your dashboard</h2>
+        <p hlmEmptyDescription>{{ message }}</p>
+      </div>
+      <div hlmEmptyContent>
+        <button (click)="retry()" hlmBtn type="button">Try again</button>
+      </div>
+    </div>
+  } @else {
+    <div aria-busy="true" class="flex flex-col gap-6" role="status">
+      <span class="sr-only">Loading your dashboard…</span>
+      <div aria-hidden="true" class="grid gap-4 sm:grid-cols-3">
+        <div class="h-28" hlmSkeleton></div>
+        <div class="h-28" hlmSkeleton></div>
+        <div class="h-28" hlmSkeleton></div>
+      </div>
+      <div aria-hidden="true" class="grid gap-6 md:grid-cols-2">
+        <div class="h-72" hlmSkeleton></div>
+        <div class="h-72" hlmSkeleton></div>
+      </div>
+    </div>
+  }
 </main>

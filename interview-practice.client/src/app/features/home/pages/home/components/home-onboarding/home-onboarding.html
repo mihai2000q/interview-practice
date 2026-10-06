@@ -1,0 +1,26 @@
+<div class="rounded-xl border border-dashed" hlmEmpty>
+  <div hlmEmptyHeader>
+    <div hlmEmptyMedia variant="icon">
+      <ng-icon aria-hidden="true" name="lucideMessagesSquare" />
+    </div>
+    <h2 hlmEmptyTitle>Practice your first interview</h2>
+    <p hlmEmptyDescription>
+      Rehearse for a real role with a mock interviewer, then see how you did.
+    </p>
+  </div>
+  <ol class="grid w-full max-w-2xl gap-3 text-left sm:grid-cols-3">
+    @for (step of steps; track step.title; let i = $index) {
+      <li class="flex flex-col gap-1 rounded-lg bg-muted/40 p-4">
+        <span class="text-xs font-medium text-primary">Step {{ i + 1 }}</span>
+        <span class="text-sm font-medium">{{ step.title }}</span>
+        <span class="text-xs text-muted-foreground">{{ step.text }}</span>
+      </li>
+    }
+  </ol>
+  <div hlmEmptyContent>
+    <a hlmBtn routerLink="/interviews/new">
+      <ng-icon aria-hidden="true" name="lucidePlus" />
+      Start an interview
+    </a>
+  </div>
+</div>

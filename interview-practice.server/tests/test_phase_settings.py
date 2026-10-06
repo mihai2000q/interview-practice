@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.errors.exceptions import ConflictError
-from app.interviews.schemas import PhaseSettingsOverride
+from app.interviews.schemas import InterviewPublic, PhaseSettingsOverride
 from app.llm.phase_settings import ensure_judge_differs_from_interviewer, phase_config
 from app.models import GenerationPhase, InterviewPhaseSettings
 
@@ -193,3 +193,55 @@ def test_no_overrides_make_no_rows() -> None:
 def test_invalid_overrides_are_rejected(bad: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         PhaseSettingsOverride.model_validate(bad)
+
+
+# -- how the settings come back in a response ---------------------------------------
+
+
+def response_overrides(rows: list[InterviewPhaseSettings]) -> dict[str, object]:
+    """`phaseSettingsOverride` of an Interview response built around `rows`."""
+    now = "2026-10-06T10:00:00Z"
+    public = InterviewPublic.model_validate(
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "job_application_id": None,
+            "job_title": "Dev",
+            "company_name": None,
+            "domain": "backend",
+            "seniority": "senior",
+            "difficulty": "easy",
+            "tone": "neutral",
+            "interview_type": "technical",
+            "interviewer_role": "recruiter",
+            "target_question_count": 3,
+            "status": "in_progress",
+            "persona_name": "Dana",
+            "persona_title": "Recruiter",
+            "persona_image_url": None,
+            "job_description_document_id": None,
+            "cv_document_id": None,
+            "cover_letter_document_id": None,
+            "coaching_helpers_enabled": False,
+            "response_style": "concise",
+            "phase_settings": rows,
+            "last_activity_at": now,
+            "created_at": now,
+            "ended_at": None,
+        }
+    )
+    return dict(public.model_dump(mode="json")["phaseSettingsOverride"])
+
+
+def test_the_response_uses_the_same_camel_case_keys_as_the_request() -> None:
+    sent = {
+        "coachingHelpers": {"model": "gpt-5-nano", "maxTokens": 400},
+        "questionPlan": {"temperature": 0.3, "reasoningEffort": "low"},
+    }
+    rows = PhaseSettingsOverride.model_validate(sent).to_rows()
+    assert response_overrides(rows) == sent
+
+
+def test_unset_settings_and_phases_are_left_out_of_the_response() -> None:
+    rows = [row(GenerationPhase.live_conversation, model="gpt-5-nano")]
+    assert response_overrides(rows) == {"liveConversation": {"model": "gpt-5-nano"}}
+    assert response_overrides([]) == {}

@@ -19,7 +19,7 @@ class GenerationPhase(enum.Enum):
     jd_analysis = "jd_analysis"
     question_plan = "question_plan"
     live_conversation = "live_conversation"
-    ask_back = "ask_back"
+    coaching_helpers = "coaching_helpers"
     evaluation = "evaluation"
     interviewer_review = "interviewer_review"
 

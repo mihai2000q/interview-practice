@@ -35,7 +35,7 @@ no JSONB column.
 ## `document_analyses`
 
 What phase 1 (JD/CV analysis) extracted from a `documents` row, cached so the document is
-analysed once and reused by every Interview that uses it. See
+analyzed once and reused by every Interview that uses it. See
 [ADR 0012](./adr/0012-document-analysis-cached-per-document-and-model.md).
 
 | Column | Type | Notes |
@@ -47,7 +47,7 @@ analysed once and reused by every Interview that uses it. See
 | `company_name` | `text`, nullable | the employer, only read from job descriptions and cover letters; null when the document doesn't name one |
 | `skills` | `text[]`, not null, default `{}` | concrete skills/tools, most important first; empty for cover letters |
 | `likely_topics` | `text[]`, not null, default `{}` | subjects an interviewer would probe (for a CV: what its experience invites questions on); empty for cover letters |
-| `created_at` | `timestamptz` | default now(); reset when the row is re-analysed |
+| `created_at` | `timestamptz` | default now(); reset when the row is re-analyzed |
 
 ## `job_applications`
 
@@ -77,7 +77,7 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `job_application_id` | `uuid`, nullable, FK → `job_applications.id` | nullable — a standalone Interview needs no Application |
 | `job_title` | `text` | |
-| `company_name` | `text`, nullable | optional, independent of the job description Document; lets persona/conversation/ask-back suggestions reference a real company even when no JD is uploaded |
+| `company_name` | `text`, nullable | the candidate's, else read from the job description / cover letter when either names one, else null; lets persona/conversation/ask-back suggestions reference a real company even when no JD is uploaded |
 | `domain` | `text` | taken from the job description's (else the CV's) `document_analyses.domain` at creation; never entered by the candidate |
 | `seniority` | `text` | |
 | `difficulty` | `enum(easy, medium, hard)` | |
@@ -91,7 +91,7 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `persona_name` | `text` | |
 | `persona_title` | `text` | job title shown alongside `persona_name`; generated in the same phase 2 call |
 | `persona_backstory` | `text` | the persona's background and knowledge scope, from the same phase 2 call; fed to the live conversation, never returned by the API |
-| `persona_image_path` | `text`, nullable | local-disk path, relative to the Flask app's `instance/` folder; null if the portrait couldn't be generated |
+| `persona_image_path` | `text`, nullable | local-disk path, relative to the Flask app's `instance/` folder; null until the portrait is generated (or if portrait generation is switched off) |
 | `job_description_document_id` | `uuid`, nullable, FK → `documents.id` | |
 | `cv_document_id` | `uuid`, nullable, FK → `documents.id` | |
 | `cover_letter_document_id` | `uuid`, nullable, FK → `documents.id` | |
@@ -110,8 +110,8 @@ phase uses the global Preferences default.
 |---|---|---|
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `interview_id` | `uuid`, FK → `interviews.id` `ON DELETE CASCADE`, not null | |
-| `phase` | `enum(jd_analysis, question_plan, live_conversation, ask_back, evaluation, interviewer_review)` | |
-| `model` | `text`, nullable | OpenRouter model id. `interviewer_review`'s choice is a narrower set (`google/gemini-2.5-flash`/`gpt-5-mini`/`gpt-5-nano`/`typesafe/jev-1.13`) than the other 5 phases' — see architecture.md |
+| `phase` | `enum(jd_analysis, question_plan, live_conversation, coaching_helpers, evaluation, interviewer_review)` | |
+| `model` | `text`, nullable | OpenRouter model id. `interviewer_review`'s choice is a narrower set (`google/gemini-2.5-flash`/`google/gemini-3.5-flash-lite`/`gpt-5-mini`/`gpt-5-nano`/`typesafe/jev-1.13`) than the other 5 phases' — see architecture.md |
 | `temperature` | `double precision`, nullable | |
 | `max_tokens` | `integer`, nullable | |
 | `reasoning_effort` | `text`, nullable | |

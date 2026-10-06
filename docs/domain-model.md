@@ -45,7 +45,7 @@ the first time an Interview needs it, not at upload.
 
 - `document_id`: FK → Document (unique — one analysis per Document)
 - `model`: the model that produced it. An Interview whose `jd_analysis` model differs
-  re-analyses the Document and overwrites the row
+  re-analyzes the Document and overwrites the row
 - `domain`: nullable — the role's field; extracted from job descriptions and CVs
 - `company_name`: nullable — the employer, extracted from job descriptions and cover
   letters only (a CV lists *past* employers), null when the document doesn't name one
@@ -99,7 +99,7 @@ One mock interview session, from creation through evaluation.
   fields regardless, so it stays self-contained even if the parent Application is later
   edited or removed
 - `job_title`: free text, as entered by the candidate
-- `company_name`: free text, optional, independent of the job description Document. Real
+- `company_name`: free text, optional. The candidate's, or when none is given the one the job description or cover letter names (as for a new Application), else null. Real
   interviews near-universally test whether the candidate researched the company ("what do
   you know about us", "why do you want to work here"); without this field there'd be no
   company identity at all when the JD upload is skipped (it's optional). Feeds persona
@@ -107,7 +107,7 @@ One mock interview session, from creation through evaluation.
   assignment's own "questions to ask the interviewer" starter idea, which explicitly wants
   a company name — the ask-back suggestions (phase 4)
 - `domain`: taken at creation from the job description's `DocumentAnalysis` (else the
-  CV's), e.g. "backend engineering"; with no analysed document, phase 2 supplies it from
+  CV's), e.g. "backend engineering"; with no analyzed document, phase 2 supplies it from
   `job_title`/`seniority`. Not a form field, so the candidate never has to categorize their
   own role. Stored on the Interview and fed to the later prompts
 - `seniority`: e.g. junior / mid / senior
@@ -137,7 +137,7 @@ One mock interview session, from creation through evaluation.
     not literal cross-session memory) as the final, more-familiar stage
   Feeds persona generation (phase 2), the live conversation (phase 3), and which ask-back
   questions make sense to suggest (phase 4) — see `architecture.md`. Presented in the UI as
-  a radio group ordered `recruiter` → `technical_screener` → `hr` → `hiring_manager` to mirror the real-world
+  a select whose options are ordered `recruiter` → `technical_screener` → `hr` → `hiring_manager` to mirror the real-world
   pipeline order, even though one Interview only ever represents a single stage.
 
   **Default cascade** — `interviewer_role` seeds `interview_type` and `tone` the same way
@@ -178,9 +178,9 @@ One mock interview session, from creation through evaluation.
   persona consistent every turn, and so the judge can score persona consistency. Never
   shown to the candidate
 - `persona_image_path`: nullable — local-disk path to the generated portrait image, under
-  the Flask app's `instance/` folder (see `architecture.md` — generated once at creation,
-  stored, not regenerated). Null when generation failed: the portrait is cosmetic, so the
-  Interview is created without one
+  the Flask app's `instance/` folder (see `architecture.md` — generated once, stored, not
+  regenerated). Null until the portrait is generated (the session page asks for it), and for good if
+  generation fails or is switched off: the portrait is cosmetic, so nothing waits for it
 - `job_description_document_id`: optional FK → Document (`type = job_description`)
 - `cv_document_id`: optional FK → Document (`type = cv`)
 - `cover_letter_document_id`: optional FK → Document (`type = cover_letter`)
@@ -198,8 +198,9 @@ One phase's LLM overrides for one Interview — the Create Interview "advanced s
 Belongs to exactly one Interview; a row exists only for a phase the candidate overrode.
 
 - `interview_id`: FK → Interview
-- `phase`: `jd_analysis` | `question_plan` | `live_conversation` | `ask_back` |
-  `evaluation` | `interviewer_review` (the 5 candidate-facing phases plus the judge)
+- `phase`: `jd_analysis` | `question_plan` | `live_conversation` |
+  `coaching_helpers` | `evaluation` | `interviewer_review` (the 5 candidate-facing phases plus
+  the judge; `coaching_helpers` covers both the coaching hints and the ask-back suggestions)
 - `model`, `temperature`, `max_tokens`, `reasoning_effort`: each nullable; a null field
   falls back to the global Preferences default. See `architecture.md` for the allowed
   models and the judge-model rule.
@@ -239,9 +240,11 @@ One turn in the interview transcript. Ordered, phase-tagged, role-tagged.
 - `role`: `interviewer` | `candidate`
 - `content`: text
 - `helper_text`: nullable text — a coaching-hint card, populated only for `interviewer` /
-  `qa`-phase messages when `Interview.coaching_helpers_enabled` is true (see `architecture.md`)
+  `qa`-phase messages when `Interview.coaching_helpers_enabled` is true, and written after the
+  message exists, so it is null until the session page asks for it (see `architecture.md`)
 - `sequence`: ordering index within the interview, from 1. The first message of every
-  Interview is the interviewer's opening, created with it. The Interview's current phase is
+  Interview is the interviewer's opening, created when the session page first asks for it (an
+  Interview may briefly have no messages). The Interview's current phase is
   the phase of its last message (`qa` before any)
 - `created_at`
 
@@ -279,7 +282,7 @@ the same trigger point as `Evaluation` (session end), keeping the two symmetric.
 - `judge_model`: the OpenRouter model id used to run this review, default
   `google/gemini-2.5-flash` (selectable globally in Preferences, or overridable per
   Interview via the `interviewer_review` `InterviewPhaseSettings` row's `model`, restricted there to
-  `google/gemini-2.5-flash` / `gpt-5-mini` / `gpt-5-nano` / `typesafe/jev-1.13`) — deliberately independent of
+  `google/gemini-2.5-flash` / `google/gemini-3.5-flash-lite` / `gpt-5-mini` / `gpt-5-nano` / `typesafe/jev-1.13`) — deliberately independent of
   whichever model produced this Interview's question-plan/persona generation (phase 2) and
   live conversation (phase 3): that model is always excluded from the judge-model choices,
   in both Preferences and advanced settings, so the two can never collide — see

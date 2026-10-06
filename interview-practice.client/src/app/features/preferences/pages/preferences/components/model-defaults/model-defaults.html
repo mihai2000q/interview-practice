@@ -51,10 +51,18 @@
               }
               <button
                 (click)="reset(phase)"
-                [attr.aria-label]="'Reset ' + phaseLabels[phase] + ' to its built-in defaults'"
+                [attr.aria-label]="
+                  'Reset ' +
+                  phaseLabels[phase] +
+                  ' to its built-in defaults' +
+                  (resetNote(phase) ? '. ' + resetNote(phase) : '')
+                "
                 [disabled]="!canReset(phase)"
+                [hlmTooltip]="resetNote(phase) ?? ''"
+                [tooltipDisabled]="!resetNote(phase)"
                 class="ml-auto"
                 hlmBtn
+                position="top"
                 size="xs"
                 type="button"
                 variant="ghost"
@@ -81,7 +89,14 @@
                   </hlm-select-trigger>
                   <hlm-select-content *hlmSelectPortal>
                     @for (option of modelsFor(phase); track option) {
-                      <hlm-select-item [value]="option">{{ option }}</hlm-select-item>
+                      <hlm-select-item [disabled]="isTaken(phase, option)" [value]="option">
+                        {{ option }}
+                        @if (isTaken(phase, option)) {
+                          <span class="text-xs text-muted-foreground"
+                            >({{ takenNote(phase) }})</span
+                          >
+                        }
+                      </hlm-select-item>
                     }
                   </hlm-select-content>
                 </hlm-select>

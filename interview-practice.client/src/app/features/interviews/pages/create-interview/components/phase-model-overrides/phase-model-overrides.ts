@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, computed, DestroyRef, inject, input } from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
+import { toast } from '@spartan-ng/brain/sonner';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import {
@@ -21,6 +22,12 @@ import {
   REASONING_EFFORTS,
   TEMPERATURE_RANGE,
 } from '@app/features/interviews/models/phase-settings.schema';
+import {
+  INTERVIEWER_PHASES,
+  isModelTaken,
+  JudgeRuleModels,
+  takenNote,
+} from '@app/features/interviews/models/judge-rule';
 import { PhasePreferences } from '@app/features/preferences/models/preferences.schema';
 import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { CreateInterviewModel } from '@app/features/interviews/pages/create-interview/models/create-interview.schema';
@@ -42,9 +49,6 @@ import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 /** The section's collapse takes this long; scrolling to its end waits for it. */
 const COLLAPSE_TRANSITION_MS = 300;
 const SCROLL_DELAY_MS = COLLAPSE_TRANSITION_MS + 20;
-
-/** The phases whose output is the interviewer the judge scores (ADR 0009). */
-const INTERVIEWER_PHASES = ['questionPlan', 'liveConversation'] as const;
 
 @Component({
   selector: 'app-phase-model-overrides',
@@ -82,19 +86,9 @@ export class PhaseModelOverrides {
   private scrollTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly field = computed(() => this.interviewForm().phaseSettings());
   private readonly value = computed(() => this.field().value());
-  /**
-   * The judge the Preferences give this Interview, while it has no judge override of its own; an
-   * interview model may not be it either (ADR 0009), and the server would answer `409`.
-   */
-  private readonly inheritedJudgeModel = computed(() =>
-    this.value().interviewerReview?.model
-      ? undefined
-      : this.preferences.phase('interviewerReview').model,
-  );
-  private readonly judgeModels = computed(() => {
-    const taken = this.interviewerModels(this.value());
-    return JUDGE_MODELS.filter((model) => !taken.has(model));
-  });
+  protected readonly takenNote = takenNote;
+  /** The models the judge and the interviewer run on now, chosen here or from the Preferences. */
+  private readonly ruleModels = computed(() => this.judgeRuleModels(this.value()));
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.scrollTimer));
@@ -117,13 +111,12 @@ export class PhaseModelOverrides {
   }
 
   protected modelsFor(phase: Phase): readonly string[] {
-    if (phase === 'interviewerReview') {
-      return this.judgeModels();
-    }
-    const inheritedJudge = this.inheritedJudgeModel();
-    return phase === 'questionPlan' || phase === 'liveConversation'
-      ? INTERVIEW_MODELS.filter((model) => model !== inheritedJudge)
-      : INTERVIEW_MODELS;
+    return phase === 'interviewerReview' ? JUDGE_MODELS : INTERVIEW_MODELS;
+  }
+
+  /** Whether `model` is shown but can't be picked for `phase`, as the judge rule forbids it. */
+  protected isTaken(phase: Phase, model: string): boolean {
+    return isModelTaken(phase, model, this.ruleModels());
   }
 
   /** What the phase starts from: the Preferences default, to which this Interview's choices are layered. */
@@ -188,16 +181,22 @@ export class PhaseModelOverrides {
 
   private set(phase: Phase, change: Partial<PhaseSettings>): void {
     const field = this.field();
-    field.value.update((current) => this.applyChange(current, phase, change));
+    const edited = this.applyChange(field.value(), phase, change);
+    const next = this.restoreJudgeRule(edited, phase);
+    field.value.set(next);
     field.markAsDirty();
+    const reset = PHASES.filter((other) => edited[other]?.model !== next[other]?.model);
+    if (reset.length > 0) {
+      toast.info(
+        `${reset.map((other) => PHASE_LABELS[other]).join(' and ')}: model set back to its ` +
+          `default, because the judge can't use a model that runs the interview.`,
+      );
+    }
   }
 
   /**
    * Applies one edit to a phase and returns the next overrides: unset (`undefined`) values are
-   * removed and a phase left with nothing set is removed entirely. The judge rule (ADR 0009) is
-   * then restored: an edit to an interview phase clears a judge that now collides with it, and an
-   * edit to the judge (resetting it to "Default" can bring back one the interview models already
-   * use) clears the interview model overrides that collide with it.
+   * removed and a phase left with nothing set is removed entirely.
    */
   private applyChange(
     settings: PhaseSettingsOverride,
@@ -211,44 +210,32 @@ export class PhaseModelOverrides {
     } else {
       delete next[phase];
     }
-    return phase === 'interviewerReview'
-      ? this.dropCollidingInterviewers(next)
-      : this.dropCollidingJudge(next);
+    return next;
+  }
+
+  /** The models in effect for `settings`: an override, else the Preferences default. */
+  private judgeRuleModels(settings: PhaseSettingsOverride): JudgeRuleModels {
+    const modelOf = (phase: Phase) => settings[phase]?.model ?? this.preferences.phase(phase).model;
+    return { judge: modelOf('interviewerReview'), interviewers: INTERVIEWER_PHASES.map(modelOf) };
   }
 
   /**
-   * The judge must never be the model that ran the interview (ADR 0009). The "interview" is the
-   * question plan and the live conversation; a phase without an override uses the default model.
-   * The server enforces the same rule (`app/interviews/model_rules.py`) as a safety net.
+   * The pickers don't offer a colliding model, but a "Default" can bring one back: the judge's
+   * back to a Preferences model an interviewer override already uses, or an interviewer's back to
+   * a Preferences model the judge override uses. The phase that was not edited gives way, so the
+   * choice just made stands (ADR 0009).
    */
-  private interviewerModels(settings: PhaseSettingsOverride): Set<string> {
-    return new Set(
-      INTERVIEWER_PHASES.map(
-        (phase) => settings[phase]?.model ?? this.preferences.phase(phase).model,
-      ),
-    );
-  }
-
-  /** Clears the judge's model (and the judge entry, if nothing else is set) when it now collides. */
-  private dropCollidingJudge(settings: PhaseSettingsOverride): PhaseSettingsOverride {
-    const model = settings.interviewerReview?.model;
-    return model && this.interviewerModels(settings).has(model)
-      ? this.withoutModel(settings, 'interviewerReview')
-      : settings;
-  }
-
-  /**
-   * Clears the model overrides of the interview phases that run on the judge's model. Only the
-   * overrides can collide: the Preferences defaults never do, so a cleared phase falls back to a
-   * model other than the judge's.
-   */
-  private dropCollidingInterviewers(settings: PhaseSettingsOverride): PhaseSettingsOverride {
-    const judge =
-      settings.interviewerReview?.model ?? this.preferences.phase('interviewerReview').model;
-    return INTERVIEWER_PHASES.reduce(
-      (next, phase) => (next[phase]?.model === judge ? this.withoutModel(next, phase) : next),
-      settings,
-    );
+  private restoreJudgeRule(settings: PhaseSettingsOverride, edited: Phase): PhaseSettingsOverride {
+    const { judge, interviewers } = this.judgeRuleModels(settings);
+    if (!interviewers.includes(judge)) {
+      return settings;
+    }
+    return edited === 'interviewerReview'
+      ? INTERVIEWER_PHASES.reduce(
+          (next, phase) => (next[phase]?.model === judge ? this.withoutModel(next, phase) : next),
+          settings,
+        )
+      : this.withoutModel(settings, 'interviewerReview');
   }
 
   /** `settings` without the model of `phase`, and without the phase itself if nothing else is set. */

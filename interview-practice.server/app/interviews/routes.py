@@ -19,6 +19,7 @@ from app.interviews.schemas import (
 )
 from app.interviews.use_cases.abandon_interview import abandon_interview
 from app.interviews.use_cases.create_interview import create_interview
+from app.interviews.use_cases.delete_interview import delete_interview
 from app.interviews.use_cases.generate_evaluation import generate_evaluation
 from app.interviews.use_cases.generate_helper import generate_helper
 from app.interviews.use_cases.generate_persona_image import generate_persona_image
@@ -49,6 +50,12 @@ def get_interviews() -> ResponseReturnValue:
 @interviews_bp.get("/<uuid:interview_id>")
 def get_interview_by_id(interview_id: uuid.UUID) -> ResponseReturnValue:
     return jsonify(to_json(InterviewDetail, get_interview(interview_id)))
+
+
+@interviews_bp.delete("/<uuid:interview_id>")
+def delete_interview_by_id(interview_id: uuid.UUID) -> ResponseReturnValue:
+    delete_interview(interview_id)
+    return "", 204
 
 
 @interviews_bp.post("/<uuid:interview_id>/messages")

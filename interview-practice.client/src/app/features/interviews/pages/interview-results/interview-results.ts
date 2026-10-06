@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -17,8 +17,8 @@ import {
   interviewSettings,
   labelOf,
 } from '@app/features/interviews/models/interview.options';
-import { InterviewHistory } from '@app/features/history/interview-history';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
+import { ResultsCache } from '@app/features/interviews/services/results-cache';
 import { ChatTranscript } from '@app/features/interviews/components/chat-transcript/chat-transcript';
 import { PersonaAvatar } from '@app/features/interviews/components/persona-avatar/persona-avatar';
 import { ImprovementSuggestions } from './components/improvement-suggestions/improvement-suggestions';
@@ -84,25 +84,38 @@ export class InterviewResults {
   readonly id = input.required<string>();
 
   private readonly api = inject(InterviewsApi);
-  /** Makes the Evaluation (and the review) the first time, so this is the slow call. */
+  private readonly results = inject(ResultsCache);
+  /** Makes the Evaluation (and the review) the first time, so this is the slow call; later it is remembered. */
   private readonly evaluationResource = rxResource({
     params: () => this.id(),
-    stream: ({ params }) => this.api.generateEvaluation(params),
+    stream: ({ params }) => this.results.evaluation(params),
   });
   /** The persona, the transcript and the settings: the page can do without them. */
   private readonly interviewResource = rxResource({
     params: () => this.id(),
-    stream: ({ params }) => this.api.get(params),
+    stream: ({ params }) => this.results.interview(params),
   });
   /** Made by the same call as the Evaluation, so it is asked for once that has finished. */
   private readonly reviewResource = rxResource({
-    params: () => (this.evaluationResource.hasValue() ? this.id() : undefined),
-    stream: ({ params }) => this.api.getInterviewerReview(params),
+    params: () => (this.evaluation() ? this.id() : undefined),
+    stream: ({ params }) => this.results.review(params),
   });
 
-  protected readonly evaluation = computed(() => valueOrUndefined(this.evaluationResource));
-  protected readonly interview = computed(() => valueOrUndefined(this.interviewResource));
-  protected readonly review = computed(() => valueOrUndefined(this.reviewResource));
+  /**
+   * What the page shows: what is already kept for this Interview, else what was requested. A
+   * resource passes through "loading" even when its answer is at hand, which would flash the
+   * skeletons for results that haven't changed.
+   */
+  private readonly kept = computed(() => this.results.kept(this.id()));
+  protected readonly evaluation = computed(
+    () => this.kept().evaluation ?? valueOrUndefined(this.evaluationResource),
+  );
+  protected readonly interview = computed(
+    () => this.kept().interview ?? valueOrUndefined(this.interviewResource),
+  );
+  protected readonly review = computed(
+    () => this.kept().review ?? valueOrUndefined(this.reviewResource),
+  );
   protected readonly interviewLoading = this.interviewResource.isLoading;
   /** Without the Interview the portrait, settings and transcript are missing: say so. */
   protected readonly interviewError = computed(() => {
@@ -143,16 +156,6 @@ export class InterviewResults {
   });
 
   protected readonly transcriptOpen = signal(false);
-
-  constructor() {
-    // The history lists this interview without a verdict until its evaluation exists.
-    const history = inject(InterviewHistory);
-    effect(() => {
-      if (this.evaluation()) {
-        untracked(() => history.refresh());
-      }
-    });
-  }
 
   protected retry(): void {
     this.evaluationResource.reload();

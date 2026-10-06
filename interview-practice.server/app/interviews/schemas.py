@@ -11,12 +11,10 @@ from pydantic import (
 )
 
 from app.llm.guard import MAX_MESSAGE_CHARS, guarded
-from app.llm.schemas import PhaseSettings
+from app.llm.schemas import PhaseSettings, PhaseSettingsOverride
 from app.models import (
     Difficulty,
     Evaluation,
-    GenerationPhase,
-    InterviewPhaseSettings,
     InterviewStatus,
     MessagePhase,
     MessageRole,
@@ -29,34 +27,6 @@ from app.serialization import ApiModel, ShortText
 # Free text that is later fed to the LLM, so it goes through the security guard. It is
 # capped at 200 characters before the guard runs, so only the injection check can fire.
 GuardedText = Annotated[ShortText, guarded()]
-
-
-class PhaseSettingsOverride(ApiModel):
-    model_config = ConfigDict(extra="forbid")
-
-    jd_analysis: PhaseSettings | None = None
-    question_plan: PhaseSettings | None = None
-    live_conversation: PhaseSettings | None = None
-    coaching_helpers: PhaseSettings | None = None
-    evaluation: PhaseSettings | None = None
-    interviewer_review: PhaseSettings | None = None
-
-    def to_rows(self) -> list[InterviewPhaseSettings]:
-        """One unsaved row per phase that carries an override."""
-        rows = (
-            settings.to_row(GenerationPhase(name))
-            for name in type(self).model_fields
-            if (settings := getattr(self, name)) is not None
-        )
-        return [row for row in rows if row is not None]
-
-
-# The request names the six phases as explicit fields (the API contract); they must stay
-# in step with the enum the rest of the code uses.
-if set(PhaseSettingsOverride.model_fields) != {p.value for p in GenerationPhase}:
-    raise RuntimeError(
-        "PhaseSettingsOverride and GenerationPhase list different phases"
-    )
 
 
 class ExistingJobApplication(ApiModel):

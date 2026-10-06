@@ -39,7 +39,13 @@ export function isSubStep(phase: Phase): boolean {
 }
 
 export const DEFAULT_INTERVIEW_MODEL = 'gpt-5-mini';
+export const DEFAULT_JUDGE_MODEL = 'google/gemini-2.5-flash';
 export const INTERVIEW_MODELS = ['gpt-5-mini', 'gpt-5-nano', 'gpt-4o-mini'] as const;
+
+/** The model a phase runs on when neither Preferences nor the Interview chose one. */
+export function builtInModelOf(phase: Phase): string {
+  return phase === 'interviewerReview' ? DEFAULT_JUDGE_MODEL : DEFAULT_INTERVIEW_MODEL;
+}
 /** Not a subset of `INTERVIEW_MODELS` on purpose, see docs/architecture.md and ADR 0009. Jev is a decision model, so only the judge can use it. */
 export const JUDGE_MODELS = [
   'google/gemini-2.5-flash',
@@ -48,7 +54,7 @@ export const JUDGE_MODELS = [
   'gpt-5-nano',
   'typesafe/jev-1.13',
 ] as const;
-/** Stand-ins for the Preferences defaults until Preferences exists; only used to place the sliders. */
+/** Where a slider rests when neither the Interview nor Preferences set the value; it is not sent. */
 export const DEFAULT_TEMPERATURE = 0.7;
 export const DEFAULT_MAX_TOKENS = 1024;
 export const REASONING_EFFORTS = ['minimal', 'low', 'medium', 'high'] as const;

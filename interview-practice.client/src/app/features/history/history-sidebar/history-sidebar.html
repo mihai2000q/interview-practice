@@ -4,10 +4,32 @@
   srOnlySheetTitle="Your interviews"
 >
   <hlm-sidebar-header>
-    <a (click)="closeMobile()" class="w-full" hlmBtn routerLink="/interviews/new">
-      <ng-icon aria-hidden="true" name="lucidePlus" />
-      New interview
-    </a>
+    <ul hlmSidebarMenu>
+      <li hlmSidebarMenuItem>
+        <a
+          [closeMobileSidebarOnClick]="true"
+          class="my-2 h-9 justify-center bg-primary font-medium text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground active:bg-primary/80 active:text-primary-foreground"
+          hlmSidebarMenuButton
+          routerLink="/interviews/new"
+        >
+          <ng-icon aria-hidden="true" name="lucidePlus" />
+          New interview
+        </a>
+      </li>
+      <li hlmSidebarMenuItem>
+        <a
+          #active="routerLinkActive"
+          [closeMobileSidebarOnClick]="true"
+          [isActive]="active.isActive"
+          hlmSidebarMenuButton
+          routerLink="/preferences"
+          routerLinkActive
+        >
+          <ng-icon aria-hidden="true" name="lucideSettings" />
+          Preferences
+        </a>
+      </li>
+    </ul>
   </hlm-sidebar-header>
 
   <hlm-sidebar-content>

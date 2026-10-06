@@ -8,6 +8,7 @@ from app.llm.factory import get_llm_client
 from app.llm.phase_settings import phase_config
 from app.llm.timing import timed
 from app.models import GenerationPhase, Message
+from app.services.preferences import load_preferences
 
 
 def open_interview(interview_id: uuid.UUID) -> Message:
@@ -36,7 +37,7 @@ def _run_and_store_opening(interview_id: uuid.UUID) -> Message:
         return interview.messages[0]
 
     model, settings = phase_config(
-        GenerationPhase.live_conversation, interview.phase_settings
+        GenerationPhase.live_conversation, interview.phase_settings, load_preferences()
     )
     with timed("opening"):
         outcome = run_exchange(get_llm_client(), model, settings, interview, None)

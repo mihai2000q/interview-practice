@@ -1,4 +1,4 @@
-import { computed, inject, Service, signal } from '@angular/core';
+import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
@@ -88,11 +88,19 @@ export class InterviewHistory {
     return error ? toApiError(error).message : null;
   });
 
-  /** `undefined` until both lists have arrived. */
-  readonly entries = computed<HistoryEntry[] | undefined>(() => {
+  private readonly arrived = computed<HistoryEntry[] | undefined>(() => {
     const interviews = valueOrUndefined(this.interviewsResource);
     const applications = valueOrUndefined(this.applicationsResource);
     return interviews && applications ? groupHistory(interviews, applications) : undefined;
+  });
+
+  /**
+   * `undefined` until both lists have arrived the first time. Reading them again keeps showing the
+   * last ones until the new ones are here, so the sidebar doesn't blink on every visit.
+   */
+  readonly entries = linkedSignal<HistoryEntry[] | undefined, HistoryEntry[] | undefined>({
+    source: this.arrived,
+    computation: (arrived, previous) => arrived ?? previous?.value,
   });
 
   /** Deletes what was asked for, then reads the lists again. Already gone counts as deleted. */

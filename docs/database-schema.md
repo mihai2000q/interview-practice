@@ -118,6 +118,23 @@ phase uses the global Preferences default.
 
 Unique: `(interview_id, phase)`. Any column left null falls back to the Preferences default.
 
+## `preference_phase_settings`
+
+The global Preferences: the default LLM settings of one phase, layered under an
+Interview's own `interview_phase_settings`. The same columns, but not tied to an Interview.
+A row exists only for a phase the developer customized, so no row means the built-in
+default, and a row whose every setting is reset is deleted. Preferences is a singleton
+with no table of its own: it is this set of rows (at most six).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK, default `gen_random_uuid()` | |
+| `phase` | `enum(jd_analysis, question_plan, live_conversation, coaching_helpers, evaluation, interviewer_review)`, unique | The same `generationphase` enum type as `interview_phase_settings.phase` |
+| `model` | `text`, nullable | Limited to the same sets as `interview_phase_settings.model` |
+| `temperature` | `double precision`, nullable | |
+| `max_tokens` | `integer`, nullable | |
+| `reasoning_effort` | `text`, nullable | |
+
 ## `interview_questions`
 
 The question plan (phase 2): the ordered questions/topics the interviewer intends to

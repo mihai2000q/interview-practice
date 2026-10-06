@@ -35,7 +35,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 
 | Status | When | Example `code` |
 |---|---|---|
-| 400 | Pydantic validation failure (malformed/missing fields, a value over its length limit), or a Document id of the wrong type for its slot | `VALIDATION_ERROR` (for a validation failure, `details` = `{"errors": [...]}`, one entry per failing field: Pydantic's `type`, `loc`, `msg` and `input`) |
+| 400 | Pydantic validation failure (malformed/missing fields, a value over its length limit), a Document id of the wrong type for its slot, or a model Preferences does not allow for a phase (`MODEL_NOT_ALLOWED`, `details` = `{phase, model, allowed}`) | `VALIDATION_ERROR` (for a validation failure, `details` = `{"errors": [...]}`, one entry per failing field: Pydantic's `type`, `loc`, `msg` and `input`) |
 | 404 | Resource doesn't exist, including a Document id sent in a request body (`POST /api/interviews`) that matches no Document | `NOT_FOUND` |
 | 413 | Upload exceeds the size limit (`MAX_UPLOAD_MB`, default 10) | `FILE_TOO_LARGE` |
 | 422 | Well-formed request, but the uploaded file can't be used (not a readable PDF, encrypted, or no extractable text) | `UNPROCESSABLE_FILE` |
@@ -377,18 +377,41 @@ an unknown Application. Deleting is also allowed while one of its Interviews is 
 
 ## `preferences` blueprint — `/api/preferences`
 
-Singleton resource, no `:id`.
+Singleton resource, no `:id`. The app-wide defaults for the six LLM phases, which an
+Interview's `phaseSettingsOverride` is layered on top of: each setting resolves from the
+Interview's override, else Preferences, else the built-in default (`gpt-5-mini`, and
+`google/gemini-2.5-flash` for `interviewerReview`). The system prompts are not
+configurable and never leave the server.
+
+Both endpoints speak one shape, keyed by the same six phases as `phaseSettingsOverride`
+(`jdAnalysis`, `questionPlan`, `liveConversation`, `coachingHelpers`, `evaluation`,
+`interviewerReview`), each `{model, temperature, maxTokens, reasoningEffort}`.
 
 ### `GET /api/preferences`
 
-Current `interviewModel`, `judgeModel`, `temperature`, and per-phase system prompts.
+Response `200`: **every** phase, with what it runs on by default. `model` is always a
+string (the built-in default if none was chosen); `temperature`, `maxTokens` and
+`reasoningEffort` are `null` when unset, meaning the provider's own default.
 
 ### `PATCH /api/preferences`
 
-Partial update of the same. Pydantic's `model_validator` enforces
-[ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md) here — setting
-`judgeModel` equal to `interviewModel` fails with `409 JUDGE_MODEL_COLLISION` before
-anything is saved.
+Partial update: only the phases named are touched, and within a phase only the settings
+named, e.g. `{"evaluation": {"temperature": 0.2}}`. An explicit `null` resets: a setting
+sent as `null` goes back to the built-in default, and a phase sent as `null` resets all
+of its settings. `temperature` is 0–2, `maxTokens` at least 1. Response `200`: the whole
+resource, same as `GET`.
+
+- `400 VALIDATION_ERROR` for an unknown phase or setting, an out-of-range value, or an
+  empty body.
+- `400 MODEL_NOT_ALLOWED` if a `model` is not one the phase may run on: `gpt-5-mini`,
+  `gpt-5-nano` or `gpt-4o-mini` for the five candidate-facing phases; `google/gemini-2.5-flash`,
+  `google/gemini-3.5-flash-lite`, `gpt-5-mini`, `gpt-5-nano` or `typesafe/jev-1.13` for
+  `interviewerReview` (see `architecture.md`).
+- `409 JUDGE_MODEL_COLLISION` if the result would give `interviewerReview` the same model as
+  `questionPlan` or `liveConversation` ([ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md)).
+  It is checked on the defaults *as they will be*, so both models can be swapped in one
+  request, and nothing is saved when it fails. `POST /api/interviews` runs the same check
+  with the Interview's overrides on top.
 
 ## `dashboard` blueprint — `/api/dashboard`
 

@@ -121,9 +121,9 @@ navigation:
 - Both Create Interview and Interview Session are guarded with a **leave-confirmation
   prompt** (`CanDeactivate`, "are you sure you want to leave?") before navigating away,
   whether that navigation comes from the topbar, browser back, or closing the tab.
-- The **Preferences page** (see its own section below) exposes model selection for the
-  interview itself (default `gpt-5-mini`), a *separate* model selection for the Interviewer
-  Performance Review judge, temperature, and the per-phase system prompts.
+- The **Preferences page** (see its own section below) sets, per phase, the default
+  model, temperature, max tokens and reasoning effort. The judge's model is separate from
+  the interview's. The system prompts are fixed in the server and not editable.
 
 ## The 5 system prompts / phases
 
@@ -402,21 +402,21 @@ itself stays simple for a non-technical user.
 
 ### Model & Prompts tab
 
-- **Interview model** selection (from the allowed OpenRouter chat models, default
-  `gpt-5-mini`) — used for all 5 candidate-facing phases above: JD/CV analysis,
-  question-plan/persona generation, live conversation, the coaching helpers (hints and
-  ask-back suggestions), and STAR evaluation
-- **Interviewer-judge model** selection, default `google/gemini-2.5-flash` — a *separate*
-  selector used only for the Interviewer Performance Review (see below), independent of the
-  interview model above. This page-level picker supports any OpenRouter chat model, not
-  just the interview's 3-model allow-list, since this judge is a distinct, swappable role —
-  the narrower 3-choice picker in per-interview advanced settings is a quick override layer
-  on top of this global default, not a replacement for it. Whichever model is currently
-  selected as **Interview model** above is excluded from this list — the two can never be
-  set to the same model, globally or per-interview (see
+For each of the six phases (JD/CV analysis, question plan, live conversation, coaching
+helpers, evaluation, interviewer review), the defaults every Interview starts from:
+
+- **Model**, from the allowed set for the phase (default `gpt-5-mini`, and
+  `google/gemini-2.5-flash` for the interviewer review). The five candidate-facing phases
+  share one allow-list and the judge has its own narrower, different one, see "Per-interview
+  advanced settings". The interview model and the judge are never the same model: the
+  judge's choices exclude whichever model the question plan or live conversation is set
+  to, and the server refuses the combination (see
   [ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md))
-- Temperature
-- Viewing/editing the per-phase system prompts
+- **Temperature**, **max tokens** and **reasoning effort**, each optional (unset means the
+  provider's default)
+
+An Interview's own advanced settings override these field by field. The system prompts are
+not part of Preferences: they stay in the server, so the client never sees one.
 
 ### Documents tab
 

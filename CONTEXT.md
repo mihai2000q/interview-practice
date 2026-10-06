@@ -158,7 +158,7 @@ _Avoid_: evaluator model, grading model
 
 **Preferences**:
 The app-wide, tabbed page for everything kept separate from the candidate-facing flow:
-interview-model/judge-model/temperature/system-prompt tuning, and all Document management
+per-phase model/temperature/max-tokens/reasoning-effort defaults, and all Document management
 (view/rename/delete/download).
 _Avoid_: settings (bare), config
 

@@ -57,7 +57,8 @@
       ],
       "@spartan-ng/helm/progress": ["./src/app/shared/components/ui/progress/src/index.ts"],
       "@spartan-ng/helm/marker": ["./src/app/shared/components/ui/marker/src/index.ts"],
-      "@spartan-ng/helm/chart": ["./src/app/shared/components/ui/chart/src/index.ts"]
+      "@spartan-ng/helm/chart": ["./src/app/shared/components/ui/chart/src/index.ts"],
+      "@spartan-ng/helm/tabs": ["./src/app/shared/components/ui/tabs/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

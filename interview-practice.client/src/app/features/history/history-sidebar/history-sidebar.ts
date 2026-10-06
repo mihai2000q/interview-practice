@@ -13,6 +13,7 @@ import {
   lucideCircleX,
   lucideEllipsis,
   lucidePlus,
+  lucideSettings,
   lucideTrash2,
 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -21,7 +22,7 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { HlmContextMenuImports } from '@spartan-ng/helm/context-menu';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
-import { HlmSidebarImports, HlmSidebarService } from '@spartan-ng/helm/sidebar';
+import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
 import { filter } from 'rxjs';
 import { OUTCOME_TEXT, outcomeOf } from '@app/features/interviews/models/interview-outcome';
 import { INTERVIEWER_ROLES, labelOf } from '@app/features/interviews/models/interview.options';
@@ -64,6 +65,7 @@ import {
       lucideCircleX,
       lucideEllipsis,
       lucidePlus,
+      lucideSettings,
       lucideTrash2,
     }),
   ],
@@ -72,7 +74,6 @@ import {
 })
 export class HistorySidebar {
   protected readonly history = inject(InterviewHistory);
-  private readonly sidebar = inject(HlmSidebarService);
   protected readonly outcomeOf = outcomeOf;
   protected readonly toneClass = OUTCOME_TEXT;
   protected readonly roleLabel = labelOf(INTERVIEWER_ROLES);
@@ -107,11 +108,6 @@ export class HistorySidebar {
         takeUntilDestroyed(),
       )
       .subscribe(() => this.history.refresh());
-  }
-
-  /** Starting an interview leaves the page: the drawer (narrow screens) closes behind it. */
-  protected closeMobile(): void {
-    this.sidebar.setOpenMobile(false);
   }
 
   protected entryLabel(entry: HistoryEntry): string {

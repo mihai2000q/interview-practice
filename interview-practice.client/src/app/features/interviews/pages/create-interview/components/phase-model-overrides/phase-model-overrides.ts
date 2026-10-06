@@ -4,7 +4,6 @@ import { FieldTree } from '@angular/forms/signals';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import {
-  DEFAULT_INTERVIEW_MODEL,
   DEFAULT_MAX_TOKENS,
   DEFAULT_TEMPERATURE,
   compactPhaseSettings,
@@ -22,6 +21,8 @@ import {
   REASONING_EFFORTS,
   TEMPERATURE_RANGE,
 } from '@app/features/interviews/models/phase-settings.schema';
+import { PhasePreferences } from '@app/features/preferences/models/preferences.schema';
+import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { CreateInterviewModel } from '@app/features/interviews/pages/create-interview/models/create-interview.schema';
 import {
   HlmCard,
@@ -71,14 +72,22 @@ export class PhaseModelOverrides {
   protected readonly phaseHints = PHASE_HINTS;
   protected readonly isSubStep = isSubStep;
   protected readonly reasoningEfforts = REASONING_EFFORTS;
-  protected readonly defaultTemperature = DEFAULT_TEMPERATURE;
-  protected readonly defaultMaxTokens = DEFAULT_MAX_TOKENS;
   protected readonly temperatureRange = TEMPERATURE_RANGE;
   protected readonly maxTokensRange = MAX_TOKENS_RANGE;
+  private readonly preferences = inject(PreferencesStore);
   private readonly document = inject(DOCUMENT);
   private scrollTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly field = computed(() => this.interviewForm().phaseSettings());
   private readonly value = computed(() => this.field().value());
+  /**
+   * The judge the Preferences give this Interview, while it has no judge override of its own; an
+   * interview model may not be it either (ADR 0009), and the server would answer `409`.
+   */
+  private readonly inheritedJudgeModel = computed(() =>
+    this.value().interviewerReview?.model
+      ? undefined
+      : this.preferences.phase('interviewerReview').model,
+  );
   private readonly judgeModels = computed(() => {
     const taken = this.interviewerModels(this.value());
     return JUDGE_MODELS.filter((model) => !taken.has(model));
@@ -105,7 +114,43 @@ export class PhaseModelOverrides {
   }
 
   protected modelsFor(phase: Phase): readonly string[] {
-    return phase === 'interviewerReview' ? this.judgeModels() : INTERVIEW_MODELS;
+    if (phase === 'interviewerReview') {
+      return this.judgeModels();
+    }
+    const inheritedJudge = this.inheritedJudgeModel();
+    return phase === 'questionPlan' || phase === 'liveConversation'
+      ? INTERVIEW_MODELS.filter((model) => model !== inheritedJudge)
+      : INTERVIEW_MODELS;
+  }
+
+  /** What the phase starts from: the Preferences default, to which this Interview's choices are layered. */
+  protected defaultOf(phase: Phase): PhasePreferences {
+    return this.preferences.phase(phase);
+  }
+
+  protected defaultModelLabel(phase: Phase): string {
+    return `Default (${this.defaultOf(phase).model})`;
+  }
+
+  /** "Default", with the value a Preference gives it if there is one. */
+  protected reasoningLabel(phase: Phase): string {
+    const effort = this.defaultOf(phase).reasoningEffort;
+    return effort === null ? 'Default reasoning' : `Default reasoning (${effort})`;
+  }
+
+  protected defaultLabel(value: number | string | null): string {
+    return value === null ? 'Default' : `Default (${value})`;
+  }
+
+  /** Where the slider rests while the setting is unset: at the default, else mid-way. */
+  protected temperatureAt(phase: Phase): number {
+    return (
+      this.current(phase).temperature ?? this.defaultOf(phase).temperature ?? DEFAULT_TEMPERATURE
+    );
+  }
+
+  protected maxTokensAt(phase: Phase): number {
+    return this.current(phase).maxTokens ?? this.defaultOf(phase).maxTokens ?? DEFAULT_MAX_TOKENS;
   }
 
   protected current(phase: Phase): PhaseSettings {
@@ -171,8 +216,8 @@ export class PhaseModelOverrides {
    */
   private interviewerModels(settings: PhaseSettingsOverride): Set<string> {
     return new Set([
-      settings.questionPlan?.model ?? DEFAULT_INTERVIEW_MODEL,
-      settings.liveConversation?.model ?? DEFAULT_INTERVIEW_MODEL,
+      settings.questionPlan?.model ?? this.preferences.phase('questionPlan').model,
+      settings.liveConversation?.model ?? this.preferences.phase('liveConversation').model,
     ]);
   }
 

@@ -47,6 +47,7 @@ from app.models import (
     InterviewerReview,
     InterviewStatus,
 )
+from app.services.preferences import load_preferences
 
 logger = logging.getLogger(__name__)
 
@@ -65,11 +66,12 @@ def generate_evaluation(interview_id: uuid.UUID) -> Evaluation:
     _ensure_can_be_evaluated(interview)
 
     client = get_llm_client()
+    preferences = load_preferences()
     eval_model, eval_settings = phase_config(
-        GenerationPhase.evaluation, interview.phase_settings
+        GenerationPhase.evaluation, interview.phase_settings, preferences
     )
     judge_model, judge_settings = phase_config(
-        GenerationPhase.interviewer_review, interview.phase_settings
+        GenerationPhase.interviewer_review, interview.phase_settings, preferences
     )
     # The prompts are built here, from the ORM objects: the jobs get plain data only.
     eval_prompt = evaluation_messages(interview)

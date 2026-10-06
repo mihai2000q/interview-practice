@@ -44,6 +44,11 @@ export class DocumentsApi {
     );
   }
 
+  /** Where the browser fetches the original file; a link's `href`, not an XHR. */
+  downloadUrl(id: string): string {
+    return `${this.url}/${id}/download`;
+  }
+
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.url}/${id}`).pipe(mapApiError());
   }

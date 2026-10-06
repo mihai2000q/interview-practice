@@ -118,8 +118,8 @@ developer-facing preferences area kept apart from the candidate experience.
     (question quality, persona consistency, pacing), so that I can assess and demonstrate
     the quality of my own prompt engineering independent of any one candidate's
     performance.
-37. As the developer, I want model, temperature, and system-prompt settings centralized in
-    a Preferences area, so that I can tune the app's behavior without touching
+37. As the developer, I want per-phase model, temperature, max tokens and reasoning effort
+    centralized in a Preferences area, so that I can tune the app's behavior without touching
     candidate-facing screens.
 38. As the developer, I want document management (view/rename/delete/download) centralized
     in Preferences too, so that it doesn't clutter the focused Create Interview flow.

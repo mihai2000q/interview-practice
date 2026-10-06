@@ -10,6 +10,7 @@ from app.llm.factory import get_llm_client
 from app.llm.phase_settings import phase_config
 from app.llm.timing import timed
 from app.models import GenerationPhase, Message
+from app.services.preferences import load_preferences
 
 
 def generate_helper(interview_id: uuid.UUID, message_id: uuid.UUID) -> Message:
@@ -40,7 +41,7 @@ def generate_helper(interview_id: uuid.UUID, message_id: uuid.UUID) -> Message:
     ensure_in_progress(interview)
 
     model, settings = phase_config(
-        GenerationPhase.coaching_helpers, interview.phase_settings
+        GenerationPhase.coaching_helpers, interview.phase_settings, load_preferences()
     )
     with timed("helper"):
         text = write_helper(

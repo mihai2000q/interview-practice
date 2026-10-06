@@ -20,3 +20,31 @@ class PhaseSettings(ApiModel):
         """An unsaved row carrying these overrides, or None if none was given."""
         fields = self.model_dump(by_alias=False, exclude_none=True)
         return InterviewPhaseSettings(phase=phase, **fields) if fields else None
+
+
+class PhaseSettingsOverride(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
+    jd_analysis: PhaseSettings | None = None
+    question_plan: PhaseSettings | None = None
+    live_conversation: PhaseSettings | None = None
+    coaching_helpers: PhaseSettings | None = None
+    evaluation: PhaseSettings | None = None
+    interviewer_review: PhaseSettings | None = None
+
+    def to_rows(self) -> list[InterviewPhaseSettings]:
+        """One unsaved row per phase that carries an override."""
+        rows = (
+            settings.to_row(GenerationPhase(name))
+            for name in type(self).model_fields
+            if (settings := getattr(self, name)) is not None
+        )
+        return [row for row in rows if row is not None]
+
+
+# The request names the six phases as explicit fields (the API contract); they must stay
+# in step with the enum the rest of the code uses.
+if set(PhaseSettingsOverride.model_fields) != {p.value for p in GenerationPhase}:
+    raise RuntimeError(
+        "PhaseSettingsOverride and GenerationPhase list different phases"
+    )

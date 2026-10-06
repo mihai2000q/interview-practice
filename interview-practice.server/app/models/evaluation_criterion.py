@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class EvaluationCriterion(Base):
-    """One bullet of an Interview's evaluation rubric (phase 2)."""
+    """One of an Interview's Evaluation criteria (phase 2)."""
 
     __tablename__ = "evaluation_criteria"
     __table_args__ = (UniqueConstraint("interview_id", "sequence"),)

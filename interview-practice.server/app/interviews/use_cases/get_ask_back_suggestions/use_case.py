@@ -17,7 +17,7 @@ def get_ask_back_suggestions(interview_id: uuid.UUID) -> list[str]:
     ensure_in_progress(interview)
     if not interview.coaching_helpers_enabled:
         raise ConflictError(
-            "Interview helpers are off for this interview.", code="HELPERS_DISABLED"
+            "Coaching helpers are off for this interview.", code="HELPERS_DISABLED"
         )
     if interview.phase is not MessagePhase.ask_back:
         raise ConflictError(

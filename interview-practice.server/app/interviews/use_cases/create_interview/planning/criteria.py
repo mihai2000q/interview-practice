@@ -1,4 +1,4 @@
-"""The evaluation criteria (the rubric the candidate is graded against, never shown)."""
+"""The Evaluation criteria (what the candidate is graded against, never shown)."""
 
 from dataclasses import dataclass
 
@@ -9,12 +9,11 @@ from app.interviews.schemas import InterviewCreate
 from app.interviews.use_cases.create_interview.planning.inputs import (
     setup_and_analyses,
 )
+from app.interviews.use_cases.create_interview.planning.limits import MAX_TEXT_CHARS
 from app.llm.openrouter import ChatMessage, CompletionSettings, OpenRouterClient
 from app.llm.timing import timed
 from app.models import InterviewCategory
 from app.services.document_analysis import JobContext
-
-_MAX_TEXT_CHARS = 500
 
 _SYSTEM_PROMPT = """\
 You design the evaluation criteria for a realistic mock job interview. Reply with a \
@@ -67,7 +66,7 @@ def generate_criteria(
         reply = client.chat_structured(_Reply, model, messages, settings)
 
     criteria = [
-        CriterionDraft(c.category, c.criterion.strip()[:_MAX_TEXT_CHARS])
+        CriterionDraft(c.category, c.criterion.strip()[:MAX_TEXT_CHARS])
         for c in reply.evaluation_criteria
         if c.criterion.strip()
     ]

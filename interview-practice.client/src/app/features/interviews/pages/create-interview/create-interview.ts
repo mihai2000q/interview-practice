@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, linkedSignal, signal, viewChild } from '@angular/core';
 import { form, submit } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -7,14 +7,16 @@ import { toApiError } from '@app/core/api/api-error';
 import { ConfirmsLeaving } from '@app/core/guards/leave-confirmation-guard';
 import { PhaseModelOverrides } from './components/phase-model-overrides/phase-model-overrides';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
-import { ApplicationSummary } from '@app/features/applications/models/application-summary';
+import { ApplicationSummary } from '@app/features/applications/models/application-summary.schema';
 import { describeInputRejection } from './models/input-rejection';
 import { toCreateInterviewRequest } from './models/create-interview.request';
 import {
   createInterviewValidation,
   initialCreateInterviewModel,
 } from './models/create-interview.schema';
+import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
+import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { InterviewJobContext } from './components/interview-job-context/interview-job-context';
 import { InterviewStructure } from './components/interview-structure/interview-structure';
 import { InterviewPersona } from './components/interview-persona/interview-persona';
@@ -27,6 +29,7 @@ import { InterviewDocuments } from './components/interview-documents/interview-d
     RouterLink,
     PhaseModelOverrides,
     HlmButtonImports,
+    HlmSkeleton,
     HlmTooltipImports,
     InterviewApplication,
     InterviewJobContext,
@@ -62,6 +65,16 @@ export class CreateInterview implements ConfirmsLeaving {
   protected readonly submitDisabled = computed(
     () => this.interviewForm().invalid() || this.documentsBusy(),
   );
+  protected readonly preferences = inject(PreferencesStore);
+  /**
+   * The form shows the Preferences defaults, so it first waits for them. If they can't be loaded it
+   * is shown anyway, with a notice, as the server applies them whether or not they are shown. Once
+   * shown it stays, so asking again doesn't discard what was entered.
+   */
+  protected readonly formShown = linkedSignal<boolean, boolean>({
+    source: () => this.preferences.ready() || this.preferences.loadError() !== null,
+    computation: (loaded, previous) => loaded || (previous?.value ?? false),
+  });
   private readonly interviewsApi = inject(InterviewsApi);
   private readonly router = inject(Router);
   private readonly submitted = signal(false);

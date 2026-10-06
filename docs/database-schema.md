@@ -42,7 +42,7 @@ analyzed once and reused by every Interview that uses it. See
 |---|---|---|
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `document_id` | `uuid`, FK → `documents.id` `ON DELETE CASCADE`, unique, not null | one-to-one: at most one analysis per document |
-| `model` | `text` | OpenRouter model id that produced it; the cache key: an Interview whose `jd_analysis` model differs re-analyses and overwrites the row |
+| `model` | `text` | OpenRouter model id that produced it; the cache key: an Interview whose `jd_analysis` model differs re-analyzes and overwrites the row |
 | `domain` | `text`, nullable | the role's field (e.g. "backend engineering"); only for job descriptions and CVs |
 | `company_name` | `text`, nullable | the employer, only read from job descriptions and cover letters; null when the document doesn't name one |
 | `skills` | `text[]`, not null, default `{}` | concrete skills/tools, most important first; empty for cover letters |
@@ -81,9 +81,9 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `domain` | `text` | taken from the job description's (else the CV's) `document_analyses.domain` at creation; never entered by the candidate |
 | `seniority` | `text` | |
 | `difficulty` | `enum(easy, medium, hard)` | |
-| `tone` | `text` | strict / neutral / friendly (a fixed set in the client form); plain text rather than a DB enum so adding a tone needs no migration |
-| `interview_type` | `text` | e.g. technical/behavioral; plain text for future extensibility (e.g. "mixed") |
-| `interviewer_role` | `text` | e.g. recruiter/hr/hiring_manager; plain text, same extensibility reasoning as `tone` |
+| `tone` | `text` | strict / neutral / friendly (a fixed set in the client form and the API's `Tone`); plain text rather than a DB enum so adding a tone needs no migration |
+| `interview_type` | `text` | technical / behavioral (the API's `InterviewType`); plain text, same extensibility reasoning as `tone` |
+| `interviewer_role` | `text` | recruiter / technical_screener / hr / hiring_manager (the API's `InterviewerRole`); plain text, same extensibility reasoning as `tone` |
 | `target_question_count` | `integer` | soft cap, seeded by difficulty; 1–30 (`CHECK`) |
 | `status` | `enum(in_progress, completed, abandoned)` | |
 | `turn_started_at` | `timestamptz`, nullable | set while a Q&A turn is being processed so a second reply is refused (`409 TURN_IN_PROGRESS`); cleared when the turn commits or fails; ignored once older than 5 minutes — see ADR 0013 |
@@ -152,14 +152,14 @@ Unique: `(interview_id, sequence)`, which also serves ordered retrieval.
 
 ## `evaluation_criteria`
 
-The evaluation rubric (phase 2), one row per criterion; grounds the STAR evaluation
+The Evaluation criteria (phase 2), one row per criterion; grounds the STAR evaluation
 (phase 5). Never shown to the candidate.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `interview_id` | `uuid`, FK → `interviews.id` `ON DELETE CASCADE`, not null | |
-| `sequence` | `integer` | order within the rubric, from 1 |
+| `sequence` | `integer` | order within the Interview's criteria, from 1 |
 | `category` | `enum(technical, behavioral)` | same enum as `interview_questions.category` |
 | `criterion` | `text` | e.g. "correctly reasons about time complexity tradeoffs" |
 
@@ -195,7 +195,7 @@ Index: `(interview_id, sequence)` for ordered transcript retrieval.
 | `star_result` | `text` | same, for Result |
 | `star_completeness` | `enum(strong, partial, weak)` | overall STAR completeness rating |
 | `incomplete` | `boolean` | default false; true when interview was abandoned |
-| `model_used` | `text` | OpenRouter model id used for this evaluation; currently always `gpt-5-mini`, same as the rest of the candidate pipeline (see architecture.md) |
+| `model_used` | `text` | OpenRouter model id the `evaluation` phase resolved to for this evaluation: the Interview's override, else Preferences, else the built-in `gpt-5-mini` (see architecture.md) |
 | `created_at` | `timestamptz` | default now() |
 
 ## `interviewer_reviews`

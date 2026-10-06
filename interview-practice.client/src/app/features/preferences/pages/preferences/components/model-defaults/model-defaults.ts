@@ -11,9 +11,18 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmSlider } from '@spartan-ng/helm/slider';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
+import {
+  collidingPhases,
+  isInterviewerPhase,
+  isModelTaken,
+  JudgeRuleModels,
+  resolveRuleModels,
+  takenNote,
+} from '@app/core/phase-settings/judge-rule';
 import {
   DEFAULT_JUDGE_MODEL,
   DEFAULT_MAX_TOKENS,
@@ -29,7 +38,7 @@ import {
   PHASES,
   REASONING_EFFORTS,
   TEMPERATURE_RANGE,
-} from '@app/features/interviews/models/phase-settings.schema';
+} from '@app/core/phase-settings/phase-settings.schema';
 import {
   PhasePreferences,
   Preferences,
@@ -38,18 +47,9 @@ import {
 import { PreferencesApi } from '@app/features/preferences/services/preferences-api';
 import {
   builtInPreferences,
+  isBuiltIn,
   PreferencesStore,
 } from '@app/features/preferences/services/preferences-store';
-
-function isBuiltIn(phase: Phase, preferences: PhasePreferences): boolean {
-  const builtIn = builtInPreferences(phase);
-  return (
-    preferences.model === builtIn.model &&
-    preferences.temperature === null &&
-    preferences.maxTokens === null &&
-    preferences.reasoningEffort === null
-  );
-}
 
 /** The settings of `draft` that differ from `saved`, as a `PATCH` body. */
 function changesOf(saved: Preferences, draft: Preferences): PreferencesPatch {
@@ -88,6 +88,7 @@ function changesOf(saved: Preferences, draft: Preferences): PreferencesPatch {
     HlmSelectImports,
     HlmSkeleton,
     HlmSlider,
+    HlmSpinnerImports,
     HlmTooltipImports,
     NgIcon,
   ],
@@ -124,13 +125,28 @@ export class ModelDefaults {
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
 
-  private readonly judgeModels = computed(() => {
-    const taken = this.interviewModels(this.draft());
-    return JUDGE_MODELS.filter((model) => !taken.has(model));
-  });
+  protected readonly takenNote = takenNote;
 
   protected modelsFor(phase: Phase): readonly string[] {
-    return phase === 'interviewerReview' ? this.judgeModels() : INTERVIEW_MODELS;
+    return phase === 'interviewerReview' ? JUDGE_MODELS : INTERVIEW_MODELS;
+  }
+
+  /** Whether `model` is shown but can't be picked for `phase`, as the judge rule forbids it. */
+  protected isTaken(phase: Phase, model: string): boolean {
+    const draft = this.draft();
+    return !!draft && isModelTaken(phase, model, judgeRuleModels(draft));
+  }
+
+  /**
+   * What resetting an interviewer phase also does, when its built-in model is the judge's: the
+   * judge goes back to its own built-in model, so the rule holds. `null` when it does nothing else.
+   */
+  protected resetNote(phase: Phase): string | null {
+    const draft = this.draft();
+    const model = builtInPreferences(phase).model;
+    return draft && isInterviewerPhase(phase) && draft.interviewerReview.model === model
+      ? `${model} is the judge's model, so the judge goes back to ${DEFAULT_JUDGE_MODEL} too.`
+      : null;
   }
 
   /** Whether the saved defaults of a phase differ from the built-in ones. */
@@ -200,29 +216,35 @@ export class ModelDefaults {
   }
 
   private edit(phase: Phase, change: Partial<PhasePreferences>): void {
-    this.draft.update(
-      (draft) =>
-        draft && this.withoutCollidingJudge({ ...draft, [phase]: { ...draft[phase], ...change } }),
-    );
+    const draft = this.draft();
+    if (!draft) {
+      return;
+    }
+    const edited = { ...draft, [phase]: { ...draft[phase], ...change } };
+    const next = this.withoutCollidingJudge(edited);
+    this.draft.set(next);
+    if (next.interviewerReview.model !== edited.interviewerReview.model) {
+      toast.info(
+        `The judge went back to ${DEFAULT_JUDGE_MODEL}: it can't use a model that runs the interview.`,
+      );
+    }
   }
 
   /**
-   * The judge must never be the model that ran the interview (ADR 0009), and the interview is the
-   * question plan and the live conversation. The server refuses the combination
-   * (`JUDGE_MODEL_COLLISION`), so a judge that now collides goes back to its built-in model.
+   * The picker does not offer a colliding model, so only resetting an interviewer phase to a
+   * built-in model the judge uses gets here. The judge goes back to its built-in model, which
+   * no interviewer phase can use (ADR 0009).
    */
-  private interviewModels(preferences: Preferences | undefined): Set<string> {
-    return new Set(
-      preferences ? [preferences.questionPlan.model, preferences.liveConversation.model] : [],
-    );
-  }
-
   private withoutCollidingJudge(preferences: Preferences): Preferences {
-    return this.interviewModels(preferences).has(preferences.interviewerReview.model)
+    return collidingPhases(judgeRuleModels(preferences)).length > 0
       ? {
           ...preferences,
           interviewerReview: { ...preferences.interviewerReview, model: DEFAULT_JUDGE_MODEL },
         }
       : preferences;
   }
+}
+
+function judgeRuleModels(preferences: Preferences): JudgeRuleModels {
+  return resolveRuleModels((phase) => preferences[phase].model);
 }

@@ -78,7 +78,6 @@ export class InterviewSessionStore {
     computation: () => null,
   });
 
-  /** The interviewer's opening message is being fetched (or awaited from another request). */
   /** An earlier reply is still being answered (a reload mid-turn, or another tab): wait, don't resend. */
   readonly waitingForTurn = linkedSignal<string, boolean>({
     source: this.id,
@@ -89,6 +88,7 @@ export class InterviewSessionStore {
     source: this.animatedMessageId,
     computation: (id) => id === null,
   });
+  /** The interviewer's opening message is being fetched (or awaited from another request). */
   readonly opening = linkedSignal<string, boolean>({
     source: this.id,
     computation: () => false,
@@ -346,7 +346,7 @@ export class InterviewSessionStore {
   ): Observable<Interview> {
     return timer(OPENING_POLL_INTERVAL_MS, OPENING_POLL_INTERVAL_MS).pipe(
       take(OPENING_MAX_POLLS),
-      // A poll still waiting for its answer is not cancelled by the next tick: it would never finish.
+      // A poll still waiting for its answer is not canceled by the next tick: it would never finish.
       exhaustMap(() => this.api.get(id)),
       filter(isReady),
       take(1),

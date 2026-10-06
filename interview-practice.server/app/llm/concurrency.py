@@ -7,7 +7,7 @@ first failure is raised at once instead of waiting for the others.
 A job should still receive only plain data and the client, and use no database
 session: the context makes Flask lookups work, not the ORM thread-safe. When one job
 fails, `fan_out` stops *waiting* for the others; a request already in flight can't be
-cancelled and finishes unobserved in its worker thread, with its result dropped.
+canceled and finishes unobserved in its worker thread, with its result dropped.
 """
 
 from collections.abc import Callable, Sequence

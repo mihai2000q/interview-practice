@@ -19,7 +19,7 @@ class ExchangeKind(Enum):
     ask = "ask"  # ask the next question; may end the questions early
     close_questions = "close_questions"  # questions are over: invite the candidate's
     answer = "answer"  # ask-back: answer the candidate; may close the interview
-    close_interview = "close_interview"  # ask-back is over: thank them and close
+    close_interview = "close_interview"  # ask-back is over: answer, thank, close
 
 
 def questions_asked(interview: Interview) -> int:
@@ -39,7 +39,8 @@ def decide_kind(interview: Interview, *, has_reply: bool) -> ExchangeKind:
         if questions_asked(interview) >= interview.target_question_count:
             return ExchangeKind.close_questions
         return ExchangeKind.ask
-    # `1 +` counts the reply being answered, which isn't stored yet.
+    # `1 +` counts the reply being answered, which isn't stored yet. The question that
+    # reaches the cap is still answered: the same message answers it and closes.
     candidate_questions = 1 + sum(
         m.role is MessageRole.candidate and m.phase is MessagePhase.ask_back
         for m in interview.messages

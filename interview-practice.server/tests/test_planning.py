@@ -248,12 +248,6 @@ def test_the_question_mix_leans_towards_the_interview_type(interview_type: str) 
     )
 
 
-def test_another_interview_type_balances_the_two_categories() -> None:
-    model = FakeModel()
-    plan(model, request(interviewType="mixed"))
-    assert "Balance the two categories." in model.system("questions")
-
-
 def test_difficulty_and_role_shape_the_questions_and_tone_shapes_the_persona() -> None:
     model = FakeModel()
     plan(model, request(difficulty="easy", tone="strict", interviewerRole="recruiter"))
@@ -315,9 +309,7 @@ def test_no_company_means_no_company_question() -> None:
     assert "company:" not in model.user("questions")
 
 
-def test_the_criteria_prompt_asks_for_the_rubric_with_a_coachability_criterion() -> (
-    None
-):
+def test_the_criteria_prompt_asks_for_a_coachability_criterion() -> None:
     model = FakeModel()
     plan(model)
     system = model.system("criteria")

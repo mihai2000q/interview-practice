@@ -24,6 +24,7 @@ import { HlmContextMenuImports } from '@spartan-ng/helm/context-menu';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
 import { filter } from 'rxjs';
+import { InterviewStatus } from '@app/features/interviews/models/interview.enums';
 import { OUTCOME_TEXT, outcomeOf } from '@app/features/interviews/models/interview-outcome';
 import { INTERVIEWER_ROLES, labelOf } from '@app/features/interviews/models/interview.options';
 import { toApiError } from '@app/core/api/api-error';
@@ -158,7 +159,7 @@ export class HistorySidebar {
   }
 
   /** A running interview is resumed; a finished one opens its results. */
-  protected link(interview: { id: string; status: string }): string[] {
+  protected link(interview: { id: string; status: InterviewStatus }): string[] {
     return interview.status === 'in_progress'
       ? ['/interviews', interview.id]
       : ['/interviews', interview.id, 'results'];

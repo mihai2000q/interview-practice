@@ -21,6 +21,7 @@ from app.models import (
     Interview,
     InterviewCategory,
     InterviewStatus,
+    InterviewType,
     ResponseStyle,
     StarCompleteness,
     Verdict,
@@ -116,16 +117,14 @@ class EvaluationDraft:
     star_completeness: StarCompleteness
 
 
-def _weighting(interview_type: str) -> str:
-    kind = interview_type.lower()
-    technical, behavioral = "technical" in kind, "behavioral" in kind
-    if technical and not behavioral:
-        return (
-            "This is a technical interview: weigh the technical criteria more heavily."
-        )
-    if behavioral and not technical:
-        return "A behavioral interview: weigh the behavioral criteria more heavily."
-    return "Weigh the technical and behavioral criteria equally."
+_WEIGHTING: dict[str, str] = {
+    InterviewType.technical: (
+        "This is a technical interview: weigh the technical criteria more heavily."
+    ),
+    InterviewType.behavioral: (
+        "A behavioral interview: weigh the behavioral criteria more heavily."
+    ),
+}
 
 
 def _criteria_lines(interview: Interview) -> str:
@@ -139,7 +138,7 @@ def _criteria_lines(interview: Interview) -> str:
 
 def build_messages(interview: Interview) -> list[ChatMessage]:
     system = _SYSTEM_PROMPT.format(
-        weighting=_weighting(interview.interview_type),
+        weighting=_WEIGHTING[interview.interview_type],
         criteria=_criteria_lines(interview),
         caveat=(
             _INCOMPLETE_CAVEAT if interview.status is InterviewStatus.abandoned else ""

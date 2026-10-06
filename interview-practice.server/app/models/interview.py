@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Enum,
     ForeignKey,
@@ -49,8 +50,45 @@ class ResponseStyle(enum.Enum):
     detailed = "detailed"
 
 
+class Tone(enum.StrEnum):
+    """How the interviewer comes across. Stored as text, see `Interview.tone`."""
+
+    strict = "strict"
+    neutral = "neutral"
+    friendly = "friendly"
+
+
+class InterviewType(enum.StrEnum):
+    """Which kind of questions the interview leans towards. Stored as text."""
+
+    technical = "technical"
+    behavioral = "behavioral"
+
+
+class InterviewerRole(enum.StrEnum):
+    """Which stage of a hiring pipeline the interviewer plays. Stored as text."""
+
+    recruiter = "recruiter"
+    technical_screener = "technical_screener"
+    hr = "hr"
+    hiring_manager = "hiring_manager"
+
+
+# `Interview.target_question_count` is limited to this range by the API and the table.
+MIN_TARGET_QUESTIONS = 1
+MAX_TARGET_QUESTIONS = 30
+
+
 class Interview(Base):
     __tablename__ = "interviews"
+    __table_args__ = (
+        CheckConstraint(
+            f"target_question_count BETWEEN {MIN_TARGET_QUESTIONS} "
+            f"AND {MAX_TARGET_QUESTIONS}",
+            name=f"ck_target_question_count_{MIN_TARGET_QUESTIONS}_"
+            f"{MAX_TARGET_QUESTIONS}",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     job_application_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -62,7 +100,8 @@ class Interview(Base):
     seniority: Mapped[str] = mapped_column(String)
     difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty))
     # tone, interview_type and interviewer_role are plain text so the set of
-    # values can grow without an enum migration (see database-schema.md)
+    # values can grow without an enum migration (see database-schema.md); `Tone`,
+    # `InterviewType` and `InterviewerRole` list the ones the API accepts today
     tone: Mapped[str] = mapped_column(String)
     interview_type: Mapped[str] = mapped_column(String)
     interviewer_role: Mapped[str] = mapped_column(String)

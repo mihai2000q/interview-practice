@@ -8,6 +8,7 @@ from app.errors.exceptions import BadRequestError, ConflictError
 from app.llm.phase_settings import (
     ensure_judge_differs_from_interviewer,
     ensure_model_allowed,
+    ensure_reasoning_effort_allowed,
     phase_config,
     phase_defaults,
 )
@@ -90,6 +91,18 @@ def test_the_judge_accepts_its_own_set_but_not_gpt_4o_mini() -> None:
         ensure_model_allowed(P.interviewer_review, model)
     with pytest.raises(BadRequestError):
         ensure_model_allowed(P.interviewer_review, "gpt-4o-mini")
+
+
+@pytest.mark.parametrize("effort", ["minimal", "low", "medium", "high"])
+def test_the_known_reasoning_efforts_are_accepted(effort: str) -> None:
+    ensure_reasoning_effort_allowed(effort)
+
+
+@pytest.mark.parametrize("effort", ["bogus", "HIGH", ""])
+def test_any_other_reasoning_effort_is_refused(effort: str) -> None:
+    with pytest.raises(BadRequestError) as caught:
+        ensure_reasoning_effort_allowed(effort)
+    assert caught.value.code == "REASONING_EFFORT_NOT_ALLOWED"
 
 
 # -- the judge rule over Preferences --------------------------------------------------

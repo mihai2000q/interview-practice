@@ -2,7 +2,7 @@ import { computed, inject, Service } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
-import { builtInModelOf, Phase } from '@app/features/interviews/models/phase-settings.schema';
+import { builtInModelOf, Phase } from '@app/core/phase-settings/phase-settings.schema';
 import { PhasePreferences, Preferences } from '../models/preferences.schema';
 import { PreferencesApi } from './preferences-api';
 
@@ -16,11 +16,23 @@ export function builtInPreferences(phase: Phase): PhasePreferences {
   };
 }
 
+/** Whether `preferences` is exactly what `phase` uses when nothing has been customized. */
+export function isBuiltIn(phase: Phase, preferences: PhasePreferences): boolean {
+  const builtIn = builtInPreferences(phase);
+  return (
+    preferences.model === builtIn.model &&
+    preferences.temperature === null &&
+    preferences.maxTokens === null &&
+    preferences.reasoningEffort === null
+  );
+}
+
 /**
  * The saved Preferences, read once and shared: the Preferences page edits them, and Create
  * Interview shows them as the defaults an Interview starts from. Until they are loaded (or if
- * that failed) every phase reads as its built-in defaults, which is also what the server uses
- * when nothing was customized.
+ * that failed) every phase reads as its built-in defaults, which is only what the server uses
+ * when nothing was customized: a page that shows or depends on the defaults checks `ready`, and
+ * does not present the built-in ones as the saved ones.
  */
 @Service()
 export class PreferencesStore {
@@ -29,6 +41,8 @@ export class PreferencesStore {
 
   /** `undefined` while loading or after a failure to load. */
   readonly preferences = computed(() => valueOrUndefined(this.preferencesResource));
+  /** Whether `phase()` answers with what the server has, not with the built-in defaults. */
+  readonly ready = computed(() => this.preferences() !== undefined);
   readonly loadError = computed(() => {
     const error = this.preferencesResource.error();
     return error ? toApiError(error).message : null;

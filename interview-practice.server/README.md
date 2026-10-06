@@ -60,7 +60,7 @@ Compose and Flask both read `.env`, never `.env.dev` directly. It has:
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_HOST`, `POSTGRES_PORT` | assembled into `SQLALCHEMY_DATABASE_URI` at runtime — discrete pieces, not one pre-built URI, so the same values also work as-is for Docker Compose's `db` service (see `../docs/deployment.md`) |
 | `CLIENT_HOST`, `CLIENT_PORT` | `flask-cors`'s allowed origin, built as `http://CLIENT_HOST:CLIENT_PORT` — `http://localhost:8002` for local dev (`ng serve` and `flask run` are different origins); a no-op inside Docker Compose, where the browser only ever talks to nginx's single origin |
 | `MAX_UPLOAD_MB` | largest document upload in MB (default `10`), the whole request including form fields; the client container's nginx gets the same value (`client_max_body_size`), so change it for both via Compose — see `../docs/deployment.md` |
-| `OPENROUTER_BASE_URL` | defaults to the real `https://openrouter.ai/api/v1`; override to point at the opt-in `mock-llm` Docker Compose service for local dev without real API cost (see `../docs/deployment.md`) |
+| `OPENROUTER_BASE_URL` | defaults to the real `https://openrouter.ai/api/v1`; override only to point at another OpenRouter-compatible endpoint (see `../docs/deployment.md`) |
 
 `OPENROUTER_API_KEY` is the one exception — deliberately **not** in `.env.dev`/`.env` or
 any other file in this repo. It comes only from wherever it already lives on your own

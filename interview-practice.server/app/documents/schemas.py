@@ -1,15 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
-
-from pydantic import StringConstraints
 
 from app.models import DocumentType
-from app.serialization import ApiModel
-
-DocumentName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-]
+from app.serialization import ApiModel, ShortText
 
 
 class DocumentPublic(ApiModel):
@@ -42,12 +35,12 @@ class DocumentCreateForm(ApiModel):
     """The non-file fields of the multipart upload."""
 
     type: DocumentType
-    name: DocumentName | None = None
+    name: ShortText | None = None
     save: bool
 
 
 class DocumentUpdate(ApiModel):
     """PATCH body: rename and/or change whether the Document is kept in the library."""
 
-    name: DocumentName | None = None
+    name: ShortText | None = None
     saved: bool | None = None

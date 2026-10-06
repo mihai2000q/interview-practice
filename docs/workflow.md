@@ -42,7 +42,7 @@ step is implemented.
   a "save for later" checkbox, checked by default for a CV or cover letter and unchecked for a
   job description (usually specific to one role); the form holds only the returned
   Document id. Right after an upload the Document is analyzed (the attachment shows an
-  "Analyzing document…" indicator; Start stays disabled while the file uploads and while it is analysed); removing the
+  "Analyzing document…" indicator; Start stays disabled while the file uploads and while it is analyzed); removing the
   attachment stops it and deletes the Document. If the Document itself is rejected it is
   deleted and the candidate is told to use a different file; if the failure is on our side
   (provider unavailable, timeout) it is kept and marked "Document not analyzed" with an
@@ -55,7 +55,7 @@ step is implemented.
   model", and either can be analyzed on the spot. Optional.
 - **CV** and **cover letter** — two separate fields, each with the same
   select-existing-or-dropzone-upload pattern as job description. Both optional.
-- **Interview helpers** toggle — boolean, default `false`. When on, each Q&A-phase question
+- **Coaching helpers** toggle — boolean, default `false`. When on, each Q&A-phase question
   comes with a coaching-hint card grounded in the CV/cover letter where a real match
   exists, falling back to a generic hint when there's no document or no grounded match —
   the hint prompt must never fabricate experience the candidate didn't actually provide —
@@ -91,7 +91,7 @@ completed.
 
 Always offered once the Q&A phase ends: the candidate can ask the interviewer their own
 questions (with optional AI-suggested questions, tailored to the interviewer's role, that
-they can accept, edit, or ignore — offered when the Interview helpers toggle is on), or
+they can accept, edit, or ignore — offered when the Coaching helpers toggle is on), or
 decline entirely (a "No questions, thank you" button, shown whether or not helpers are on, sends
 a short message saying so; it counts like any other reply, see ADR 0013). What they ask — or that they
 decline — is itself a signal that feeds into the evaluation, the way it would in a real

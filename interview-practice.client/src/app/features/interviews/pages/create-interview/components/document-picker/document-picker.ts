@@ -20,12 +20,9 @@ import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
-import { ApplicationDocument } from '@app/features/applications/models/application-summary';
-import {
-  AnalysisSettings,
-  DocumentType,
-  StoredDocument,
-} from '@app/features/documents/models/document.schema';
+import { PhaseSettings } from '@app/core/phase-settings/phase-settings.schema';
+import { ApplicationDocument } from '@app/features/applications/models/application-summary.schema';
+import { DocumentType, StoredDocument } from '@app/features/documents/models/document.schema';
 import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { MAX_UPLOAD_MB } from '@app/features/documents/documents.constants';
 import { DocumentsApi } from '@app/features/documents/services/documents-api';
@@ -81,7 +78,7 @@ export class DocumentPicker {
   readonly disabled = input(false);
   readonly extraDocuments = input<ApplicationDocument[]>([]);
   /** The interview's `jdAnalysis` override: the analysis it will use, and what "Analyze now" runs. */
-  readonly analysisSettings = input<AnalysisSettings | undefined>(undefined);
+  readonly analysisSettings = input<PhaseSettings | undefined>(undefined);
 
   protected readonly selectId = `document-picker-${nextId++}`;
   private readonly uploadInProgress = signal(false);
@@ -93,7 +90,6 @@ export class DocumentPicker {
     computation: () => null,
   });
   protected readonly uploadedDocument = signal<StoredDocument | null>(null);
-  /** The Document being analyzed right now. */
   /** The Document being analyzed; choosing another one ends it. */
   private readonly analysisTarget = linkedSignal<string | null, string | null>({
     source: this.value,
@@ -103,9 +99,14 @@ export class DocumentPicker {
   /** Models that analyzed Documents in this session; the lists loaded earlier don't know yet. */
   private readonly analyzedModels = signal<ReadonlyMap<string, string>>(new Map());
   private readonly preferences = inject(PreferencesStore);
-  /** The model the interview will analyze with: the override, else the Preferences default. */
+  /**
+   * The model the interview will analyze with: the override, else the Preferences default.
+   * `undefined` when that is not known, as the Preferences could not be loaded.
+   */
   protected readonly expectedModel = computed(
-    () => this.analysisSettings()?.model ?? this.preferences.phase('jdAnalysis').model,
+    () =>
+      this.analysisSettings()?.model ??
+      (this.preferences.ready() ? this.preferences.phase('jdAnalysis').model : undefined),
   );
   /** The last attempt to analyze the chosen Document failed for a reason that isn't its own. */
   protected readonly analysisFailed = linkedSignal<string | null, boolean>({
@@ -166,7 +167,8 @@ export class DocumentPicker {
     if (model === null) {
       return 'missing';
     }
-    return model === this.expectedModel() ? 'done' : 'outdated';
+    const expected = this.expectedModel();
+    return expected === undefined || model === expected ? 'done' : 'outdated';
   });
 
   protected reload(): void {
@@ -201,7 +203,7 @@ export class DocumentPicker {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.analysisRequest?.unsubscribe());
 
-    // Choosing another Document (or none) ends the request that was analysing the previous one.
+    // Choosing another Document (or none) ends the request that was analyzing the previous one.
     effect(() => {
       if (this.analysisTarget() === null) {
         untracked(() => {

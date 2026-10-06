@@ -41,9 +41,7 @@ export OPENROUTER_API_KEY=...  # from wherever it already lives on your machine 
 docker compose up
 ```
 
-`.env.dev` already has safe local defaults for everything else. To use the mock LLM
-instead of real OpenRouter (no cost, no real key needed) see
-[`docs/deployment.md`](docs/deployment.md#services).
+`.env.dev` already has safe local defaults for everything else.
 
 Or run each half manually — see [`interview-practice.client/README.md`](interview-practice.client/README.md)
 and [`interview-practice.server/README.md`](interview-practice.server/README.md).

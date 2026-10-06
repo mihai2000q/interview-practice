@@ -62,7 +62,7 @@ class DocumentAnalysis(Base):
     document_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), unique=True
     )
-    # The model that produced it: an Interview using a different one re-analyses.
+    # The model that produced it: an Interview using a different one re-analyzes.
     model: Mapped[str] = mapped_column(String)
     domain: Mapped[str | None] = mapped_column(String)
     company_name: Mapped[str | None] = mapped_column(String)

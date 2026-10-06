@@ -1,4 +1,5 @@
 import { inject, Service } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, tap } from 'rxjs';
 import { InterviewHistory } from '@app/features/history/interview-history';
 import { Evaluation, InterviewerReview } from '../models/evaluation.schema';
@@ -20,6 +21,20 @@ export class ResultsCache {
   private readonly evaluations = new Map<string, Evaluation>();
   private readonly interviews = new Map<string, Interview>();
   private readonly reviews = new Map<string, InterviewerReview>();
+  /** Deleted Interviews: an answer still on its way for one of them must not be kept. */
+  private readonly removed = new Set<string>();
+
+  constructor() {
+    // A deleted Interview must not keep answering from here: its results page has to 404.
+    this.history.interviewsRemoved$.pipe(takeUntilDestroyed()).subscribe((ids) => {
+      for (const id of ids) {
+        this.removed.add(id);
+        this.evaluations.delete(id);
+        this.interviews.delete(id);
+        this.reviews.delete(id);
+      }
+    });
+  }
 
   /** What is kept for `id`, to show at once instead of waiting for a request to answer. */
   kept(id: string): { evaluation?: Evaluation; interview?: Interview; review?: InterviewerReview } {
@@ -70,7 +85,7 @@ export class ResultsCache {
       ? of(hit as R)
       : load().pipe(
           tap((value) => {
-            if (value && isFinal(value)) {
+            if (value && isFinal(value) && !this.removed.has(id)) {
               cache.set(id, value);
             }
           }),

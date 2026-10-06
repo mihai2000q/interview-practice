@@ -25,11 +25,3 @@ export const documentAnalysisSchema = z.object({
   likelyTopics: z.array(z.string()),
 });
 export type DocumentAnalysis = z.infer<typeof documentAnalysisSchema>;
-
-/** Model and completion settings for an analysis; what a `jdAnalysis` override can carry. */
-export interface AnalysisSettings {
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  reasoningEffort?: string;
-}

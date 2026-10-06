@@ -35,6 +35,9 @@ _JUDGE_MODELS = (
     "typesafe/jev-1.13",
 )
 
+# The reasoning efforts Preferences may set, the same four the client offers.
+_REASONING_EFFORTS = ("minimal", "low", "medium", "high")
+
 # Phases whose output is "the interviewer" the judge scores (ADR 0009).
 _INTERVIEWER_PHASES = (GenerationPhase.question_plan, GenerationPhase.live_conversation)
 
@@ -57,6 +60,25 @@ def ensure_model_allowed(phase: GenerationPhase, model: str) -> None:
             details={"phase": phase.value, "model": model, "allowed": list(allowed)},
             code="MODEL_NOT_ALLOWED",
         )
+
+
+def ensure_reasoning_effort_allowed(effort: str) -> None:
+    """Preferences only lets a phase run on the reasoning efforts listed here."""
+    if effort not in _REASONING_EFFORTS:
+        raise BadRequestError(
+            f"'{effort}' is not a reasoning effort a phase can run on.",
+            details={"reasoningEffort": effort, "allowed": list(_REASONING_EFFORTS)},
+            code="REASONING_EFFORT_NOT_ALLOWED",
+        )
+
+
+def ensure_overrides_allowed(rows: Iterable[InterviewPhaseSettings]) -> None:
+    """An Interview's overrides only name what Preferences could: models and efforts."""
+    for row in rows:
+        if row.model is not None:
+            ensure_model_allowed(row.phase, row.model)
+        if row.reasoning_effort is not None:
+            ensure_reasoning_effort_allowed(row.reasoning_effort)
 
 
 def phase_config(

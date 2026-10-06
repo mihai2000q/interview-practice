@@ -8,7 +8,22 @@
       </p>
     </div>
 
-    <div class="flex flex-col gap-4" hlmCardContent>
+    <!-- `inert` keeps the pointer and the keyboard out while the save is in flight, so nothing can
+         be edited that the response would then overwrite. -->
+    <div
+      [attr.aria-busy]="saving()"
+      [attr.inert]="saving() ? '' : null"
+      class="relative flex flex-col gap-4"
+      hlmCardContent
+    >
+      @if (saving()) {
+        <div
+          aria-hidden="true"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-card/70"
+        >
+          <hlm-spinner />
+        </div>
+      }
       @for (phase of phases; track phase; let last = $last; let index = $index) {
         <div class="gap-1" hlmFieldGroup>
           <fieldset
@@ -34,19 +49,31 @@
               @if (isCustomized(phase)) {
                 <span class="text-muted-foreground" hlmBadge variant="outline">Customized</span>
               }
-              <button
-                (click)="reset(phase)"
-                [attr.aria-label]="'Reset ' + phaseLabels[phase] + ' to its built-in defaults'"
-                [disabled]="!canReset(phase)"
-                class="ml-auto"
-                hlmBtn
-                size="xs"
-                type="button"
-                variant="ghost"
+              <!-- A disabled button gets no pointer events, so the tooltip sits on this wrapper. -->
+              <span
+                [hlmTooltip]="resetNote(phase) ?? ''"
+                [tooltipDisabled]="!resetNote(phase)"
+                class="ml-auto inline-flex"
+                position="top"
               >
-                <ng-icon aria-hidden="true" name="lucideRotateCcw" />
-                Reset
-              </button>
+                <button
+                  (click)="reset(phase)"
+                  [attr.aria-label]="
+                    'Reset ' +
+                    phaseLabels[phase] +
+                    ' to its built-in defaults' +
+                    (resetNote(phase) ? '. ' + resetNote(phase) : '')
+                  "
+                  [disabled]="!canReset(phase)"
+                  hlmBtn
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ng-icon aria-hidden="true" name="lucideRotateCcw" />
+                  Reset
+                </button>
+              </span>
             </legend>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
@@ -66,7 +93,14 @@
                   </hlm-select-trigger>
                   <hlm-select-content *hlmSelectPortal>
                     @for (option of modelsFor(phase); track option) {
-                      <hlm-select-item [value]="option">{{ option }}</hlm-select-item>
+                      <hlm-select-item [disabled]="isTaken(phase, option)" [value]="option">
+                        {{ option }}
+                        @if (isTaken(phase, option)) {
+                          <span class="text-xs text-muted-foreground"
+                            >({{ takenNote(phase) }})</span
+                          >
+                        }
+                      </hlm-select-item>
                     }
                   </hlm-select-content>
                 </hlm-select>

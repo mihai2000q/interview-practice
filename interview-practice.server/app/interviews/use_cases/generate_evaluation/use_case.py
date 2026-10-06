@@ -38,7 +38,7 @@ from app.interviews.use_cases.generate_evaluation.transcript import (
 )
 from app.llm.concurrency import fan_out
 from app.llm.factory import get_llm_client
-from app.llm.phase_settings import phase_config
+from app.llm.phase_settings import ensure_judge_differs_from_interviewer, phase_config
 from app.llm.timing import timed
 from app.models import (
     Evaluation,
@@ -67,6 +67,8 @@ def generate_evaluation(interview_id: uuid.UUID) -> Evaluation:
 
     client = get_llm_client()
     preferences = load_preferences()
+    # Preferences may have changed since the Interview was created (ADR 0009).
+    ensure_judge_differs_from_interviewer(interview.phase_settings, preferences)
     eval_model, eval_settings = phase_config(
         GenerationPhase.evaluation, interview.phase_settings, preferences
     )

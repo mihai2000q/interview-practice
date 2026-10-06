@@ -152,7 +152,7 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    plan (skewed
    technical vs. behavioral by `interview_type`: at least 70% of the questions are of the
    interview's own type, and exactly `target_question_count` of them are planned), and a
-   structured **evaluation rubric**
+   structured set of **Evaluation criteria**
    (technical + behavioral criteria, stored as `EvaluationCriterion` rows; the question plan
    as `InterviewQuestion` rows) — the assignment's
    "generate interviewer guidelines" optional task, folded into this same phase rather
@@ -196,25 +196,25 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    complete input-to-output examples (one per interviewer role, five suggestions each) and
    the model is asked for five suggestions (fewer than five usable ones is a `502`; extras are trimmed). It also sees the conversation so
    far, so suggestions can build on what was discussed. It is offered only when the
-   Interview's interview-helpers toggle (`coaching_helpers_enabled`, the same one as the
+   Interview's coaching-helpers toggle (`coaching_helpers_enabled`, the same one as the
    coaching hints) is on, and runs on the Interview's `coaching_helpers` model and settings,
    the same phase as the coaching hints (one phase for both, as the one toggle governs both).
    Unlike
    the coaching hint, the candidate asks for it, so a failure is a normal error, not a
    missing card.
 5. **STAR evaluation** — scores the full transcript (both phases) against the STAR
-   framework and the Interview's `EvaluationCriterion` rows (phase 2's rubric, weighted toward
+   framework and the Interview's `EvaluationCriterion` rows (phase 2's criteria, weighted toward
    whichever half — technical or behavioral — matches `interview_type`), and produces a
    verdict
    (`hire`/`no_hire`), reasoning, and improvement suggestions. Technique:
    **chain-of-thought** reasoning constrained to a structured JSON output;
    `Interview.response_style` shapes how long/detailed the reasoning and improvement
-   suggestions are. Runs on the same model as the rest of the pipeline (`gpt-5-mini`,
-   recorded on the Evaluation as `model_used` for reproducibility) — see
+   suggestions are. Runs on the `evaluation` phase's model (the Interview's override, else Preferences, else
+   the built-in `gpt-5-mini`, recorded on the Evaluation as `model_used` for reproducibility) — see
    [ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md) for why
    that's deliberate rather than decoupled like the Interviewer Performance Review below.
 
-## Answer helpers
+## Coaching helpers
 
 An optional coaching-hint card shown alongside each Q&A-phase question (e.g. "Talk about
 your experience with JavaScript"). Controlled by a single boolean the candidate sets at

@@ -1,10 +1,10 @@
 """Create Interview: analyze the documents, plan the interview, store it.
 
-Phase 1 (JD/CV analysis, `app.services.document_analysis`) and phase 2 (`planning.py`)
-run in sequence and the Interview is committed. The interviewer's opening message and
-the persona's portrait are not made here: the session page asks for them (`PUT
-.../opening`, `PUT .../persona-image`), so the candidate reaches the session as soon as
-the plan exists.
+Phase 1 (JD/CV analysis, `app.services.document_analysis`) and phase 2 (the `planning`
+package) run in sequence and the Interview is committed. The interviewer's opening
+message and the persona's portrait are not made here: the session page asks for them
+(`PUT .../opening`, `PUT .../persona-image`), so the candidate reaches the session as
+soon as the plan exists.
 """
 
 import uuid
@@ -19,7 +19,11 @@ from app.interviews.use_cases.create_interview.planning import (
     plan_interview,
 )
 from app.llm.factory import get_llm_client
-from app.llm.phase_settings import ensure_judge_differs_from_interviewer, phase_config
+from app.llm.phase_settings import (
+    ensure_judge_differs_from_interviewer,
+    ensure_overrides_allowed,
+    phase_config,
+)
 from app.llm.timing import timed
 from app.models import (
     Document,
@@ -41,6 +45,7 @@ def create_interview(body: InterviewCreate) -> Interview:
     phase_settings = (
         body.phase_settings_override.to_rows() if body.phase_settings_override else []
     )
+    ensure_overrides_allowed(phase_settings)
     preferences = load_preferences()
     ensure_judge_differs_from_interviewer(phase_settings, preferences)
     client = get_llm_client()
@@ -108,7 +113,7 @@ def _resolve_application(
     if isinstance(body.job_application, ExistingJobApplication):
         application = db.session.get(JobApplication, body.job_application.id)
         if application is None:
-            raise NotFoundError("Job application not found.")
+            raise NotFoundError("Application not found.")
         return application
     if body.job_application is None:
         return None
@@ -138,9 +143,9 @@ def _build_interview(
         domain=plan.domain,
         seniority=body.seniority,
         difficulty=body.difficulty,
-        tone=body.tone,
-        interview_type=body.interview_type,
-        interviewer_role=body.interviewer_role,
+        tone=body.tone.value,
+        interview_type=body.interview_type.value,
+        interviewer_role=body.interviewer_role.value,
         target_question_count=body.target_question_count,
         status=InterviewStatus.in_progress,
         persona_name=plan.persona_name,

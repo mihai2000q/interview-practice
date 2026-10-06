@@ -61,7 +61,7 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
 
 - **History entries cannot be renamed.** The sidebar's context menu (right-click, or the `⋯`
   button on hover) only offers **Delete**, for an Application (with all its Interviews) and
-  for a standalone Interview. An Application is labelled "Company — Job title" and a standalone
+  for a standalone Interview. An Application is labeled "Company — Job title" and a standalone
   Interview by its job title; changing either means making a new interview. A separate,
   editable `name` was considered and left out for time: it would need a column on both
   `JobApplication` and `Interview`, endpoints to set it, and a decision about where else the

@@ -23,7 +23,8 @@ request: loading, the claim, the lock and the commit.
 
 The ask-back phase ends when the interviewer closes it (`done`, which the model sets when the
 candidate declines or has no more questions) or after 5 candidate questions, whichever comes
-first. The Interview then becomes `completed` and `ended_at` is set. There is no separate
+first. The fifth question is still answered: the interviewer's reply answers it and closes
+the phase in the same message. The Interview then becomes `completed` and `ended_at` is set. There is no separate
 "finish" action: the candidate declining is a message like any other, and it is itself a
 signal for the evaluation, as the workflow describes.
 

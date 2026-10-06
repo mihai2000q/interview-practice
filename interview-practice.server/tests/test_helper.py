@@ -1,4 +1,4 @@
-"""The coaching helper (docs/architecture.md, "Answer helpers"): what its prompt is
+"""The coaching helper (docs/architecture.md, "Coaching helpers"): what its prompt is
 given and how its reply is tidied. No database: the Interview is built unsaved and the
 model is a fake transport."""
 

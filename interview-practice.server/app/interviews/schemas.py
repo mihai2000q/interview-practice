@@ -15,13 +15,17 @@ from app.llm.schemas import PhaseSettings, PhaseSettingsOverride
 from app.models import (
     Difficulty,
     Evaluation,
+    InterviewerRole,
     InterviewStatus,
+    InterviewType,
     MessagePhase,
     MessageRole,
     ResponseStyle,
     StarCompleteness,
+    Tone,
     Verdict,
 )
+from app.models.interview import MAX_TARGET_QUESTIONS, MIN_TARGET_QUESTIONS
 from app.serialization import ApiModel, ShortText
 
 # Free text that is later fed to the LLM, so it goes through the security guard. It is
@@ -48,10 +52,10 @@ class InterviewCreate(ApiModel):
     company_name: GuardedText | None = None
     seniority: GuardedText
     difficulty: Difficulty
-    target_question_count: int = Field(ge=1, le=30)
-    tone: Literal["strict", "neutral", "friendly"]
-    interview_type: GuardedText
-    interviewer_role: Literal["recruiter", "technical_screener", "hr", "hiring_manager"]
+    target_question_count: int = Field(ge=MIN_TARGET_QUESTIONS, le=MAX_TARGET_QUESTIONS)
+    tone: Tone
+    interview_type: InterviewType
+    interviewer_role: InterviewerRole
     response_style: ResponseStyle
     coaching_helpers_enabled: bool
     job_description_id: uuid.UUID | None = None

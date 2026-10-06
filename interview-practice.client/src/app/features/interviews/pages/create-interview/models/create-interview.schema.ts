@@ -19,7 +19,7 @@ import {
   JOB_TITLE_MAX_LENGTH,
   MAX_QUESTION_COUNT,
 } from '@app/features/interviews/interviews.constants';
-import { phaseSettingsOverrideSchema } from '@app/features/interviews/models/phase-settings.schema';
+import { phaseSettingsOverrideSchema } from '@app/core/phase-settings/phase-settings.schema';
 
 export const createInterviewSchema = z
   .object({

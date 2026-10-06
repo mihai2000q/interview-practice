@@ -35,7 +35,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 
 | Status | When | Example `code` |
 |---|---|---|
-| 400 | Pydantic validation failure (malformed/missing fields, a value over its length limit), a Document id of the wrong type for its slot, or a model Preferences does not allow for a phase (`MODEL_NOT_ALLOWED`, `details` = `{phase, model, allowed}`) | `VALIDATION_ERROR` (for a validation failure, `details` = `{"errors": [...]}`, one entry per failing field: Pydantic's `type`, `loc`, `msg` and `input`) |
+| 400 | Pydantic validation failure (malformed/missing fields, a value over its length limit), a Document id of the wrong type for its slot, or a model Preferences does not allow for a phase (`MODEL_NOT_ALLOWED`, `details` = `{phase, model, allowed}`), or a reasoning effort it does not allow (`REASONING_EFFORT_NOT_ALLOWED`) | `VALIDATION_ERROR` (for a validation failure, `details` = `{"errors": [...]}`, one entry per failing field: Pydantic's `type`, `loc`, `msg` and `input`) |
 | 404 | Resource doesn't exist, including a Document id sent in a request body (`POST /api/interviews`) that matches no Document | `NOT_FOUND` |
 | 413 | Upload exceeds the size limit (`MAX_UPLOAD_MB`, default 10) | `FILE_TOO_LARGE` |
 | 422 | Well-formed request, but the uploaded file can't be used (not a readable PDF, encrypted, or no extractable text) | `UNPROCESSABLE_FILE` |
@@ -60,7 +60,7 @@ Create Interview submission. Request:
   "difficulty": "easy" | "medium" | "hard",
   "targetQuestionCount": "integer",   // 1–30; the client seeds it from difficulty, then sends the final value
   "tone": "strict" | "neutral" | "friendly",  // the client seeds it from difficulty / interviewerRole (last pick wins), then sends the final value
-  "interviewType": "string",          // the client seeds it from difficulty / interviewerRole (last pick wins), then sends the final value
+  "interviewType": "technical" | "behavioral",  // the client seeds it from difficulty / interviewerRole (last pick wins), then sends the final value
   "interviewerRole": "recruiter" | "technical_screener" | "hr" | "hiring_manager",
   "responseStyle": "concise" | "detailed",  // the client seeds it from difficulty (hard → detailed), then sends the final value
   "coachingHelpersEnabled": false,  // the client seeds it from difficulty (on for easy), then sends the final value
@@ -72,7 +72,7 @@ Create Interview submission. Request:
 }
 ```
 
-- Free-text fields (`jobTitle`, `companyName`, `seniority`, `interviewType`) are 1–200
+- Free-text fields (`jobTitle`, `companyName`, `seniority`) are 1–200
   characters after trimming. A longer value is a `400 VALIDATION_ERROR`, not a guard
   rejection.
 - `jobDescriptionId`/`cvId`/`coverLetterId` — always the id of an existing `Document` of the
@@ -201,7 +201,7 @@ Phase 4 call. Ephemeral — returns candidate-question suggestions the client ca
 nothing is persisted until the candidate actually sends one via `POST .../messages`.
 
 Response `200`: `{"suggestions": [string, ...]}` (five; the server trims extras). `409`
-`HELPERS_DISABLED` if the Interview's interview-helpers toggle is off, `409`
+`HELPERS_DISABLED` if the Interview's coaching-helpers toggle is off, `409`
 `NOT_IN_ASK_BACK_PHASE` before the Q&A phase has ended, `409` `INTERVIEW_ALREADY_ENDED`
 once the Interview is over; `502`/`503`/`504` when the provider fails (no suggestions is an
 error, not an empty list). A `GET` because it has no side effects on the Interview.
@@ -238,7 +238,10 @@ text. The review is a dev-facing extra: if the judge's call fails, the Evaluatio
 stored and returned, the review is simply missing, and it is not retried by later calls.
 
 `409 INTERVIEW_NOT_ENDED` while the Interview is `in_progress`, `409 NOTHING_TO_EVALUATE` if
-the candidate never sent a message (an abandoned Interview with only the opening), `404` for an
+the candidate never sent a message (an abandoned Interview with only the opening),
+`409 JUDGE_MODEL_COLLISION` if Preferences changed since the Interview was created so that the
+judge now resolves to an interviewer model ([ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md);
+nothing is generated, and it works again once the Preferences are fixed), `404` for an
 unknown Interview, `502`/`503`/`504` when the Evaluation's model call fails (nothing is
 stored; the client retries).
 
@@ -357,7 +360,8 @@ an empty array when there are none.
 
 Application Overview page data: `companyName`, `jobTitle`, every stage (id,
 `interviewerRole`, `status`, link to its Results), plus `progressScore`/
-`progressSummary` once 2+ stages have an `Evaluation`.
+`progressSummary` once 2+ stages have an `Evaluation`. **Not built yet**: neither this route nor the
+progress summary exists, and the client has no Application Overview page; both are planned together.
 
 ### `PATCH /api/applications/:id`
 
@@ -406,7 +410,11 @@ resource, same as `GET`.
 - `400 MODEL_NOT_ALLOWED` if a `model` is not one the phase may run on: `gpt-5-mini`,
   `gpt-5-nano` or `gpt-4o-mini` for the five candidate-facing phases; `google/gemini-2.5-flash`,
   `google/gemini-3.5-flash-lite`, `gpt-5-mini`, `gpt-5-nano` or `typesafe/jev-1.13` for
-  `interviewerReview` (see `architecture.md`).
+  `interviewerReview` (see `architecture.md`). `POST /api/interviews` and
+  `PUT /api/documents/<id>/analysis` answer it too, for the `model` of their overrides.
+- `400 REASONING_EFFORT_NOT_ALLOWED` if a `reasoningEffort` is not `minimal`, `low`, `medium`
+  or `high` (`details` = `{reasoningEffort, allowed}`). `POST /api/interviews` and
+  `PUT /api/documents/<id>/analysis` answer it too, for the `reasoningEffort` of their overrides.
 - `409 JUDGE_MODEL_COLLISION` if the result would give `interviewerReview` the same model as
   `questionPlan` or `liveConversation` ([ADR 0009](./adr/0009-judge-model-excludes-the-interview-model.md)).
   It is checked on the defaults *as they will be*, so both models can be swapped in one

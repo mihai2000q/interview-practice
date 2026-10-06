@@ -1,10 +1,10 @@
 import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
 import { ApplicationsApi } from '@app/features/applications/services/applications-api';
-import { ApplicationSummary } from '@app/features/applications/models/application-summary';
+import { ApplicationSummary } from '@app/features/applications/models/application-summary.schema';
 import { InterviewSummary } from '@app/features/interviews/models/interview-summary.schema';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
 
@@ -70,6 +70,9 @@ export class InterviewHistory {
   private readonly version = signal(0);
   /** Counts what was deleted from here, so a page showing totals knows to read them again. */
   readonly deletions = signal(0);
+  private readonly removedInterviews = new Subject<readonly string[]>();
+  /** The ids of the Interviews that were deleted from here, for whatever keeps them around. */
+  readonly interviewsRemoved$ = this.removedInterviews.asObservable();
 
   private readonly interviewsResource = rxResource({
     params: () => this.version(),
@@ -117,6 +120,7 @@ export class InterviewHistory {
       }
     }
     this.deletions.update((count) => count + 1);
+    this.removedInterviews.next(target.interviewIds);
     this.version.update((version) => version + 1);
   }
 

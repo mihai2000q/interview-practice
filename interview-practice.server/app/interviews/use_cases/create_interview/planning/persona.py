@@ -72,8 +72,8 @@ def generate_persona(
     context: JobContext,
 ) -> PersonaDraft:
     system = _SYSTEM_PROMPT.format(
-        role=ROLE_GUIDANCE.get(request.interviewer_role, request.interviewer_role),
-        tone=TONE_GUIDANCE.get(request.tone, request.tone),
+        role=ROLE_GUIDANCE[request.interviewer_role],
+        tone=TONE_GUIDANCE[request.tone],
         company=(
             " The interviewer works at the company named in the setup, so their title "
             "and backstory must fit it."

@@ -12,14 +12,13 @@ from app.interviews.use_cases.create_interview.planning.inputs import (
     company_of,
     setup_and_analyses,
 )
+from app.interviews.use_cases.create_interview.planning.limits import MAX_TEXT_CHARS
 from app.llm.openrouter import ChatMessage, CompletionSettings, OpenRouterClient
 from app.llm.timing import timed
-from app.models import InterviewCategory
+from app.models import InterviewCategory, InterviewType
 from app.services.document_analysis import JobContext
 
 logger = logging.getLogger(__name__)
-
-_MAX_TEXT_CHARS = 500
 
 _SYSTEM_PROMPT = """\
 You design the question plan for a realistic mock job interview. Reply with a single \
@@ -57,17 +56,11 @@ class QuestionDraft:
     question: str
 
 
-def _skew(interview_type: str) -> str:
-    if interview_type in (
-        InterviewCategory.technical.value,
-        InterviewCategory.behavioral.value,
-    ):
-        return (
-            f"At least 70% of the questions must be {interview_type} "
-            "(this is a "
-            f"{interview_type} interview), the rest the other category."
-        )
-    return "Balance the two categories."
+def _skew(interview_type: InterviewType) -> str:
+    return (
+        f"At least 70% of the questions must be {interview_type} "
+        f"(this is a {interview_type} interview), the rest the other category."
+    )
 
 
 def generate_questions(
@@ -82,7 +75,7 @@ def generate_questions(
         count=target,
         skew=_skew(request.interview_type),
         difficulty=DIFFICULTY_GUIDANCE[request.difficulty.value],
-        role=ROLE_GUIDANCE.get(request.interviewer_role, request.interviewer_role),
+        role=ROLE_GUIDANCE[request.interviewer_role],
         company=(
             " At least one question must test what the candidate knows about the "
             "company and why they want to work there."
@@ -99,7 +92,7 @@ def generate_questions(
 
     # Bounded and tidied because it is stored and fed to every later prompt.
     questions = [
-        QuestionDraft(q.category, q.question.strip()[:_MAX_TEXT_CHARS])
+        QuestionDraft(q.category, q.question.strip()[:MAX_TEXT_CHARS])
         for q in reply.questions
         if q.question.strip()
     ]

@@ -1,6 +1,6 @@
-"""Answer helpers: the optional coaching-hint card shown with each Q&A question.
+"""Coaching helpers: the optional hint card shown with each Q&A question.
 
-Its own LLM call, made after the question exists (docs/architecture.md, "Answer
+Its own LLM call, made after the question exists (docs/architecture.md, "Coaching
 helpers"). It sees the exact question plus the candidate's CV, cover letter and the
 job description's analysis, as plain context injection (ADR 0004). The no-fabrication
 rule is stated as an absolute. The hint is a nicety, so a failed call leaves the card

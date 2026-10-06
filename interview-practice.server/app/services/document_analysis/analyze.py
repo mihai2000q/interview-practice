@@ -1,4 +1,4 @@
-"""Analysing Documents: the cached `DocumentAnalysis` rows and what callers get back.
+"""Analyzing Documents: the cached `DocumentAnalysis` rows and what callers get back.
 
 An analysis belongs to its Document and is reused by every later Interview until a
 different model is chosen (ADR 0012). Callers never read `Document.analysis` or handle a
@@ -73,7 +73,7 @@ def _ensure_analyses(
     parallel and their rows created or overwritten, then committed straight away: an
     analysis is valid on its own, so it stays even if a later step of the request fails.
 
-    Two requests can analyze the same Document at once (a cancelled client request keeps
+    Two requests can analyze the same Document at once (a canceled client request keeps
     running on the server while the candidate submits). The first to commit wins; the
     other finds the row already there, which is just as good.
     """

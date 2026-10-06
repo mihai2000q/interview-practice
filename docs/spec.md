@@ -142,13 +142,11 @@ developer-facing preferences area kept apart from the candidate experience.
 45. As the developer, I want the OpenRouter API key sourced only from each developer's own
     machine, never written into any file in the repo, so that it's never accidentally
     committed or shared.
-46. As the developer, I want a Docker-based mock LLM option, so that I can exercise the
-    app's own request/response plumbing locally without real API cost.
 
 ## Implementation Decisions
 
 - **Stack**: Flask (application factory `create_app()`, Blueprints per domain area —
-  `interviews`, `documents`, `applications`, `preferences`) + Angular 22 (standalone
+  `interviews`, `documents`, `applications`, `preferences`, `dashboard`) + Angular 22 (standalone
   components, zoneless) — see [ADR 0001](./adr/0001-flask-and-angular-over-streamlit-or-nextjs.md)
   for why not Streamlit/Next.js. UI components via Spartan + Tailwind
   ([ADR 0010](./adr/0010-spartan-for-ui-components.md)).
@@ -172,8 +170,8 @@ developer-facing preferences area kept apart from the candidate experience.
   `InterviewPhaseSettings` rows across 6 phases including the judge phase's narrower model
   set), `Message` (phase, role, content, helper_text, sequence), `Evaluation` (verdict,
   reasoning, improvement_suggestions, star_situation/task/action/result +
-  star_completeness, incomplete, model_used — always
-  `gpt-5-mini`, see [ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)),
+  star_completeness, incomplete, model_used — the model the
+  `evaluation` phase resolved to, `gpt-5-mini` unless overridden, see [ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)),
   `InterviewerReview` (judge_model default `google/gemini-2.5-flash`, score_question_relevance /
   score_persona_consistency / score_pacing 1-5, reasoning, automatic trigger at
   session end).
@@ -195,15 +193,15 @@ developer-facing preferences area kept apart from the candidate experience.
   sidebar (Interview Session only: portrait, name + title, tone badge, company name if set,
   question progress, Abandon action), a phase indicator pinned above the transcript (not in
   either sidebar).
-- **API contract**: the 4 blueprints' endpoints exactly as specified in `api-design.md`
+- **API contract**: the 5 blueprints' endpoints exactly as specified in `api-design.md`
   (create/get/message/abandon/evaluation/interviewer-review for interviews;
   list/upload/download/rename/delete for documents; list/get/rename/delete for
-  applications; get/patch singleton for preferences) + the uniform error contract
+  applications; get/patch singleton for preferences; one read-only `GET /api/dashboard`
+  aggregate for the Home page) + the uniform error contract
   (400/404/409/500, one JSON error shape).
 - **File storage**: local disk under the Flask app's `instance/` folder, backed by a
   persisted Docker volume in deployment (see `deployment.md`).
-- **Deployment**: Docker Compose (`client`/`server`/`db`, plus opt-in `mock-llm` behind a
-  profile), project name pinned to `interview-practice`, nginx reverse-proxying `/api/*`
+- **Deployment**: Docker Compose (`client`/`server`/`db`), project name pinned to `interview-practice`, nginx reverse-proxying `/api/*`
   same-origin in the client container (no CORS in that path), CORS only relevant for local
   dev via `CLIENT_HOST`/`CLIENT_PORT`, discrete `POSTGRES_*` env vars assembled into the DB URI at
   runtime, `.env.dev` as a checked-in template copied to a real git-ignored `.env`,
@@ -218,10 +216,7 @@ No automated test suite for this pass — explicitly out of scope, given the tim
 a bootcamp project. If/when this changes, the natural seam is the Flask API layer itself
 (test through HTTP via the contract in `api-design.md`, not internal functions), with a
 thin OpenRouter client adapter as the one necessary fake boundary (the one real external
-dependency). Manual/local exercising of the real API is supported today via the opt-in
-`mock-llm` Docker Compose service (see `deployment.md`), which stands in for OpenRouter
-with canned responses at zero cost — useful for checking the app's own plumbing, not for
-judging output quality.
+dependency).
 
 ## Out of Scope
 
@@ -241,8 +236,9 @@ judging output quality.
 - This is a synthesis of a long documentation-only session, not a new design pass — if
   something here seems to contradict `docs/adr/`, the ADR is the source of truth, not this
   file.
-- The candidate-facing STAR evaluation's model (`gpt-5-mini`) is deliberately **not**
-  decoupled from the interview model — self-grading is an accepted tradeoff
+- The candidate-facing STAR evaluation's default model (`gpt-5-mini`, configurable like
+  every phase) is deliberately **not** decoupled from the interview model — self-grading
+  is an accepted tradeoff
   ([ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)).
   Don't "fix" this to look like the Interviewer Performance Review's decoupling; they're
   different by design.

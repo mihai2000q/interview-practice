@@ -70,7 +70,14 @@
                   <hlm-select-content *hlmSelectPortal>
                     <hlm-select-item [value]="null">{{ defaultModelLabel(phase) }}</hlm-select-item>
                     @for (option of modelsFor(phase); track option) {
-                      <hlm-select-item [value]="option">{{ option }}</hlm-select-item>
+                      <hlm-select-item [disabled]="isTaken(phase, option)" [value]="option">
+                        {{ option }}
+                        @if (isTaken(phase, option)) {
+                          <span class="text-xs text-muted-foreground"
+                            >({{ takenNote(phase) }})</span
+                          >
+                        }
+                      </hlm-select-item>
                     }
                   </hlm-select-content>
                 </hlm-select>

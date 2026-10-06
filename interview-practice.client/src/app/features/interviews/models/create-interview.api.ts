@@ -7,7 +7,7 @@ import {
   Seniority,
   Tone,
 } from './interview.enums';
-import { PhaseSettingsOverride } from './phase-settings.schema';
+import { PhaseSettingsOverride } from '@app/core/phase-settings/phase-settings.schema';
 
 /** `POST /api/interviews` body (docs/api-design.md). */
 export interface CreateInterviewRequest {

@@ -15,7 +15,7 @@ from app.interviews.use_cases.create_interview.planning.inputs import (
 from app.interviews.use_cases.create_interview.planning.limits import MAX_TEXT_CHARS
 from app.llm.openrouter import ChatMessage, CompletionSettings, OpenRouterClient
 from app.llm.timing import timed
-from app.models import InterviewCategory
+from app.models import InterviewCategory, InterviewType
 from app.services.document_analysis import JobContext
 
 logger = logging.getLogger(__name__)
@@ -56,17 +56,11 @@ class QuestionDraft:
     question: str
 
 
-def _skew(interview_type: str) -> str:
-    if interview_type in (
-        InterviewCategory.technical.value,
-        InterviewCategory.behavioral.value,
-    ):
-        return (
-            f"At least 70% of the questions must be {interview_type} "
-            "(this is a "
-            f"{interview_type} interview), the rest the other category."
-        )
-    return "Balance the two categories."
+def _skew(interview_type: InterviewType) -> str:
+    return (
+        f"At least 70% of the questions must be {interview_type} "
+        f"(this is a {interview_type} interview), the rest the other category."
+    )
 
 
 def generate_questions(

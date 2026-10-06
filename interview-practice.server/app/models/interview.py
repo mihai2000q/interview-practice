@@ -58,6 +58,13 @@ class Tone(enum.StrEnum):
     friendly = "friendly"
 
 
+class InterviewType(enum.StrEnum):
+    """Which kind of questions the interview leans towards. Stored as text."""
+
+    technical = "technical"
+    behavioral = "behavioral"
+
+
 class InterviewerRole(enum.StrEnum):
     """Which stage of a hiring pipeline the interviewer plays. Stored as text."""
 
@@ -93,8 +100,8 @@ class Interview(Base):
     seniority: Mapped[str] = mapped_column(String)
     difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty))
     # tone, interview_type and interviewer_role are plain text so the set of
-    # values can grow without an enum migration (see database-schema.md); `Tone` and
-    # `InterviewerRole` list the ones the API accepts today
+    # values can grow without an enum migration (see database-schema.md); `Tone`,
+    # `InterviewType` and `InterviewerRole` list the ones the API accepts today
     tone: Mapped[str] = mapped_column(String)
     interview_type: Mapped[str] = mapped_column(String)
     interviewer_role: Mapped[str] = mapped_column(String)

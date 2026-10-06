@@ -60,7 +60,7 @@ Create Interview submission. Request:
   "difficulty": "easy" | "medium" | "hard",
   "targetQuestionCount": "integer",   // 1–30; the client seeds it from difficulty, then sends the final value
   "tone": "strict" | "neutral" | "friendly",  // the client seeds it from difficulty / interviewerRole (last pick wins), then sends the final value
-  "interviewType": "string",          // the client seeds it from difficulty / interviewerRole (last pick wins), then sends the final value
+  "interviewType": "technical" | "behavioral",  // the client seeds it from difficulty / interviewerRole (last pick wins), then sends the final value
   "interviewerRole": "recruiter" | "technical_screener" | "hr" | "hiring_manager",
   "responseStyle": "concise" | "detailed",  // the client seeds it from difficulty (hard → detailed), then sends the final value
   "coachingHelpersEnabled": false,  // the client seeds it from difficulty (on for easy), then sends the final value
@@ -72,7 +72,7 @@ Create Interview submission. Request:
 }
 ```
 
-- Free-text fields (`jobTitle`, `companyName`, `seniority`, `interviewType`) are 1–200
+- Free-text fields (`jobTitle`, `companyName`, `seniority`) are 1–200
   characters after trimming. A longer value is a `400 VALIDATION_ERROR`, not a guard
   rejection.
 - `jobDescriptionId`/`cvId`/`coverLetterId` — always the id of an existing `Document` of the

@@ -6,6 +6,7 @@ from app.models.interview import (
     Interview,
     InterviewerRole,
     InterviewStatus,
+    InterviewType,
     ResponseStyle,
     Tone,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "InterviewPhaseSettings",
     "InterviewQuestion",
     "InterviewStatus",
+    "InterviewType",
     "InterviewerReview",
     "InterviewerRole",
     "JobApplication",

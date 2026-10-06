@@ -13,9 +13,11 @@ from sqlalchemy import CheckConstraint
 
 from app.interviews.schemas import InterviewCreate
 from app.interviews.shared.guidance import ROLE_GUIDANCE, TONE_GUIDANCE
+from app.interviews.use_cases.generate_evaluation import evaluation
 from app.interviews.use_cases.generate_persona_image.portrait import build_prompt
-from app.models import Interview, InterviewerRole, Tone
+from app.models import Interview, InterviewerRole, InterviewType, Tone
 from app.models.interview import MAX_TARGET_QUESTIONS, MIN_TARGET_QUESTIONS
+from tests.support import build_interview
 
 
 def create_body(**overrides: Any) -> dict[str, Any]:
@@ -38,13 +40,21 @@ def test_every_role_and_tone_has_guidance_wording() -> None:
     assert set(TONE_GUIDANCE) == set(Tone)
 
 
+@pytest.mark.parametrize("interview_type", list(InterviewType))
+def test_every_interview_type_has_a_weighting(interview_type: InterviewType) -> None:
+    interview = build_interview(interview_type=interview_type.value)
+    assert "weigh" in evaluation.build_messages(interview)[0].content
+
+
 def test_every_tone_gives_the_portrait_its_own_expression() -> None:
     prompts = {build_prompt("Dana Whitfield", "Recruiter", tone) for tone in Tone}
     assert len(prompts) == len(Tone)
 
 
 @pytest.mark.parametrize(
-    "overrides", [{"tone": "grumpy"}, {"interviewerRole": "ceo"}], ids=["tone", "role"]
+    "overrides",
+    [{"tone": "grumpy"}, {"interviewerRole": "ceo"}, {"interviewType": "mixed"}],
+    ids=["tone", "role", "type"],
 )
 def test_a_tone_or_role_outside_the_vocabulary_is_rejected(
     overrides: dict[str, str],

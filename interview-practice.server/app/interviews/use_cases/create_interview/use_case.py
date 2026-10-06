@@ -144,7 +144,7 @@ def _build_interview(
         seniority=body.seniority,
         difficulty=body.difficulty,
         tone=body.tone.value,
-        interview_type=body.interview_type,
+        interview_type=body.interview_type.value,
         interviewer_role=body.interviewer_role.value,
         target_question_count=body.target_question_count,
         status=InterviewStatus.in_progress,

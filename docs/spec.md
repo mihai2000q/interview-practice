@@ -146,7 +146,7 @@ developer-facing preferences area kept apart from the candidate experience.
 ## Implementation Decisions
 
 - **Stack**: Flask (application factory `create_app()`, Blueprints per domain area —
-  `interviews`, `documents`, `applications`, `preferences`) + Angular 22 (standalone
+  `interviews`, `documents`, `applications`, `preferences`, `dashboard`) + Angular 22 (standalone
   components, zoneless) — see [ADR 0001](./adr/0001-flask-and-angular-over-streamlit-or-nextjs.md)
   for why not Streamlit/Next.js. UI components via Spartan + Tailwind
   ([ADR 0010](./adr/0010-spartan-for-ui-components.md)).
@@ -193,10 +193,11 @@ developer-facing preferences area kept apart from the candidate experience.
   sidebar (Interview Session only: portrait, name + title, tone badge, company name if set,
   question progress, Abandon action), a phase indicator pinned above the transcript (not in
   either sidebar).
-- **API contract**: the 4 blueprints' endpoints exactly as specified in `api-design.md`
+- **API contract**: the 5 blueprints' endpoints exactly as specified in `api-design.md`
   (create/get/message/abandon/evaluation/interviewer-review for interviews;
   list/upload/download/rename/delete for documents; list/get/rename/delete for
-  applications; get/patch singleton for preferences) + the uniform error contract
+  applications; get/patch singleton for preferences; one read-only `GET /api/dashboard`
+  aggregate for the Home page) + the uniform error contract
   (400/404/409/500, one JSON error shape).
 - **File storage**: local disk under the Flask app's `instance/` folder, backed by a
   persisted Docker volume in deployment (see `deployment.md`).

@@ -118,8 +118,8 @@ One mock interview session, from creation through evaluation.
 - `tone`: strict | neutral | friendly — the interviewer persona's style; a fixed set in the
   client form, stored as plain text so adding one later needs no migration; defaults from
   `difficulty` and `interviewer_role` (last pick wins), independently overridable
-- `interview_type`: `technical` | `behavioral` (initial set, plain text like `tone` for
-  future extensibility, e.g. a later "mixed") — skews the question plan and which half of
+- `interview_type`: `technical` | `behavioral` (the API's `InterviewType`; stored as plain text
+  like `tone`, so adding one later needs no DB migration) — skews the question plan and which half of
   the `EvaluationCriterion` rows of each category carry more weight at evaluation time
 - `interviewer_role`: `recruiter` | `technical_screener` | `hr` | `hiring_manager` (initial set, same
   extensible-text treatment as `tone`) — who the persona *is*, not just their tone:

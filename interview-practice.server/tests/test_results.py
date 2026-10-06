@@ -118,8 +118,6 @@ def test_the_prompt_lists_the_criteria_and_the_numbered_transcript() -> None:
     [
         ("technical", "weigh the technical criteria more heavily"),
         ("behavioral", "weigh the behavioral criteria more heavily"),
-        ("mixed", "equally"),
-        ("technical and behavioral", "equally"),
     ],
 )
 def test_the_criteria_are_weighted_by_the_interview_type(

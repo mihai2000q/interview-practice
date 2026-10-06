@@ -17,6 +17,7 @@ from app.models import (
     Evaluation,
     InterviewerRole,
     InterviewStatus,
+    InterviewType,
     MessagePhase,
     MessageRole,
     ResponseStyle,
@@ -53,7 +54,7 @@ class InterviewCreate(ApiModel):
     difficulty: Difficulty
     target_question_count: int = Field(ge=MIN_TARGET_QUESTIONS, le=MAX_TARGET_QUESTIONS)
     tone: Tone
-    interview_type: GuardedText
+    interview_type: InterviewType
     interviewer_role: InterviewerRole
     response_style: ResponseStyle
     coaching_helpers_enabled: bool

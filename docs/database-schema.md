@@ -82,7 +82,7 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `seniority` | `text` | |
 | `difficulty` | `enum(easy, medium, hard)` | |
 | `tone` | `text` | strict / neutral / friendly (a fixed set in the client form and the API's `Tone`); plain text rather than a DB enum so adding a tone needs no migration |
-| `interview_type` | `text` | e.g. technical/behavioral; plain text for future extensibility (e.g. "mixed") |
+| `interview_type` | `text` | technical / behavioral (the API's `InterviewType`); plain text, same extensibility reasoning as `tone` |
 | `interviewer_role` | `text` | recruiter / technical_screener / hr / hiring_manager (the API's `InterviewerRole`); plain text, same extensibility reasoning as `tone` |
 | `target_question_count` | `integer` | soft cap, seeded by difficulty; 1–30 (`CHECK`) |
 | `status` | `enum(in_progress, completed, abandoned)` | |

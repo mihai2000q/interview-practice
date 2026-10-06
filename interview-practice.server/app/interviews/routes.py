@@ -6,8 +6,10 @@ from flask.typing import ResponseReturnValue
 from app.interviews import interviews_bp
 from app.interviews.schemas import (
     AskBackSuggestions,
+    EvaluationPublic,
     InterviewCreate,
     InterviewDetail,
+    InterviewerReviewPublic,
     InterviewPublic,
     MessageCreate,
     MessageExchange,
@@ -16,12 +18,15 @@ from app.interviews.schemas import (
 )
 from app.interviews.use_cases.abandon_interview import abandon_interview
 from app.interviews.use_cases.create_interview import create_interview
+from app.interviews.use_cases.generate_evaluation import generate_evaluation
 from app.interviews.use_cases.generate_helper import generate_helper
 from app.interviews.use_cases.generate_persona_image import generate_persona_image
 from app.interviews.use_cases.get_ask_back_suggestions import (
     get_ask_back_suggestions,
 )
+from app.interviews.use_cases.get_evaluation import get_evaluation
 from app.interviews.use_cases.get_interview import get_interview
+from app.interviews.use_cases.get_interviewer_review import get_interviewer_review
 from app.interviews.use_cases.get_persona_image import get_persona_image
 from app.interviews.use_cases.open_interview import open_interview
 from app.interviews.use_cases.send_message import send_message
@@ -79,3 +84,20 @@ def put_interview_message_helper(
     interview_id: uuid.UUID, message_id: uuid.UUID
 ) -> ResponseReturnValue:
     return jsonify(to_json(MessagePublic, generate_helper(interview_id, message_id)))
+
+
+@interviews_bp.put("/<uuid:interview_id>/evaluation")
+def put_interview_evaluation(interview_id: uuid.UUID) -> ResponseReturnValue:
+    return jsonify(to_json(EvaluationPublic, generate_evaluation(interview_id)))
+
+
+@interviews_bp.get("/<uuid:interview_id>/evaluation")
+def get_interview_evaluation(interview_id: uuid.UUID) -> ResponseReturnValue:
+    return jsonify(to_json(EvaluationPublic, get_evaluation(interview_id)))
+
+
+@interviews_bp.get("/<uuid:interview_id>/interviewer-review")
+def get_interview_interviewer_review(interview_id: uuid.UUID) -> ResponseReturnValue:
+    return jsonify(
+        to_json(InterviewerReviewPublic, get_interviewer_review(interview_id))
+    )

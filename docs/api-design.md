@@ -39,7 +39,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 | 404 | Resource doesn't exist, including a Document id sent in a request body (`POST /api/interviews`) that matches no Document | `NOT_FOUND` |
 | 413 | Upload exceeds the size limit (`MAX_UPLOAD_MB`, default 10) | `FILE_TOO_LARGE` |
 | 422 | Well-formed request, but the uploaded file can't be used (not a readable PDF, encrypted, or no extractable text) | `UNPROCESSABLE_FILE` |
-| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED`, `TURN_IN_PROGRESS`, `HELPERS_DISABLED`, `NOT_IN_ASK_BACK_PHASE`, `NOT_A_QUESTION` |
+| 409 | Request is well-formed but violates a business rule/current state | `JUDGE_MODEL_COLLISION`, `INTERVIEW_ALREADY_ENDED`, `TURN_IN_PROGRESS`, `HELPERS_DISABLED`, `NOT_IN_ASK_BACK_PHASE`, `NOT_A_QUESTION`, `INTERVIEW_NOT_ENDED`, `NOTHING_TO_EVALUATE` |
 | 422 | The security guard (or the provider's moderation) refused the text: it looks like prompt injection or is over its length limit. `details` = `{reason}` (plus `field`, the request field, for the JSON bodies) with `reason` one of `prompt_injection` (+ `excerpt`, the matched wording, so the candidate can find it in a long document), `too_long` (+ `maxLength`), `moderation`; the message never names the rule that matched. Applies to `POST /api/documents` (the extracted text, max 50,000 characters; `too_long` possible), `POST /api/interviews` (the free-text fields, `prompt_injection` or `moderation` only: they are capped at 200 characters first, and a longer one is a `400 VALIDATION_ERROR`) and `POST /api/interviews/:id/messages` (the reply, max 2,000 characters; `too_long` possible). Nothing is persisted and no interview state changes, so the client keeps the user's input and lets them edit and resend | `INPUT_REJECTED` |
 | 502 | The model provider failed, was unreachable, or returned an unusable/contract-breaking response | `LLM_UPSTREAM_ERROR` |
 | 503 | The provider can't serve us right now (rate limit, credits, key); `details.retryAfterSeconds` when known | `LLM_UNAVAILABLE` |
@@ -163,8 +163,8 @@ becomes `completed` when the interviewer closes the ask-back phase. A turn is
 all-or-nothing: if the model fails, nothing is stored and the candidate can send the reply
 again. `409 INTERVIEW_ALREADY_ENDED` if the Interview is no longer `in_progress`, and
 `409 TURN_IN_PROGRESS` if the previous reply is still being answered (the client should wait
-for it, not resend). Evaluation
-and InterviewerReview are triggered when `status` becomes `"completed"` (not built yet).
+for it, not resend). The Evaluation and InterviewerReview are not made here: the Results
+page asks for them with `PUT .../evaluation` below.
 
 ### `PUT /api/interviews/:id/messages/:messageId/helper`
 
@@ -196,18 +196,43 @@ error, not an empty list). A `GET` because it has no side effects on the Intervi
 
 No body. The Interviewer-sidebar "Abandon interview" action. Marks `status: "abandoned"`,
 `endedAt`, returns the Interview like `GET /api/interviews/:id` (`409 INTERVIEW_ALREADY_ENDED`
-if it already ended), and triggers `Evaluation` (`incomplete: true`) + `InterviewerReview`, same as
-the natural-completion path.
+if it already ended). Like a completed Interview, it is then evaluated by `PUT .../evaluation`
+(with `incomplete: true`).
+
+### `PUT /api/interviews/:id/evaluation`
+
+Results page call. No body. Makes the Interview's `Evaluation` (phase 5) **and** its
+`InterviewerReview` (the judge) from the stored transcript, **in parallel** on the models of
+the `evaluation` and `interviewer_review` phases, stores both and returns the Evaluation, same
+shape as `GET` below. Nothing is made when an Interview ends, so ending one (the last
+`POST .../messages`, `POST .../abandon`) stays fast; see
+[ADR 0014](./adr/0014-results-are-generated-on-demand-by-an-idempotent-put.md).
+**Idempotent**: an Interview that has an Evaluation answers with it at once and calls no
+model; two calls at once may both run the models, the first to store wins and both get that
+text. The review is a dev-facing extra: if the judge's call fails, the Evaluation is still
+stored and returned, the review is simply missing, and it is not retried by later calls.
+
+`409 INTERVIEW_NOT_ENDED` while the Interview is `in_progress`, `409 NOTHING_TO_EVALUATE` if
+the candidate never sent a message (an abandoned Interview with only the opening), `404` for an
+unknown Interview, `502`/`503`/`504` when the Evaluation's model call fails (nothing is
+stored; the client retries).
 
 ### `GET /api/interviews/:id/evaluation`
 
-The `Evaluation` (Results page data): `verdict`, `reasoning`, `improvementSuggestions`,
-`starBreakdown`, `incomplete`. `404` until the Interview has ended.
+The stored `Evaluation` (Results page data), never generates one:
+`{verdict, reasoning, improvementSuggestions, starBreakdown, incomplete}`. `verdict` is
+`"hire"` | `"no_hire"`; `improvementSuggestions` is text with one suggestion per line;
+`starBreakdown` is `{situation, task, action, result, completeness}` where `completeness` is
+`"strong"` | `"partial"` | `"weak"`; `incomplete` is `true` when the Interview was abandoned
+(the evaluation then says it rests on a partial interview). `404` until `PUT` has made it.
 
 ### `GET /api/interviews/:id/interviewer-review`
 
 The `InterviewerReview` — dev-facing, not called by the candidate-facing Results page, but
-available for the reflection/debugging use case. `404` until the Interview has ended.
+available for the reflection/debugging use case:
+`{judgeModel, scores: {questionRelevance, personaConsistency, pacing}, reasoning}`, scores
+from 1 to 5. Made by the same `PUT .../evaluation` call. `404` until then, and also if the
+judge's call failed there.
 
 ## `documents` blueprint — `/api/documents`
 

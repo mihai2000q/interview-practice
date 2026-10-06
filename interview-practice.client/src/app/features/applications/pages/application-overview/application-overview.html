@@ -13,7 +13,7 @@
         <p hlmCardDescription>How your performance compares across the stages.</p>
       </div>
       <div class="flex flex-col gap-4" hlmCardContent>
-        @if (working()) {
+        @if (preparing()) {
           <p class="flex items-center gap-2 text-sm text-muted-foreground" role="status">
             <hlm-spinner aria-hidden="true" />
             {{
@@ -33,7 +33,7 @@
         }
         @if (overview.progressScore !== null && overview.progressSummary !== null) {
           <div
-            [class.opacity-60]="working()"
+            [class.opacity-60]="preparing()"
             class="flex flex-col items-center gap-4 sm:flex-row sm:items-start"
           >
             <app-score-gauge
@@ -43,7 +43,7 @@
             />
             <div class="flex flex-col gap-2">
               <p class="leading-relaxed whitespace-pre-line">{{ overview.progressSummary }}</p>
-              @if (overview.progressOutdated && !working()) {
+              @if (overview.progressOutdated && !preparing()) {
                 <p class="text-xs text-muted-foreground">
                   This doesn't include your latest results yet.
                 </p>
@@ -55,7 +55,7 @@
             A comparison needs at least {{ stagesToCompare }} finished stages, and you have
             {{ finishedCount() }}.
           </p>
-        } @else if (!working() && !refreshError()) {
+        } @else if (!preparing() && !refreshError()) {
           <p class="text-sm text-muted-foreground">
             There is nothing to compare yet: the finished stages have no results to compare.
           </p>

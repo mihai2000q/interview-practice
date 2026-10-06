@@ -96,9 +96,19 @@ export class ApplicationOverviewPage {
   });
 
   /** The Application whose summary was last made here, so a visit tries once. */
-  private attemptedFor: string | null = null;
+  private readonly attemptedFor = signal<string | null>(null);
+  /** Stages that came back with nothing to grade: not asked again during this visit. */
+  private readonly ungradable = new Set<string>();
   /** Counts the runs of `refreshProgress`, so an older one never overwrites a newer one's state. */
   private runs = 0;
+
+  /** The page has found the summary missing or outdated and is about to make it. */
+  private readonly pending = computed(() => {
+    const overview = this.overview();
+    return !!overview && this.attemptedFor() !== overview.id && this.needsRefresh(overview);
+  });
+  /** Making the summary, or about to: the card says so rather than that there is nothing. */
+  protected readonly preparing = computed(() => this.working() || this.pending());
 
   protected readonly documents = computed(() => {
     const overview = this.overview();
@@ -126,9 +136,11 @@ export class ApplicationOverviewPage {
     // Evaluation, then ask for the summary, whenever the page finds it missing or outdated.
     effect(() => {
       const overview = this.overview();
-      if (overview && this.attemptedFor !== overview.id && this.needsRefresh(overview)) {
-        this.attemptedFor = overview.id;
-        untracked(() => void this.refreshProgress(overview));
+      if (overview && this.pending()) {
+        untracked(() => {
+          this.attemptedFor.set(overview.id);
+          void this.refreshProgress(overview);
+        });
       }
     });
   }
@@ -155,18 +167,23 @@ export class ApplicationOverviewPage {
     const stages = overview.interviews;
     return (
       overview.progressOutdated ||
-      (stages.some(isUngraded) && stages.filter(isFinished).length >= STAGES_TO_COMPARE)
+      (stages.some((stage) => this.isGradable(stage)) &&
+        stages.filter(isFinished).length >= STAGES_TO_COMPARE)
     );
+  }
+
+  private isGradable(stage: OverviewStage): boolean {
+    return isUngraded(stage) && !this.ungradable.has(stage.id);
   }
 
   /**
    * Grades every finished stage that has no Evaluation (the Results cache keeps what comes back,
    * so opening those results later asks for nothing), then asks for the summary, then reads the
-   * page again. A stage with nothing to grade is simply left out; any other failure is told.
+   * page again. A stage with nothing to grade is left out, and not asked about again this visit; any other failure is told.
    */
   private async refreshProgress(overview: ApplicationOverview): Promise<void> {
     const { id } = overview;
-    const ungraded = overview.interviews.filter(isUngraded);
+    const ungraded = overview.interviews.filter((stage) => this.isGradable(stage));
     let graded = overview.interviews.filter((stage) => stage.verdict !== null).length;
     const run = ++this.runs;
     let problem: string | null = null;
@@ -176,16 +193,18 @@ export class ApplicationOverviewPage {
       const outcomes = await Promise.allSettled(
         ungraded.map((stage) => firstValueFrom(this.results.evaluation(stage.id))),
       );
-      for (const outcome of outcomes) {
+      outcomes.forEach((outcome, index) => {
         if (outcome.status === 'fulfilled') {
           graded++;
-        } else {
-          const error = toApiError(outcome.reason);
-          if (error.code !== 'NOTHING_TO_EVALUATE') {
-            problem ??= error.message;
-          }
+          return;
         }
-      }
+        const error = toApiError(outcome.reason);
+        if (error.code === 'NOTHING_TO_EVALUATE') {
+          this.ungradable.add(ungraded[index].id);
+        } else {
+          problem ??= error.message;
+        }
+      });
     }
 
     if (graded >= STAGES_TO_COMPARE) {

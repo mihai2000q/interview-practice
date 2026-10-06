@@ -18,6 +18,7 @@ from app.interviews.use_cases.generate_evaluation.transcript import (
 )
 from app.llm.openrouter import ChatMessage, CompletionSettings, OpenRouterClient
 from app.models import (
+    Difficulty,
     Interview,
     InterviewCategory,
     InterviewStatus,
@@ -45,6 +46,8 @@ request.
 Grade against these evaluation criteria. {weighting}
 {criteria}
 
+{bar}
+
 Also use the STAR framework (Situation, Task, Action, Result): across the whole \
 interview, assess how well the candidate's stories and answers set out each part. If \
 the interview gave no occasion for a part, say so plainly instead of inventing \
@@ -55,8 +58,9 @@ less of it.
 Rules:
 - Ground every claim in the transcript; quote or point to what the candidate said. \
 Never credit experience they did not state.
-- "hire" only if the evidence meets the criteria for this role and seniority. When the \
-transcript gives too little to judge, choose "no_hire" and say what was missing.
+- "hire" only if the evidence meets the criteria for this role and seniority, at the \
+bar set by the difficulty above. When the transcript gives too little to judge, choose \
+"no_hire" and say what was missing.
 - Write for the candidate, in the second person ("you explained ...").
 - {style}
 
@@ -117,6 +121,24 @@ class EvaluationDraft:
     star_completeness: StarCompleteness
 
 
+_BAR: dict[str, str] = {
+    Difficulty.easy.value: (
+        'Difficulty was easy, so the bar is lenient: choose "hire" for an answer set '
+        "that was acceptable overall, even with weak spots, gaps or imperfect answers. "
+        'Choose "no_hire" only for a very poor performance: mostly empty, off-topic '
+        "or wrong answers, rudeness or disrespect, or clear disengagement. Still name "
+        "the weak spots in the suggestions."
+    ),
+    Difficulty.medium.value: (
+        'Difficulty was medium, so the bar is balanced: "hire" needs mostly solid '
+        'answers; notable gaps or weak answers on core criteria mean "no_hire".'
+    ),
+    Difficulty.hard.value: (
+        'Difficulty was hard, so the bar is demanding: "hire" needs strong, '
+        "well-reasoned answers across the criteria, including trade-offs and edge cases."
+    ),
+}
+
 _WEIGHTING: dict[str, str] = {
     InterviewType.technical: (
         "This is a technical interview: weigh the technical criteria more heavily."
@@ -139,6 +161,7 @@ def _criteria_lines(interview: Interview) -> str:
 def build_messages(interview: Interview) -> list[ChatMessage]:
     system = _SYSTEM_PROMPT.format(
         weighting=_WEIGHTING[interview.interview_type],
+        bar=_BAR[interview.difficulty.value],
         criteria=_criteria_lines(interview),
         caveat=(
             _INCOMPLETE_CAVEAT if interview.status is InterviewStatus.abandoned else ""

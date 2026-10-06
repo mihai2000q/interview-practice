@@ -6,15 +6,21 @@ from flask import jsonify
 from flask.typing import ResponseReturnValue
 
 from app.applications import applications_bp
-from app.applications.schemas import ApplicationSummary
+from app.applications.schemas import ApplicationOverview, ApplicationSummary
 from app.applications.use_cases.delete_application import delete_application
+from app.applications.use_cases.get_application import get_application
 from app.applications.use_cases.list_applications import list_applications
-from app.serialization import to_json_list
+from app.serialization import to_json, to_json_list
 
 
 @applications_bp.get("")
 def get_applications() -> ResponseReturnValue:
     return jsonify(to_json_list(ApplicationSummary, list_applications()))
+
+
+@applications_bp.get("/<uuid:application_id>")
+def get_application_by_id(application_id: uuid.UUID) -> ResponseReturnValue:
+    return jsonify(to_json(ApplicationOverview, get_application(application_id)))
 
 
 @applications_bp.delete("/<uuid:application_id>")

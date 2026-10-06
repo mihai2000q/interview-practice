@@ -7,6 +7,7 @@ import pytest
 
 from app.errors.exceptions import LlmUpstreamError
 from app.interviews.shared.exchange import run_exchange
+from app.interviews.shared.exchange.conversation import build_messages
 from app.interviews.shared.exchange.pacing import (
     MAX_ASK_BACK_QUESTIONS,
     ExchangeKind,
@@ -204,6 +205,16 @@ def test_the_ask_back_cap_forces_the_close() -> None:
     interview = ask_back_interview(MAX_ASK_BACK_QUESTIONS - 1)
     finish_ask_back(interview, "One more", FakeModel().say("Goodbye!", done=True))
     assert interview.status is InterviewStatus.completed
+
+
+def test_the_close_at_the_cap_still_answers_the_last_question() -> None:
+    interview = ask_back_interview(MAX_ASK_BACK_QUESTIONS - 1)
+    transcript = [(m.role, m.content) for m in interview.messages]
+    system = build_messages(interview, transcript, ExchangeKind.close_interview, 1)[
+        0
+    ].content
+    assert "Answer their last message" in system
+    assert "close the interview" in system
 
 
 def test_an_ask_back_close_that_keeps_going_is_an_error() -> None:

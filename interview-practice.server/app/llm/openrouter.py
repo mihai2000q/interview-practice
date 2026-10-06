@@ -1,7 +1,7 @@
 """Minimal OpenRouter chat-completions client.
 
 Framework-free on purpose (no Flask import): the base URL and key are passed in, so
-the client can be pointed at the `mock-llm` service and tested with a fake transport.
+the client can be tested with a fake transport.
 No LangChain (ADR 0005). Every failure becomes an `ApiError` subclass, so routes just
 let it propagate and the error handlers produce the JSON contract.
 """

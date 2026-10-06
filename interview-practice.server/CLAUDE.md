@@ -30,6 +30,7 @@ There is no `tests/` directory yet; `[tool.ruff.lint.per-file-ignores]` and `[to
 - `static/` and `templates/` exist but are empty, following default Flask conventions for static assets and Jinja templates.
 - `create_app()` is built; the Blueprints (one per domain area) are not yet. Extensions (`db`, `migrate`) live in `app/extensions.py`, models in `app/models/`. See `../docs/architecture.md` and `../docs/api-design.md` before adding routes, so each domain area gets its own Blueprint, registered in `create_app()`, rather than growing `app.py` monolithically.
 - `Dockerfile`/`.dockerignore` exist for the Docker Compose deployment — see `../docs/deployment.md`.
+- Spelling is American English in code, comments and docs (`analyze`, `analyzed`, `behavior`). `analysis`/`analyses` stay as the nouns.
 - Ruff (`[tool.ruff]`, `[tool.ruff.lint]` in `pyproject.toml`): target `py312`, line length 88, rule set `E, W, F, I, B, C90, UP, SIM, RUF`.
 - Mypy (`[tool.mypy]`): `strict = true`, `disallow_untyped_defs = true`, `warn_return_any = true` — new functions need full type annotations. `migrations` and `tests` are excluded.
 - `.editorconfig`: 4-space indent, UTF-8, final newline, trimmed trailing whitespace; Python lines capped at 88 (matches Ruff), Markdown line length unrestricted.

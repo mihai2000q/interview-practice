@@ -21,7 +21,7 @@ from app.services.document_analysis.context import JobContext
 from app.services.document_analysis.extraction import extract
 
 
-def analyse_document(
+def analyze_document(
     client: OpenRouterClient,
     model: str,
     settings: CompletionSettings,
@@ -41,7 +41,7 @@ def analyse_document(
     return analysis
 
 
-def analyse_job_documents(
+def analyze_job_documents(
     client: OpenRouterClient,
     model: str,
     settings: CompletionSettings,
@@ -50,7 +50,7 @@ def analyse_job_documents(
     cv: Document | None,
     cover_letter: Document | None,
 ) -> JobContext:
-    """Analyse whichever of the three Documents exist and resolve what they say."""
+    """Analyze whichever of the three Documents exist and resolve what they say."""
     documents = [d for d in (job_description, cv, cover_letter) if d is not None]
     _ensure_analyses(client, model, settings, documents)
     try:
@@ -69,11 +69,11 @@ def _ensure_analyses(
 ) -> None:
     """Make sure each Document has a `DocumentAnalysis` made by `model`.
 
-    Documents already analysed by `model` are skipped; the rest are analysed in
+    Documents already analyzed by `model` are skipped; the rest are analyzed in
     parallel and their rows created or overwritten, then committed straight away: an
     analysis is valid on its own, so it stays even if a later step of the request fails.
 
-    Two requests can analyse the same Document at once (a cancelled client request keeps
+    Two requests can analyze the same Document at once (a cancelled client request keeps
     running on the server while the candidate submits). The first to commit wins; the
     other finds the row already there, which is just as good.
     """

@@ -22,7 +22,7 @@ from app.documents.use_cases.delete_document import delete_document
 from app.documents.use_cases.download_document import download_document
 from app.documents.use_cases.list_documents import list_documents
 from app.documents.use_cases.update_document import update_document
-from app.interviews.schemas import PhaseSettings
+from app.llm.schemas import PhaseSettings
 from app.serialization import to_json, to_json_list
 
 
@@ -33,7 +33,7 @@ def get_documents() -> ResponseReturnValue:
 
 
 @documents_bp.post("")
-def post_document() -> ResponseReturnValue:
+def post_documents() -> ResponseReturnValue:
     form = DocumentCreateForm.model_validate(request.form.to_dict())
     document = create_document(form, request.files.get("file"))
     return jsonify(to_json(DocumentPublic, document)), 201
@@ -48,7 +48,7 @@ def put_document_analysis(document_id: uuid.UUID) -> ResponseReturnValue:
 
 
 @documents_bp.get("/<uuid:document_id>/download")
-def get_document_file(document_id: uuid.UUID) -> ResponseReturnValue:
+def get_document_download(document_id: uuid.UUID) -> ResponseReturnValue:
     file = download_document(document_id)
     return send_file(
         file.path,
@@ -59,12 +59,12 @@ def get_document_file(document_id: uuid.UUID) -> ResponseReturnValue:
 
 
 @documents_bp.patch("/<uuid:document_id>")
-def patch_document(document_id: uuid.UUID) -> ResponseReturnValue:
+def patch_document_by_id(document_id: uuid.UUID) -> ResponseReturnValue:
     body = DocumentUpdate.model_validate(request.get_json(silent=True) or {})
     return jsonify(to_json(DocumentPublic, update_document(document_id, body)))
 
 
 @documents_bp.delete("/<uuid:document_id>")
-def remove_document(document_id: uuid.UUID) -> ResponseReturnValue:
+def delete_document_by_id(document_id: uuid.UUID) -> ResponseReturnValue:
     delete_document(document_id)
     return "", 204

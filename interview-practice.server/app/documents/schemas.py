@@ -25,7 +25,7 @@ class DocumentPublic(ApiModel):
 
 
 class DocumentAnalysisPublic(ApiModel):
-    """Response of `POST /api/documents/:id/analysis`."""
+    """Response of `PUT /api/documents/:id/analysis`."""
 
     model: str
     domain: str | None

@@ -4,7 +4,7 @@ export const PHASES = [
   'jdAnalysis',
   'questionPlan',
   'liveConversation',
-  'askBack',
+  'coachingHelpers',
   'evaluation',
   'interviewerReview',
 ] as const;
@@ -14,10 +14,29 @@ export const PHASE_LABELS: Record<Phase, string> = {
   jdAnalysis: 'Job description & CV analysis',
   questionPlan: 'Question plan & persona',
   liveConversation: 'Live interview',
-  askBack: 'Ask-back suggestions',
-  evaluation: 'Evaluation',
+  coachingHelpers: 'Coaching helpers',
+  evaluation: 'Candidate evaluation',
   interviewerReview: 'Interviewer review (judge)',
 };
+
+/** Position in the pipeline; a dotted number is a sub-step of the phase before it. */
+export const PHASE_STEPS: Record<Phase, string> = {
+  jdAnalysis: '1',
+  questionPlan: '2',
+  liveConversation: '3',
+  coachingHelpers: '3.1',
+  evaluation: '4',
+  interviewerReview: '5',
+};
+
+/** Phases whose label alone doesn't say everything they cover. */
+export const PHASE_HINTS: Partial<Record<Phase, string>> = {
+  coachingHelpers: 'Covers both the coaching hints and the ask-back suggestions.',
+};
+
+export function isSubStep(phase: Phase): boolean {
+  return PHASE_STEPS[phase].includes('.');
+}
 
 export const DEFAULT_INTERVIEW_MODEL = 'gpt-5-mini';
 export const INTERVIEW_MODELS = ['gpt-5-mini', 'gpt-5-nano', 'gpt-4o-mini'] as const;

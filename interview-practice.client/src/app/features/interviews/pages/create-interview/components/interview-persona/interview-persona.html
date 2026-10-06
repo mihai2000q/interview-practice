@@ -15,9 +15,8 @@
             (valueChange)="onRoleChange($event)"
             [formField]="interviewForm().interviewerRole"
             [itemToString]="interviewerRoleLabel"
-            id="interviewer-role"
           >
-            <hlm-select-trigger class="w-full">
+            <hlm-select-trigger buttonId="interviewer-role" class="w-full">
               <hlm-select-value />
             </hlm-select-trigger>
             <hlm-select-content *hlmSelectPortal>

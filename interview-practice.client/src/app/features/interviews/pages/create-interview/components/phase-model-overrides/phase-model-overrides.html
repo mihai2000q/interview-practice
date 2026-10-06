@@ -29,10 +29,29 @@
 
   <div hlmCollapsibleContent>
     <div class="flex flex-col gap-4" hlmCardContent>
-      @for (phase of phases; track phase; let last = $last) {
+      @for (phase of phases; track phase; let last = $last; let index = $index) {
         <div [class.mb-7]="last" class="gap-1" hlmFieldGroup>
-          <fieldset class="flex min-w-0 flex-col gap-1">
-            <legend class="mb-1" hlmLabel>{{ phaseLabels[phase] }}</legend>
+          <fieldset
+            [class.border-l-2]="isSubStep(phase)"
+            [class.ml-3]="isSubStep(phase)"
+            [class.pl-4]="isSubStep(phase)"
+            class="flex min-w-0 flex-col gap-1"
+          >
+            <legend class="mb-1 flex items-center gap-2" hlmLabel>
+              <span class="tabular-nums text-muted-foreground">{{ phaseSteps[phase] }}</span>
+              {{ phaseLabels[phase] }}
+              @if (phaseHints[phase]; as hint) {
+                <button
+                  [attr.aria-label]="hint"
+                  [hlmTooltip]="hint"
+                  class="inline-flex rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                  position="top"
+                  type="button"
+                >
+                  <ng-icon aria-hidden="true" name="lucideInfo" size="14" />
+                </button>
+              }
+            </legend>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
               <div class="gap-2" hlmField>
                 <span class="mt-3 text-muted-foreground" hlmFieldLabel>Model</span>
@@ -117,7 +136,7 @@
               </div>
             </div>
           </fieldset>
-          @if (!last) {
+          @if (!last && !isSubStep(phases[index + 1])) {
             <hlm-field-separator class="mt-1" />
           }
         </div>

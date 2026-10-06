@@ -12,10 +12,13 @@ import {
   JUDGE_MODELS,
   MAX_TOKENS_RANGE,
   Phase,
+  PHASE_HINTS,
   PHASE_LABELS,
+  PHASE_STEPS,
   PHASES,
   PhaseSettings,
   PhaseSettingsOverride,
+  isSubStep,
   REASONING_EFFORTS,
   TEMPERATURE_RANGE,
 } from '@app/features/interviews/models/phase-settings.schema';
@@ -29,10 +32,11 @@ import {
 } from '@spartan-ng/helm/card';
 import { HlmFieldGroup, HlmFieldImports } from '@spartan-ng/helm/field';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideWrench } from '@ng-icons/lucide';
+import { lucideChevronDown, lucideInfo, lucideWrench } from '@ng-icons/lucide';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmSlider } from '@spartan-ng/helm/slider';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 
 /** The section's collapse takes this long; scrolling to its end waits for it. */
 const COLLAPSE_TRANSITION_MS = 300;
@@ -40,7 +44,7 @@ const SCROLL_DELAY_MS = COLLAPSE_TRANSITION_MS + 20;
 
 @Component({
   selector: 'app-phase-model-overrides',
-  providers: [provideIcons({ lucideChevronDown, lucideWrench })],
+  providers: [provideIcons({ lucideChevronDown, lucideInfo, lucideWrench })],
   imports: [
     HlmLabelImports,
     HlmSelectImports,
@@ -55,6 +59,7 @@ const SCROLL_DELAY_MS = COLLAPSE_TRANSITION_MS + 20;
     HlmFieldImports,
     HlmSlider,
     HlmCollapsibleImports,
+    HlmTooltipImports,
   ],
   templateUrl: './phase-model-overrides.html',
 })
@@ -62,6 +67,9 @@ export class PhaseModelOverrides {
   readonly interviewForm = input.required<FieldTree<CreateInterviewModel>>();
   protected readonly phases = PHASES;
   protected readonly phaseLabels = PHASE_LABELS;
+  protected readonly phaseSteps = PHASE_STEPS;
+  protected readonly phaseHints = PHASE_HINTS;
+  protected readonly isSubStep = isSubStep;
   protected readonly reasoningEfforts = REASONING_EFFORTS;
   protected readonly defaultTemperature = DEFAULT_TEMPERATURE;
   protected readonly defaultMaxTokens = DEFAULT_MAX_TOKENS;

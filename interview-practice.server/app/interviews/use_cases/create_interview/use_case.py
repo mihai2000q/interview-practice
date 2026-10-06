@@ -120,6 +120,7 @@ def _resolve_application(
     application = JobApplication(
         company_name=plan.company_name,
         job_title=body.job_title,
+        seniority=body.seniority,
         job_description_document=documents.job_description,
         cv_document=documents.cv,
         cover_letter_document=documents.cover_letter,

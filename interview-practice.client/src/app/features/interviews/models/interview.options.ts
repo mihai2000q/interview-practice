@@ -19,6 +19,9 @@ export const SENIORITIES: readonly { value: Seniority; label: string }[] = [
   { value: 'senior', label: 'Senior' },
 ];
 
+/** The icon shown beside a seniority wherever it is listed with the role. */
+export const SENIORITY_ICON = 'lucideTrendingUp';
+
 export const DIFFICULTIES: readonly { value: Difficulty; label: string }[] = [
   { value: 'easy', label: 'Easy' },
   { value: 'medium', label: 'Medium' },

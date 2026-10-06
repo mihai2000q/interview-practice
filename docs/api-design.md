@@ -347,7 +347,7 @@ that referenced the Document are kept and just lose the link (`ON DELETE SET NUL
 
 ### `GET /api/applications`
 
-List, newest first: `id`, `companyName`, `jobTitle`, the optional documents
+List, newest first: `id`, `companyName`, `jobTitle`, `seniority`, the optional documents
 `jobDescription`/`cv`/`coverLetter` — each `{id, name, analysisModel}` or `null`, so Create Interview can
 pre-fill a new stage and show an attached document by name even when it isn't `saved` — and
 `interviews` — each stage's `id`, `interviewerRole` and `status`, oldest first (a stage
@@ -358,7 +358,7 @@ an empty array when there are none.
 
 ### `GET /api/applications/:id`
 
-Application Overview page data: `id`, `companyName`, `jobTitle`, the documents
+Application Overview page data: `id`, `companyName`, `jobTitle`, `seniority`, the documents
 `jobDescription`/`cv`/`coverLetter` (each `{id, name, analysisModel}` or `null`, as in the list),
 `progressScore`/`progressSummary` (both `null` until generated), `progressOutdated` (`true` when
 2+ stages have an Evaluation and the stored pair was not built from exactly those), `createdAt`, and `interviews` —

@@ -4,7 +4,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideFileText } from '@ng-icons/lucide';
+import { lucideFileText, lucideTrendingUp } from '@ng-icons/lucide';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -18,7 +18,12 @@ import {
   OverviewStage,
 } from '@app/features/applications/models/application-overview.schema';
 import { InterviewStatus } from '@app/features/interviews/models/interview.enums';
-import { INTERVIEWER_ROLES, labelOf } from '@app/features/interviews/models/interview.options';
+import {
+  INTERVIEWER_ROLES,
+  labelOf,
+  SENIORITIES,
+  SENIORITY_ICON,
+} from '@app/features/interviews/models/interview.options';
 import { OUTCOME_BADGE, outcomeOf } from '@app/features/interviews/models/interview-outcome';
 import { ScoreGauge } from '@app/shared/components/score-gauge/score-gauge';
 import { ResultsCache } from '@app/features/interviews/services/results-cache';
@@ -53,7 +58,7 @@ const isUngraded = (stage: OverviewStage) => isFinished(stage) && stage.verdict 
     RouterLink,
     ScoreGauge,
   ],
-  providers: [provideIcons({ lucideFileText })],
+  providers: [provideIcons({ lucideFileText, lucideTrendingUp })],
   templateUrl: './application-overview.html',
 })
 export class ApplicationOverviewPage {
@@ -76,6 +81,8 @@ export class ApplicationOverviewPage {
   protected readonly outcomeOf = outcomeOf;
   protected readonly badgeOf = OUTCOME_BADGE;
   protected readonly roleLabel = labelOf(INTERVIEWER_ROLES);
+  protected readonly seniorityLabel = labelOf(SENIORITIES);
+  protected readonly seniorityIcon = SENIORITY_ICON;
   protected readonly stagesToCompare = STAGES_TO_COMPARE;
   protected readonly placeholders = [1, 2, 3];
 

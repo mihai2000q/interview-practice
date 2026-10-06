@@ -72,6 +72,7 @@ each — `Message`, `Evaluation`, `InterviewerReview`), not just the grouping �
 header is also the click target into the `/applications/:id` Application Overview page
 (see `architecture.md`).
 
+- `seniority`: e.g. junior / mid / senior; set from the Interview that creates the Application, since the candidate's level doesn't change across the stages of one hiring process. A new stage under it copies its `seniority` from here, and the Create Interview field is locked while the Application is selected, like the job title
 - `company_name`: free text, optional — when a stage creates the Application without one, it is read from the job description or cover letter if either names a company
 - `job_title`: free text
 - `job_description_document_id`: optional FK → Document (`type = job_description`)

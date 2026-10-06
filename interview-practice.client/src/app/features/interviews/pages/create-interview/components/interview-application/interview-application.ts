@@ -113,11 +113,13 @@ export class InterviewApplication {
       return;
     }
     form.jobTitle().value.set(application.jobTitle);
+    form.seniority().value.set(application.seniority);
     form.companyName().value.set(application.companyName ?? '');
     form.jobDescriptionId().value.set(application.jobDescription?.id ?? null);
     form.cvId().value.set(application.cv?.id ?? null);
     form.coverLetterId().value.set(application.coverLetter?.id ?? null);
     form.jobTitle().markAsDirty();
+    form.seniority().markAsDirty();
     form.companyName().markAsDirty();
     form.jobDescriptionId().markAsDirty();
     form.cvId().markAsDirty();

@@ -3,6 +3,7 @@ import { verdictSchema } from '@app/features/interviews/models/evaluation.schema
 import {
   interviewerRoleSchema,
   interviewStatusSchema,
+  senioritySchema,
 } from '@app/features/interviews/models/interview.enums';
 import { applicationDocumentSchema } from './application-summary.schema';
 
@@ -23,6 +24,7 @@ export const applicationOverviewSchema = z.object({
   id: z.string(),
   companyName: z.string().nullable(),
   jobTitle: z.string(),
+  seniority: senioritySchema,
   jobDescription: applicationDocumentSchema.nullable(),
   cv: applicationDocumentSchema.nullable(),
   coverLetter: applicationDocumentSchema.nullable(),

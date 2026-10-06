@@ -24,6 +24,7 @@ def overview(*stages: dict[str, object], **fields: object) -> dict[str, object]:
         id=uuid.uuid4(),
         company_name="Acme",
         job_title="Backend Dev",
+        seniority="senior",
         created_at=STARTED,
         **fields,
     )
@@ -39,6 +40,7 @@ def test_overview_has_exactly_the_contract_keys() -> None:
         "id",
         "companyName",
         "jobTitle",
+        "seniority",
         "jobDescription",
         "cv",
         "coverLetter",

@@ -29,6 +29,7 @@ class ApplicationSummary(ApiModel):
     id: uuid.UUID
     company_name: str | None
     job_title: str
+    seniority: str
     job_description: ApplicationDocument | None = Field(
         validation_alias="job_description_document",
         serialization_alias="jobDescription",
@@ -75,6 +76,7 @@ class ApplicationOverview(ApiModel):
     id: uuid.UUID
     company_name: str | None
     job_title: str
+    seniority: str
     job_description: ApplicationDocument | None = Field(
         validation_alias="job_description_document",
         serialization_alias="jobDescription",

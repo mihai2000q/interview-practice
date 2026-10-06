@@ -5,6 +5,10 @@
         {{ overview.companyName ?? 'Job application' }}
       </p>
       <h1 class="text-2xl font-semibold tracking-tight">{{ overview.jobTitle }}</h1>
+      <p class="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <ng-icon aria-hidden="true" [name]="seniorityIcon" />
+        {{ seniorityLabel(overview.seniority) }}
+      </p>
     </header>
 
     <section aria-labelledby="progress-heading" hlmCard>

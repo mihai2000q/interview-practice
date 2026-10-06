@@ -23,5 +23,7 @@ def get_ask_back_suggestions(interview_id: uuid.UUID) -> list[str]:
             "Suggestions are only available in the ask-back phase.",
             code="NOT_IN_ASK_BACK_PHASE",
         )
-    model, settings = phase_config(GenerationPhase.ask_back, interview.phase_settings)
+    model, settings = phase_config(
+        GenerationPhase.coaching_helpers, interview.phase_settings
+    )
     return suggest_questions(get_llm_client(), model, settings, interview)

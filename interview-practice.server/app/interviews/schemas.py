@@ -5,6 +5,7 @@ from typing import Annotated, Any, Literal
 from pydantic import ConfigDict, Field, StringConstraints, field_validator
 
 from app.llm.guard import MAX_MESSAGE_CHARS, guarded
+from app.llm.schemas import PhaseSettings
 from app.models import (
     Difficulty,
     GenerationPhase,
@@ -14,24 +15,11 @@ from app.models import (
     MessageRole,
     ResponseStyle,
 )
-from app.serialization import ApiModel
+from app.serialization import ApiModel, ShortText
 
-ShortText = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-]
-# Free text that is later fed to the LLM, so it goes through the security guard.
+# Free text that is later fed to the LLM, so it goes through the security guard. It is
+# capped at 200 characters before the guard runs, so only the injection check can fire.
 GuardedText = Annotated[ShortText, guarded()]
-
-
-class PhaseSettings(ApiModel):
-    """Per-phase LLM overrides; any field left out falls back to Preferences."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    model: ShortText | None = None
-    temperature: float | None = Field(default=None, ge=0, le=2)
-    max_tokens: int | None = Field(default=None, ge=1)
-    reasoning_effort: ShortText | None = None
 
 
 class PhaseSettingsOverride(ApiModel):
@@ -40,20 +28,18 @@ class PhaseSettingsOverride(ApiModel):
     jd_analysis: PhaseSettings | None = None
     question_plan: PhaseSettings | None = None
     live_conversation: PhaseSettings | None = None
-    ask_back: PhaseSettings | None = None
+    coaching_helpers: PhaseSettings | None = None
     evaluation: PhaseSettings | None = None
     interviewer_review: PhaseSettings | None = None
 
     def to_rows(self) -> list[InterviewPhaseSettings]:
         """One unsaved row per phase that carries an override."""
-        return [
-            InterviewPhaseSettings(
-                phase=GenerationPhase(name),
-                **settings.model_dump(by_alias=False, exclude_none=True),
-            )
+        rows = (
+            settings.to_row(GenerationPhase(name))
             for name in type(self).model_fields
             if (settings := getattr(self, name)) is not None
-        ]
+        )
+        return [row for row in rows if row is not None]
 
 
 # The request names the six phases as explicit fields (the API contract); they must stay
@@ -129,17 +115,21 @@ class InterviewPublic(ApiModel):
     @field_validator("phase_settings_override", mode="before")
     @classmethod
     def _from_rows(cls, rows: Any) -> Any:
-        """The settings rows as `{phase: {setting: value}}`, set fields only."""
+        """The settings rows as `{phase: {setting: value}}`, set fields only, with the
+        same camelCase keys the request takes (`PhaseSettingsOverride` owns them)."""
         if isinstance(rows, dict):
             return rows
-        return {
+        by_phase = {
             row.phase.value: {
                 name: value
-                for name in ("model", "temperature", "max_tokens", "reasoning_effort")
+                for name in PhaseSettings.model_fields
                 if (value := getattr(row, name)) is not None
             }
             for row in rows
         }
+        return PhaseSettingsOverride.model_validate(by_phase).model_dump(
+            by_alias=True, exclude_none=True
+        )
 
 
 class MessagePublic(ApiModel):
@@ -184,3 +174,9 @@ class AskBackSuggestions(ApiModel):
     """Response of `GET /api/interviews/:id/ask-back-suggestions`."""
 
     suggestions: list[str]
+
+
+class PersonaImage(ApiModel):
+    """Response of `PUT /api/interviews/:id/persona-image`."""
+
+    persona_image_url: str | None

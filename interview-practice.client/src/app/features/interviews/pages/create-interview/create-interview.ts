@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, linkedSignal, signal, viewChild } from '@angular/core';
 import { form, submit } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -14,7 +14,6 @@ import {
   createInterviewValidation,
   initialCreateInterviewModel,
 } from './models/create-interview.schema';
-import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
@@ -30,7 +29,6 @@ import { InterviewDocuments } from './components/interview-documents/interview-d
     RouterLink,
     PhaseModelOverrides,
     HlmButtonImports,
-    HlmEmptyImports,
     HlmSkeleton,
     HlmTooltipImports,
     InterviewApplication,
@@ -67,8 +65,16 @@ export class CreateInterview implements ConfirmsLeaving {
   protected readonly submitDisabled = computed(
     () => this.interviewForm().invalid() || this.documentsBusy(),
   );
-  /** The form shows and sends the Preferences defaults, so it is only shown once they are here. */
   protected readonly preferences = inject(PreferencesStore);
+  /**
+   * The form shows the Preferences defaults, so it first waits for them. If they can't be loaded it
+   * is shown anyway, with a notice, as the server applies them whether or not they are shown. Once
+   * shown it stays, so asking again doesn't discard what was entered.
+   */
+  protected readonly formShown = linkedSignal<boolean, boolean>({
+    source: () => this.preferences.ready() || this.preferences.loadError() !== null,
+    computation: (loaded, previous) => loaded || (previous?.value ?? false),
+  });
   private readonly interviewsApi = inject(InterviewsApi);
   private readonly router = inject(Router);
   private readonly submitted = signal(false);

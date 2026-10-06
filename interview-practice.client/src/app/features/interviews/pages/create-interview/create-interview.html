@@ -4,7 +4,26 @@
     <p class="text-muted-foreground">Set up an interview for the role you are preparing for.</p>
   </header>
 
-  @if (preferences.ready()) {
+  @if (formShown()) {
+    <!-- The defaults are only shown, never sent: the server layers this interview's settings over
+         the saved ones, so the form still works without them. -->
+    @if (preferences.loadError(); as message) {
+      <p
+        class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed px-4 py-3 text-sm"
+        role="alert"
+      >
+        <span>
+          {{ message }} Your saved defaults can't be shown here, but they still apply to this
+          interview.
+        </span>
+        <button (click)="preferences.reload()" hlmBtn size="sm" type="button" variant="outline">
+          Try again
+        </button>
+      </p>
+    } @else if (!preferences.ready()) {
+      <p class="text-sm text-muted-foreground" role="status">Loading your defaults…</p>
+    }
+
     <form (submit)="onSubmit($event)" class="flex flex-col gap-6" novalidate>
       <app-interview-application
         [(selectedApplication)]="selectedApplication"
@@ -43,17 +62,6 @@
         </span>
       </div>
     </form>
-  } @else if (preferences.loadError(); as message) {
-    <!-- The form shows and sends the Preferences defaults, so it waits for them. -->
-    <div hlmEmpty>
-      <div hlmEmptyHeader>
-        <h2 hlmEmptyTitle>Could not load your defaults</h2>
-        <p hlmEmptyDescription>{{ message }}</p>
-      </div>
-      <div hlmEmptyContent>
-        <button (click)="preferences.reload()" hlmBtn type="button">Try again</button>
-      </div>
-    </div>
   } @else {
     <div aria-busy="true" class="flex flex-col gap-6" role="status">
       <span class="sr-only">Loading your defaults…</span>

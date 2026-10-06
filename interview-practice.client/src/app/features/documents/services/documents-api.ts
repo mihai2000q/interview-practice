@@ -3,8 +3,8 @@ import { inject, Service } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import { mapApiError } from '@app/core/api/api-error';
+import { PhaseSettings } from '@app/core/phase-settings/phase-settings.schema';
 import {
-  AnalysisSettings,
   DocumentAnalysis,
   documentAnalysisSchema,
   DocumentType,
@@ -37,7 +37,7 @@ export class DocumentsApi {
   }
 
   /** With the interview's `jdAnalysis` override the result is the one that interview will reuse. */
-  analyzeDocument(id: string, settings?: AnalysisSettings): Observable<DocumentAnalysis> {
+  analyzeDocument(id: string, settings?: PhaseSettings): Observable<DocumentAnalysis> {
     return this.http.put<unknown>(`${this.url}/${id}/analysis`, settings ?? null).pipe(
       map((response) => documentAnalysisSchema.parse(response)),
       mapApiError(),

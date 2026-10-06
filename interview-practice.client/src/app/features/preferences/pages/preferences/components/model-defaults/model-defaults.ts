@@ -22,7 +22,7 @@ import {
   JudgeRuleModels,
   resolveRuleModels,
   takenNote,
-} from '@app/features/interviews/models/judge-rule';
+} from '@app/core/phase-settings/judge-rule';
 import {
   DEFAULT_JUDGE_MODEL,
   DEFAULT_MAX_TOKENS,
@@ -38,7 +38,7 @@ import {
   PHASES,
   REASONING_EFFORTS,
   TEMPERATURE_RANGE,
-} from '@app/features/interviews/models/phase-settings.schema';
+} from '@app/core/phase-settings/phase-settings.schema';
 import {
   PhasePreferences,
   Preferences,
@@ -47,18 +47,9 @@ import {
 import { PreferencesApi } from '@app/features/preferences/services/preferences-api';
 import {
   builtInPreferences,
+  isBuiltIn,
   PreferencesStore,
 } from '@app/features/preferences/services/preferences-store';
-
-function isBuiltIn(phase: Phase, preferences: PhasePreferences): boolean {
-  const builtIn = builtInPreferences(phase);
-  return (
-    preferences.model === builtIn.model &&
-    preferences.temperature === null &&
-    preferences.maxTokens === null &&
-    preferences.reasoningEffort === null
-  );
-}
 
 /** The settings of `draft` that differ from `saved`, as a `PATCH` body. */
 function changesOf(saved: Preferences, draft: Preferences): PreferencesPatch {

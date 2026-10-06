@@ -21,14 +21,14 @@ import {
   isSubStep,
   REASONING_EFFORTS,
   TEMPERATURE_RANGE,
-} from '@app/features/interviews/models/phase-settings.schema';
+} from '@app/core/phase-settings/phase-settings.schema';
 import {
   collidingPhases,
   isModelTaken,
   JudgeRuleModels,
   resolveRuleModels,
   takenNote,
-} from '@app/features/interviews/models/judge-rule';
+} from '@app/core/phase-settings/judge-rule';
 import { PhasePreferences } from '@app/features/preferences/models/preferences.schema';
 import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { CreateInterviewModel } from '@app/features/interviews/pages/create-interview/models/create-interview.schema';

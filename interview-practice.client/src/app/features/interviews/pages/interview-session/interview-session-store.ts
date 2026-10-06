@@ -78,7 +78,6 @@ export class InterviewSessionStore {
     computation: () => null,
   });
 
-  /** The interviewer's opening message is being fetched (or awaited from another request). */
   /** An earlier reply is still being answered (a reload mid-turn, or another tab): wait, don't resend. */
   readonly waitingForTurn = linkedSignal<string, boolean>({
     source: this.id,
@@ -89,6 +88,7 @@ export class InterviewSessionStore {
     source: this.animatedMessageId,
     computation: (id) => id === null,
   });
+  /** The interviewer's opening message is being fetched (or awaited from another request). */
   readonly opening = linkedSignal<string, boolean>({
     source: this.id,
     computation: () => false,

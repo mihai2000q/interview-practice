@@ -20,12 +20,9 @@ import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
+import { PhaseSettings } from '@app/core/phase-settings/phase-settings.schema';
 import { ApplicationDocument } from '@app/features/applications/models/application-summary.schema';
-import {
-  AnalysisSettings,
-  DocumentType,
-  StoredDocument,
-} from '@app/features/documents/models/document.schema';
+import { DocumentType, StoredDocument } from '@app/features/documents/models/document.schema';
 import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { MAX_UPLOAD_MB } from '@app/features/documents/documents.constants';
 import { DocumentsApi } from '@app/features/documents/services/documents-api';
@@ -81,7 +78,7 @@ export class DocumentPicker {
   readonly disabled = input(false);
   readonly extraDocuments = input<ApplicationDocument[]>([]);
   /** The interview's `jdAnalysis` override: the analysis it will use, and what "Analyze now" runs. */
-  readonly analysisSettings = input<AnalysisSettings | undefined>(undefined);
+  readonly analysisSettings = input<PhaseSettings | undefined>(undefined);
 
   protected readonly selectId = `document-picker-${nextId++}`;
   private readonly uploadInProgress = signal(false);
@@ -93,7 +90,6 @@ export class DocumentPicker {
     computation: () => null,
   });
   protected readonly uploadedDocument = signal<StoredDocument | null>(null);
-  /** The Document being analyzed right now. */
   /** The Document being analyzed; choosing another one ends it. */
   private readonly analysisTarget = linkedSignal<string | null, string | null>({
     source: this.value,

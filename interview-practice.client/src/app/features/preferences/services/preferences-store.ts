@@ -2,7 +2,7 @@ import { computed, inject, Service } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
-import { builtInModelOf, Phase } from '@app/features/interviews/models/phase-settings.schema';
+import { builtInModelOf, Phase } from '@app/core/phase-settings/phase-settings.schema';
 import { PhasePreferences, Preferences } from '../models/preferences.schema';
 import { PreferencesApi } from './preferences-api';
 
@@ -14,6 +14,17 @@ export function builtInPreferences(phase: Phase): PhasePreferences {
     maxTokens: null,
     reasoningEffort: null,
   };
+}
+
+/** Whether `preferences` is exactly what `phase` uses when nothing has been customized. */
+export function isBuiltIn(phase: Phase, preferences: PhasePreferences): boolean {
+  const builtIn = builtInPreferences(phase);
+  return (
+    preferences.model === builtIn.model &&
+    preferences.temperature === null &&
+    preferences.maxTokens === null &&
+    preferences.reasoningEffort === null
+  );
 }
 
 /**

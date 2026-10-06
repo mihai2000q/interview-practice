@@ -47,6 +47,8 @@ def generate_progress(application_id: uuid.UUID) -> JobApplication:
     model, settings = phase_config(GenerationPhase.evaluation, (), load_preferences())
     messages = build_messages(graded)
     seen_basis = application.progress_basis
+    # Don't hold a connection in an open transaction while the model works.
+    db.session.rollback()
     with timed("progress"):
         draft = summarize(get_llm_client(), model, settings, messages)
     return _store(application_id, seen_basis, basis, draft)

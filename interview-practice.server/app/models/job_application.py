@@ -51,3 +51,13 @@ class JobApplication(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    @property
+    def progress_outdated(self) -> bool:
+        """Whether the stored score and summary should be remade now (ADR 0015)."""
+        from app.applications.shared import is_outdated  # lazy: avoids an import cycle
+
+        return is_outdated(
+            self.progress_basis,
+            [i.evaluation.id for i in self.interviews if i.evaluation is not None],
+        )

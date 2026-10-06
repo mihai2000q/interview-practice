@@ -1,10 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Any
 
-from pydantic import Field, ValidationInfo, field_validator
+from pydantic import Field, field_validator
 
-from app.applications.shared import is_outdated
 from app.models import Evaluation, InterviewStatus, Verdict
 from app.serialization import ApiModel
 
@@ -71,7 +69,7 @@ class ApplicationOverview(ApiModel):
     `progress_score` and `progress_summary` are `null` until they have been generated.
     `progress_outdated` says they should be (re)generated now: there are enough
     Evaluations to compare and they are not the ones the stored pair was built from
-    (ADR 0015). The basis itself is internal and never serialized.
+    (ADR 0015); the model works that out, since the basis is internal.
     """
 
     id: uuid.UUID
@@ -89,20 +87,9 @@ class ApplicationOverview(ApiModel):
     )
     progress_score: int | None
     progress_summary: str | None
-    progress_basis: str | None = Field(default=None, exclude=True)
-    # Read from the stages (the same attribute as `interviews`), checked against the
-    # basis declared above.
-    progress_outdated: bool = Field(
-        validation_alias="interviews", serialization_alias="progressOutdated"
-    )
+    progress_outdated: bool
     created_at: datetime
     interviews: list[OverviewStage]
-
-    @field_validator("progress_outdated", mode="before")
-    @classmethod
-    def _outdated(cls, stages: Any, info: ValidationInfo) -> bool:
-        evaluation_ids = [s.evaluation.id for s in stages if s.evaluation is not None]
-        return is_outdated(info.data.get("progress_basis"), evaluation_ids)
 
 
 class ApplicationProgress(ApiModel):

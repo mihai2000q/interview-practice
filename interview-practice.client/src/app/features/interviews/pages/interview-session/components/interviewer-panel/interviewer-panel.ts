@@ -56,16 +56,16 @@ export class InterviewerPanel {
     const interview = this.interview();
     return [
       { label: 'Position', value: interview.jobTitle, icon: 'lucideBriefcase' },
-      { label: 'Seniority', value: this.seniorityLabel(interview.seniority), icon: SENIORITY_ICON },
       ...(interview.companyName
         ? [{ label: 'Company', value: interview.companyName, icon: 'lucideBuilding2' }]
         : []),
+      { label: 'Seniority', value: this.seniorityLabel(interview.seniority), icon: SENIORITY_ICON },
     ];
   });
   protected readonly details = computed(() => {
     const interview = this.interview();
     return [
-      ...interviewSettings(interview).filter((setting) => setting.label !== 'Seniority'),
+      ...interviewSettings(interview, { withSeniority: false }),
       { label: 'Coaching helpers', value: interview.coachingHelpersEnabled ? 'On' : 'Off' },
     ];
   });

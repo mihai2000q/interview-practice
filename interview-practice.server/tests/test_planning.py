@@ -315,9 +315,7 @@ def test_no_company_means_no_company_question() -> None:
     assert "company:" not in model.user("questions")
 
 
-def test_the_criteria_prompt_asks_for_the_rubric_with_a_coachability_criterion() -> (
-    None
-):
+def test_the_criteria_prompt_asks_for_a_coachability_criterion() -> None:
     model = FakeModel()
     plan(model)
     system = model.system("criteria")

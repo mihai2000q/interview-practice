@@ -81,7 +81,7 @@ export class SpeechDictation {
     void this.microphone.start();
   }
 
-  /** Stops listening and drops what was still being recognised (for when the text changed under it). */
+  /** Stops listening and drops what was still being recognized (for when the text changed under it). */
   cancel(): void {
     const recognition = this.recognition;
     if (recognition) {

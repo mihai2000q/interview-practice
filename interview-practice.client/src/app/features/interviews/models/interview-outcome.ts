@@ -30,7 +30,7 @@ export function outcomeOf(interview: {
   }
 }
 
-/** Text colour for a tone (theme tokens only). */
+/** Text color for a tone (theme tokens only). */
 export const OUTCOME_TEXT: Record<OutcomeTone, string> = {
   live: 'text-primary',
   success: 'text-success',
@@ -38,7 +38,7 @@ export const OUTCOME_TEXT: Record<OutcomeTone, string> = {
   muted: 'text-muted-foreground',
 };
 
-/** The Spartan badge that carries a tone (a variant, plus the colour the variants don't have). */
+/** The Spartan badge that carries a tone (a variant, plus the color the variants don't have). */
 export const OUTCOME_BADGE: Record<
   OutcomeTone,
   { variant: 'default' | 'secondary' | 'destructive'; class: string }

@@ -1,10 +1,10 @@
 """Create Interview: analyze the documents, plan the interview, store it.
 
-Phase 1 (JD/CV analysis, `app.services.document_analysis`) and phase 2 (`planning.py`)
-run in sequence and the Interview is committed. The interviewer's opening message and
-the persona's portrait are not made here: the session page asks for them (`PUT
-.../opening`, `PUT .../persona-image`), so the candidate reaches the session as soon as
-the plan exists.
+Phase 1 (JD/CV analysis, `app.services.document_analysis`) and phase 2 (the `planning`
+package) run in sequence and the Interview is committed. The interviewer's opening
+message and the persona's portrait are not made here: the session page asks for them
+(`PUT .../opening`, `PUT .../persona-image`), so the candidate reaches the session as
+soon as the plan exists.
 """
 
 import uuid
@@ -113,7 +113,7 @@ def _resolve_application(
     if isinstance(body.job_application, ExistingJobApplication):
         application = db.session.get(JobApplication, body.job_application.id)
         if application is None:
-            raise NotFoundError("Job application not found.")
+            raise NotFoundError("Application not found.")
         return application
     if body.job_application is None:
         return None

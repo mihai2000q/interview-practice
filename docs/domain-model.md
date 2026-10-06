@@ -219,7 +219,7 @@ shown to the candidate.
 
 ## EvaluationCriterion
 
-One bullet of the Interview's evaluation criteria (the rubric), generated alongside the
+One of the Interview's Evaluation criteria, generated alongside the
 question plan in phase 2 and used to ground the STAR evaluation (phase 5). Belongs to
 exactly one Interview; not shown to the candidate. The `behavioral` criteria explicitly
 include a self-awareness/coachability signal — *how* the candidate talks about a past
@@ -227,7 +227,7 @@ failure or weakness (ownership, growth mindset), not just whether their STAR sto
 complete — since real interviewers weigh this as much as the story itself.
 
 - `interview_id`: FK → Interview
-- `sequence`: order within the rubric, from 1
+- `sequence`: order within the Interview's criteria, from 1
 - `category`: `technical` | `behavioral`
 - `criterion`: text, e.g. "correctly reasons about time complexity tradeoffs"
 
@@ -262,10 +262,10 @@ The outcome of an Interview. One-to-one with Interview, created once the session
 - `star_completeness`: `strong` | `partial` | `weak` — the overall STAR completeness rating
 - `incomplete`: boolean — true when the Interview was `abandoned`; the evaluation is still
   produced, but explicitly caveated as based on a partial transcript
-- `model_used`: the OpenRouter model id actually used to produce this evaluation —
-  currently the same model that runs the rest of the candidate pipeline (`gpt-5-mini`, see
-  `architecture.md`), recorded here for reproducibility even though it isn't decoupled from
-  the interview model
+- `model_used`: the OpenRouter model id actually used to produce this evaluation — what the
+  `evaluation` phase resolved to (the Interview's override, else Preferences, else the
+  built-in `gpt-5-mini`, see `architecture.md`), recorded here for reproducibility even
+  though it isn't decoupled from the interview model
 - `created_at`
 
 ## InterviewerReview

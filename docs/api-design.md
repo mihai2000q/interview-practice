@@ -201,7 +201,7 @@ Phase 4 call. Ephemeral — returns candidate-question suggestions the client ca
 nothing is persisted until the candidate actually sends one via `POST .../messages`.
 
 Response `200`: `{"suggestions": [string, ...]}` (five; the server trims extras). `409`
-`HELPERS_DISABLED` if the Interview's interview-helpers toggle is off, `409`
+`HELPERS_DISABLED` if the Interview's coaching-helpers toggle is off, `409`
 `NOT_IN_ASK_BACK_PHASE` before the Q&A phase has ended, `409` `INTERVIEW_ALREADY_ENDED`
 once the Interview is over; `502`/`503`/`504` when the provider fails (no suggestions is an
 error, not an empty list). A `GET` because it has no side effects on the Interview.
@@ -360,7 +360,8 @@ an empty array when there are none.
 
 Application Overview page data: `companyName`, `jobTitle`, every stage (id,
 `interviewerRole`, `status`, link to its Results), plus `progressScore`/
-`progressSummary` once 2+ stages have an `Evaluation`.
+`progressSummary` once 2+ stages have an `Evaluation`. **Not built yet**: neither this route nor the
+progress summary exists, and the client has no Application Overview page; both are planned together.
 
 ### `PATCH /api/applications/:id`
 

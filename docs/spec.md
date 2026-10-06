@@ -172,8 +172,8 @@ developer-facing preferences area kept apart from the candidate experience.
   `InterviewPhaseSettings` rows across 6 phases including the judge phase's narrower model
   set), `Message` (phase, role, content, helper_text, sequence), `Evaluation` (verdict,
   reasoning, improvement_suggestions, star_situation/task/action/result +
-  star_completeness, incomplete, model_used — always
-  `gpt-5-mini`, see [ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)),
+  star_completeness, incomplete, model_used — the model the
+  `evaluation` phase resolved to, `gpt-5-mini` unless overridden, see [ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)),
   `InterviewerReview` (judge_model default `google/gemini-2.5-flash`, score_question_relevance /
   score_persona_consistency / score_pacing 1-5, reasoning, automatic trigger at
   session end).

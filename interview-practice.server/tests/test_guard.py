@@ -83,7 +83,7 @@ REWORDED = [
 
 # Ordinary text that must never be blocked.
 LEGITIMATE = [
-    "Led a team of 5 engineers; ignored legacy tooling in favour of CI/CD.",
+    "Led a team of 5 engineers; ignored legacy tooling in favor of CI/CD.",
     "Reduced previous release cycle from 2 weeks to 3 days.",
     "Built an admin dashboard and a developer portal for internal users.",
     "Experience with system prompts and LLM evaluation for a chatbot product.",

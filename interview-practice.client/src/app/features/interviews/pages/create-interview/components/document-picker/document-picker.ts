@@ -203,7 +203,7 @@ export class DocumentPicker {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.analysisRequest?.unsubscribe());
 
-    // Choosing another Document (or none) ends the request that was analysing the previous one.
+    // Choosing another Document (or none) ends the request that was analyzing the previous one.
     effect(() => {
       if (this.analysisTarget() === null) {
         untracked(() => {

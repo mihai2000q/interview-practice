@@ -1,4 +1,4 @@
-"""The evaluation criteria (the rubric the candidate is graded against, never shown)."""
+"""The Evaluation criteria (what the candidate is graded against, never shown)."""
 
 from dataclasses import dataclass
 

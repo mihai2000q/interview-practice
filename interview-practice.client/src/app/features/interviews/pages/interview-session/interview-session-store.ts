@@ -346,7 +346,7 @@ export class InterviewSessionStore {
   ): Observable<Interview> {
     return timer(OPENING_POLL_INTERVAL_MS, OPENING_POLL_INTERVAL_MS).pipe(
       take(OPENING_MAX_POLLS),
-      // A poll still waiting for its answer is not cancelled by the next tick: it would never finish.
+      // A poll still waiting for its answer is not canceled by the next tick: it would never finish.
       exhaustMap(() => this.api.get(id)),
       filter(isReady),
       take(1),

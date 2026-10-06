@@ -65,10 +65,10 @@
                     class="w-full data-[size=sm]:h-7 py-0 text-xs"
                     size="sm"
                   >
-                    <hlm-select-value placeholder="Default model" />
+                    <hlm-select-value [placeholder]="defaultModelLabel(phase)" />
                   </hlm-select-trigger>
                   <hlm-select-content *hlmSelectPortal>
-                    <hlm-select-item [value]="null">Default model</hlm-select-item>
+                    <hlm-select-item [value]="null">{{ defaultModelLabel(phase) }}</hlm-select-item>
                     @for (option of modelsFor(phase); track option) {
                       <hlm-select-item [value]="option">{{ option }}</hlm-select-item>
                     }
@@ -79,7 +79,9 @@
               <div class="gap-2" hlmField>
                 <span class="mt-3 text-muted-foreground" hlmFieldLabel>
                   Temperature
-                  <span class="ml-auto text-xs">{{ current(phase).temperature ?? 'Default' }}</span>
+                  <span class="ml-auto text-xs">{{
+                    current(phase).temperature ?? defaultLabel(defaultOf(phase).temperature)
+                  }}</span>
                 </span>
                 <div class="flex h-7 items-center">
                   <hlm-slider
@@ -88,7 +90,7 @@
                     [max]="temperatureRange.max"
                     [min]="temperatureRange.min"
                     [step]="temperatureRange.step"
-                    [value]="[current(phase).temperature ?? defaultTemperature]"
+                    [value]="[temperatureAt(phase)]"
                     valueTooltip
                   />
                 </div>
@@ -97,7 +99,9 @@
               <div class="gap-2" hlmField>
                 <span class="mt-3 text-muted-foreground" hlmFieldLabel>
                   Max Tokens
-                  <span class="ml-auto text-xs">{{ current(phase).maxTokens ?? 'Default' }}</span>
+                  <span class="ml-auto text-xs">{{
+                    current(phase).maxTokens ?? defaultLabel(defaultOf(phase).maxTokens)
+                  }}</span>
                 </span>
                 <div class="flex h-7 items-center">
                   <hlm-slider
@@ -106,7 +110,7 @@
                     [max]="maxTokensRange.max"
                     [min]="maxTokensRange.min"
                     [step]="maxTokensRange.step"
-                    [value]="[current(phase).maxTokens ?? defaultMaxTokens]"
+                    [value]="[maxTokensAt(phase)]"
                     valueTooltip
                   />
                 </div>
@@ -124,10 +128,10 @@
                     class="w-full data-[size=sm]:h-7 py-0 text-xs"
                     size="sm"
                   >
-                    <hlm-select-value placeholder="Default reasoning" />
+                    <hlm-select-value [placeholder]="reasoningLabel(phase)" />
                   </hlm-select-trigger>
                   <hlm-select-content *hlmSelectPortal>
-                    <hlm-select-item [value]="null">Default reasoning</hlm-select-item>
+                    <hlm-select-item [value]="null">{{ reasoningLabel(phase) }}</hlm-select-item>
                     @for (effort of reasoningEfforts; track effort) {
                       <hlm-select-item [value]="effort">{{ effort }}</hlm-select-item>
                     }

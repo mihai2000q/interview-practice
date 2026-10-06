@@ -54,7 +54,7 @@ export const JUDGE_MODELS = [
   'gpt-5-nano',
   'typesafe/jev-1.13',
 ] as const;
-/** Stand-ins for the Preferences defaults until Preferences exists; only used to place the sliders. */
+/** Where a slider rests when neither the Interview nor Preferences set the value; it is not sent. */
 export const DEFAULT_TEMPERATURE = 0.7;
 export const DEFAULT_MAX_TOKENS = 1024;
 export const REASONING_EFFORTS = ['minimal', 'low', 'medium', 'high'] as const;

@@ -1,5 +1,4 @@
 import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideInfo, lucideRotateCcw } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -15,9 +14,7 @@ import { HlmSlider } from '@spartan-ng/helm/slider';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
-import { valueOrUndefined } from '@app/core/api/resource-value';
 import {
-  builtInModelOf,
   DEFAULT_JUDGE_MODEL,
   DEFAULT_MAX_TOKENS,
   DEFAULT_TEMPERATURE,
@@ -39,16 +36,10 @@ import {
   PreferencesPatch,
 } from '@app/features/preferences/models/preferences.schema';
 import { PreferencesApi } from '@app/features/preferences/services/preferences-api';
-
-/** What a phase uses when nothing has been customized. */
-function builtInPreferences(phase: Phase): PhasePreferences {
-  return {
-    model: builtInModelOf(phase),
-    temperature: null,
-    maxTokens: null,
-    reasoningEffort: null,
-  };
-}
+import {
+  builtInPreferences,
+  PreferencesStore,
+} from '@app/features/preferences/services/preferences-store';
 
 function isBuiltIn(phase: Phase, preferences: PhasePreferences): boolean {
   const builtIn = builtInPreferences(phase);
@@ -104,7 +95,7 @@ function changesOf(saved: Preferences, draft: Preferences): PreferencesPatch {
 })
 export class ModelDefaults {
   private readonly api = inject(PreferencesApi);
-  private readonly preferencesResource = rxResource({ stream: () => this.api.get() });
+  private readonly store = inject(PreferencesStore);
 
   protected readonly phases = PHASES;
   protected readonly phaseLabels = PHASE_LABELS;
@@ -118,13 +109,10 @@ export class ModelDefaults {
   protected readonly maxTokensRange = MAX_TOKENS_RANGE;
 
   /** What the server has. */
-  protected readonly saved = computed(() => valueOrUndefined(this.preferencesResource));
+  protected readonly saved = this.store.preferences;
   /** What the page shows: `saved` plus the edits not saved yet. A new `saved` replaces it. */
   protected readonly draft = linkedSignal(() => this.saved());
-  protected readonly loadError = computed(() => {
-    const error = this.preferencesResource.error();
-    return error ? toApiError(error).message : null;
-  });
+  protected readonly loadError = this.store.loadError;
 
   private readonly changes = computed(() => {
     const [saved, draft] = [this.saved(), this.draft()];
@@ -198,7 +186,7 @@ export class ModelDefaults {
     this.saveError.set(null);
     this.saving.set(true);
     try {
-      this.preferencesResource.set(await firstValueFrom(this.api.update(patch)));
+      this.store.replace(await firstValueFrom(this.api.update(patch)));
       toast.success('Defaults saved');
     } catch (err) {
       this.saveError.set(toApiError(err).message);
@@ -208,7 +196,7 @@ export class ModelDefaults {
   }
 
   protected retry(): void {
-    this.preferencesResource.reload();
+    this.store.reload();
   }
 
   private edit(phase: Phase, change: Partial<PhasePreferences>): void {

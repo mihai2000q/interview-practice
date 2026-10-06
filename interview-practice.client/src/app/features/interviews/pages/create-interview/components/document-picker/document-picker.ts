@@ -26,7 +26,7 @@ import {
   DocumentType,
   StoredDocument,
 } from '@app/features/documents/models/document.schema';
-import { DEFAULT_INTERVIEW_MODEL } from '@app/features/interviews/models/phase-settings.schema';
+import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { MAX_UPLOAD_MB } from '@app/features/documents/documents.constants';
 import { DocumentsApi } from '@app/features/documents/services/documents-api';
 import { FileDropzone } from '@app/shared/components/file-dropzone/file-dropzone';
@@ -102,9 +102,10 @@ export class DocumentPicker {
   readonly analyzing = computed(() => this.analysisTarget() !== null);
   /** Models that analyzed Documents in this session; the lists loaded earlier don't know yet. */
   private readonly analyzedModels = signal<ReadonlyMap<string, string>>(new Map());
-  /** The model the interview will analyze with: the override, else the default. */
+  private readonly preferences = inject(PreferencesStore);
+  /** The model the interview will analyze with: the override, else the Preferences default. */
   protected readonly expectedModel = computed(
-    () => this.analysisSettings()?.model ?? DEFAULT_INTERVIEW_MODEL,
+    () => this.analysisSettings()?.model ?? this.preferences.phase('jdAnalysis').model,
   );
   /** The last attempt to analyze the chosen Document failed for a reason that isn't its own. */
   protected readonly analysisFailed = linkedSignal<string | null, boolean>({

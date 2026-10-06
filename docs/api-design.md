@@ -453,7 +453,7 @@ itself. Its own tiny blueprint. Response `200`:
   "recent": [
     {
       "id": "…", "jobTitle": "Senior Engineer", "companyName": "Acme",
-      "status": "completed", "verdict": "hire", "endedAt": "2026-10-06T09:10:00Z"
+      "interviewerRole": "recruiter", "status": "completed", "verdict": "hire", "endedAt": "2026-10-06T09:10:00Z"
     }
   ]
 }
@@ -470,7 +470,7 @@ itself. Its own tiny blueprint. Response `200`:
   so this is the "go and open your results" number. An abandoned Interview with nothing to
   grade (`NOTHING_TO_EVALUATE`) is in none of the three outcomes.
 - `recent` is the (up to) 5 Interviews that ended most recently, newest `endedAt` first, each
-  `{id, jobTitle, companyName, status, verdict, endedAt}` with `verdict` `null` when it has no
+  `{id, jobTitle, companyName, interviewerRole, status, verdict, endedAt}` with `verdict` `null` when it has no
   `Evaluation`. This is the "trend" the Home page draws.
 - All counts are `0` and `recent` is `[]` when there is nothing yet (the Home page then shows
   its onboarding state). The endpoint only reads: it never generates an `Evaluation`.

@@ -21,6 +21,7 @@ class RecentInterview(ApiModel):
     id: uuid.UUID
     job_title: str
     company_name: str | None
+    interviewer_role: str
     status: InterviewStatus
     verdict: Verdict | None
     ended_at: datetime

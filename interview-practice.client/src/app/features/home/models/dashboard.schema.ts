@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { verdictSchema } from '@app/features/interviews/models/evaluation.schema';
-import { interviewStatusSchema } from '@app/features/interviews/models/interview.enums';
+import {
+  interviewerRoleSchema,
+  interviewStatusSchema,
+} from '@app/features/interviews/models/interview.enums';
 
 /** `GET /api/dashboard`: the numbers behind the Home page. */
 export const dashboardSchema = z.object({
@@ -22,6 +25,7 @@ export const dashboardSchema = z.object({
       id: z.string(),
       jobTitle: z.string(),
       companyName: z.string().nullable(),
+      interviewerRole: interviewerRoleSchema,
       status: interviewStatusSchema,
       verdict: verdictSchema.nullable(),
       endedAt: z.coerce.date().nullable(),

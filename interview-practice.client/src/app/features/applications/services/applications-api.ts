@@ -13,4 +13,9 @@ export class ApplicationsApi {
   list(): Observable<ApplicationSummary[]> {
     return this.http.get<ApplicationSummary[]>(this.url).pipe(mapApiError());
   }
+
+  /** Deletes the Application and every Interview under it, with their results. Irreversible. */
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id}`).pipe(mapApiError());
+  }
 }

@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -11,15 +11,28 @@ import {
   lucideCircleDot,
   lucideCircleSlash,
   lucideCircleX,
+  lucideEllipsis,
   lucidePlus,
+  lucideTrash2,
 } from '@ng-icons/lucide';
+import { toast } from '@spartan-ng/brain/sonner';
+import { HlmAlertDialogImports } from '@spartan-ng/helm/alert-dialog';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
+import { HlmContextMenuImports } from '@spartan-ng/helm/context-menu';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan-ng/helm/sidebar';
 import { filter } from 'rxjs';
 import { OUTCOME_TEXT, outcomeOf } from '@app/features/interviews/models/interview-outcome';
 import { INTERVIEWER_ROLES, labelOf } from '@app/features/interviews/models/interview.options';
-import { HistoryGroup, InterviewHistory } from '../interview-history';
+import { toApiError } from '@app/core/api/api-error';
+import {
+  DeleteTarget,
+  deleteTargetOf,
+  HistoryEntry,
+  HistoryGroup,
+  InterviewHistory,
+} from '../interview-history';
 
 /**
  * The way into practice, beside the pages that show it: start an interview, or open a past one.
@@ -30,8 +43,11 @@ import { HistoryGroup, InterviewHistory } from '../interview-history';
   selector: 'app-history-sidebar',
   imports: [
     DatePipe,
+    HlmAlertDialogImports,
     HlmButtonImports,
     HlmCollapsibleImports,
+    HlmContextMenuImports,
+    HlmDropdownMenuImports,
     HlmSidebarImports,
     NgIcon,
     RouterLink,
@@ -46,7 +62,9 @@ import { HistoryGroup, InterviewHistory } from '../interview-history';
       lucideCircleDot,
       lucideCircleSlash,
       lucideCircleX,
+      lucideEllipsis,
       lucidePlus,
+      lucideTrash2,
     }),
   ],
   templateUrl: './history-sidebar.html',
@@ -59,13 +77,32 @@ export class HistorySidebar {
   protected readonly toneClass = OUTCOME_TEXT;
   protected readonly roleLabel = labelOf(INTERVIEWER_ROLES);
   protected readonly placeholders = [1, 2, 3, 4];
+  private readonly router = inject(Router);
+
+  /** What the open confirmation is about; `null` while there is none. */
+  protected readonly target = signal<DeleteTarget | null>(null);
+  protected readonly deleting = signal(false);
+  protected readonly deleteError = signal<string | null>(null);
+  protected readonly deleteDescription = computed(() => {
+    const target = this.target();
+    if (!target) {
+      return '';
+    }
+    const count = target.interviewIds.length;
+    const what =
+      target.kind === 'application'
+        ? `all ${count === 1 ? 'its interview' : `${count} of its interviews`}, with their transcripts and results`
+        : 'the interview, with its transcript and results';
+    const running = target.running ? ' An interview that is still running is stopped too.' : '';
+    return `This permanently deletes ${what}.${running} This can't be undone.`;
+  });
 
   constructor() {
     // Whatever was done since a page last showed this (an interview made, ended or evaluated) may
     // have changed it: read it again on arriving, and on every move between these pages.
     this.history.refresh();
-    inject(Router)
-      .events.pipe(
+    this.router.events
+      .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
@@ -75,6 +112,48 @@ export class HistorySidebar {
   /** Starting an interview leaves the page: the drawer (narrow screens) closes behind it. */
   protected closeMobile(): void {
     this.sidebar.setOpenMobile(false);
+  }
+
+  protected entryLabel(entry: HistoryEntry): string {
+    if (entry.kind === 'group') {
+      return this.groupLabel(entry);
+    }
+    const { companyName, jobTitle } = entry.interview;
+    return companyName ? `${companyName} — ${jobTitle}` : jobTitle;
+  }
+
+  protected askDelete(entry: HistoryEntry): void {
+    this.deleteError.set(null);
+    this.target.set(deleteTargetOf(entry, this.entryLabel(entry)));
+  }
+
+  /** The dialog was dismissed (Escape, the backdrop, Cancel): forget the request, unless it is running. */
+  protected onDialogState(state: 'open' | 'closed'): void {
+    if (state === 'closed' && !this.deleting()) {
+      this.target.set(null);
+    }
+  }
+
+  protected async confirmDelete(): Promise<void> {
+    const target = this.target();
+    if (!target || this.deleting()) {
+      return;
+    }
+    this.deleteError.set(null);
+    this.deleting.set(true);
+    try {
+      await this.history.remove(target);
+      this.target.set(null);
+      toast.success(`Deleted “${target.label}”`);
+      // The page on screen may be one of the deleted interviews.
+      if (target.interviewIds.some((id) => this.router.url.includes(id))) {
+        await this.router.navigateByUrl('/');
+      }
+    } catch (err) {
+      this.deleteError.set(toApiError(err).message);
+    } finally {
+      this.deleting.set(false);
+    }
   }
 
   protected groupLabel(group: HistoryGroup): string {

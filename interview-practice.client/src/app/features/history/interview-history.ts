@@ -1,5 +1,6 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
 import { ApplicationsApi } from '@app/features/applications/services/applications-api';
@@ -25,6 +26,37 @@ export interface HistorySingle {
 
 export type HistoryEntry = HistoryGroup | HistorySingle;
 
+/** What the candidate asked to delete: an Application with its Interviews, or one Interview. */
+export interface DeleteTarget {
+  kind: 'application' | 'interview';
+  id: string;
+  /** What the history calls it, for the confirmation. */
+  label: string;
+  /** Every Interview that goes with it. */
+  interviewIds: readonly string[];
+  /** One of them is still being answered. */
+  running: boolean;
+}
+
+/** The Application an entry is, or the standalone Interview, as something to delete. */
+export function deleteTargetOf(entry: HistoryEntry, label: string): DeleteTarget {
+  return entry.kind === 'group'
+    ? {
+        kind: 'application',
+        id: entry.application.id,
+        label,
+        interviewIds: entry.stages.map((stage) => stage.id),
+        running: entry.stages.some((stage) => stage.status === 'in_progress'),
+      }
+    : {
+        kind: 'interview',
+        id: entry.interview.id,
+        label,
+        interviewIds: [entry.interview.id],
+        running: entry.interview.status === 'in_progress',
+      };
+}
+
 /**
  * The candidate's past interviews as the history sidebar lists them: grouped under their
  * Application, standalone ones on their own, all ordered by how recently they were started. One
@@ -36,6 +68,8 @@ export class InterviewHistory {
   private readonly applicationsApi = inject(ApplicationsApi);
   /** Bumped to read both lists again (after an interview was made, ended or evaluated). */
   private readonly version = signal(0);
+  /** Counts what was deleted from here, so a page showing totals knows to read them again. */
+  readonly deletions = signal(0);
 
   private readonly interviewsResource = rxResource({
     params: () => this.version(),
@@ -60,6 +94,23 @@ export class InterviewHistory {
     const applications = valueOrUndefined(this.applicationsResource);
     return interviews && applications ? groupHistory(interviews, applications) : undefined;
   });
+
+  /** Deletes what was asked for, then reads the lists again. Already gone counts as deleted. */
+  async remove(target: DeleteTarget): Promise<void> {
+    try {
+      await firstValueFrom(
+        target.kind === 'application'
+          ? this.applicationsApi.delete(target.id)
+          : this.interviewsApi.delete(target.id),
+      );
+    } catch (err) {
+      if (toApiError(err).status !== 404) {
+        throw err;
+      }
+    }
+    this.deletions.update((count) => count + 1);
+    this.version.update((version) => version + 1);
+  }
 
   /** Reads both lists again, unless that is already happening (what is loading is fresh enough). */
   refresh(): void {

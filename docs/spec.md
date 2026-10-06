@@ -108,9 +108,10 @@ developer-facing preferences area kept apart from the candidate experience.
 33. As a candidate, I want to see an aggregate score and narrative comparing my performance
     across a job application's stages, so that I understand whether I'm improving, staying
     consistent, or regressing.
-34. As a candidate, I want to rename or delete a job application (with its interviews)
-    directly from the history sidebar, so that I can keep my history tidy without hunting
-    for a separate management screen.
+34. As a candidate, I want to delete a job application (with its interviews), or a standalone
+    interview, directly from the history sidebar, so that I can keep my history tidy without
+    hunting for a separate management screen. (Renaming was part of this story and is a known
+    limitation, see `overview.md`.)
 35. As a candidate, I want to start a brand-new interview or add a stage to an existing
     application from the sidebar, so that starting practice is always one click away.
 36. As the developer, I want a separate review of the AI interviewer's own conduct

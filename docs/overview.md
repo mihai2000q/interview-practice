@@ -59,6 +59,14 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
 
 ## Known limitations
 
+- **History entries cannot be renamed.** The sidebar's context menu (right-click, or the `⋯`
+  button on hover) only offers **Delete**, for an Application (with all its Interviews) and
+  for a standalone Interview. An Application is labelled "Company — Job title" and a standalone
+  Interview by its job title; changing either means making a new interview. A separate,
+  editable `name` was considered and left out for time: it would need a column on both
+  `JobApplication` and `Interview`, endpoints to set it, and a decision about where else the
+  name shows (Home, Results).
+
 - **Prototype scope, no authentication.** No login, no per-user isolation, no access
   control — see [ADR 0002](./adr/0002-single-user-prototype-no-auth.md).
 - **Job description context is not RAG** — plain-text injection, no vector database or

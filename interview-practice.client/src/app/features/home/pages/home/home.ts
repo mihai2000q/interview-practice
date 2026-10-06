@@ -9,6 +9,7 @@ import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
+import { InterviewHistory } from '@app/features/history/interview-history';
 import { DashboardApi } from '@app/features/home/services/dashboard-api';
 import { HomeOnboarding } from './components/home-onboarding/home-onboarding';
 import { OutcomeDonut } from './components/outcome-donut/outcome-donut';
@@ -35,7 +36,10 @@ import { StatTile } from './components/stat-tile/stat-tile';
 })
 export class Home {
   private readonly api = inject(DashboardApi);
+  private readonly history = inject(InterviewHistory);
   private readonly dashboardResource = rxResource({
+    // Deleting an entry in the sidebar changes every number here.
+    params: () => this.history.deletions(),
     stream: () => this.api.get(),
   });
 

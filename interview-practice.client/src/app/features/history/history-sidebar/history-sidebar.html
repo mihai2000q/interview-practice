@@ -27,19 +27,43 @@
               ) {
                 @if (entry.kind === 'group') {
                   <li [expanded]="true" hlmCollapsible hlmSidebarMenuItem>
+                    <ng-template #menu>
+                      <hlm-dropdown-menu class="w-44">
+                        <button
+                          (click)="askDelete(entry)"
+                          hlmDropdownMenuItem
+                          variant="destructive"
+                        >
+                          <ng-icon aria-hidden="true" name="lucideTrash2" />
+                          Delete
+                        </button>
+                      </hlm-dropdown-menu>
+                    </ng-template>
                     <button
+                      [hlmContextMenuTrigger]="menu"
                       class="group/trigger"
                       hlmCollapsibleTrigger
                       hlmSidebarMenuButton
                       type="button"
                     >
                       <ng-icon aria-hidden="true" name="lucideBuilding2" />
-                      <span>{{ groupLabel(entry) }}</span>
+                      <span [attr.title]="groupLabel(entry)" class="min-w-0 flex-1 truncate">{{
+                        groupLabel(entry)
+                      }}</span>
                       <ng-icon
                         aria-hidden="true"
                         class="ml-auto transition-transform group-data-[state=closed]/trigger:-rotate-90"
                         name="lucideChevronDown"
                       />
+                    </button>
+                    <button
+                      [attr.aria-label]="'Actions for ' + groupLabel(entry)"
+                      [hlmDropdownMenuTrigger]="menu"
+                      hlmSidebarMenuAction
+                      showOnHover
+                      type="button"
+                    >
+                      <ng-icon aria-hidden="true" name="lucideEllipsis" />
                     </button>
                     <div hlmCollapsibleContent>
                       <ul hlmSidebarMenuSub>
@@ -78,9 +102,22 @@
                 } @else {
                   @let outcome = outcomeOf(entry.interview);
                   <li hlmSidebarMenuItem>
+                    <ng-template #menu>
+                      <hlm-dropdown-menu class="w-44">
+                        <button
+                          (click)="askDelete(entry)"
+                          hlmDropdownMenuItem
+                          variant="destructive"
+                        >
+                          <ng-icon aria-hidden="true" name="lucideTrash2" />
+                          Delete
+                        </button>
+                      </hlm-dropdown-menu>
+                    </ng-template>
                     <a
                       #active="routerLinkActive"
                       [attr.aria-label]="entry.interview.jobTitle + ', ' + outcome.label"
+                      [hlmContextMenuTrigger]="menu"
                       [closeMobileSidebarOnClick]="true"
                       [isActive]="active.isActive"
                       [routerLink]="link(entry.interview)"
@@ -104,6 +141,15 @@
                         </span>
                       </span>
                     </a>
+                    <button
+                      [attr.aria-label]="'Actions for ' + entryLabel(entry)"
+                      [hlmDropdownMenuTrigger]="menu"
+                      hlmSidebarMenuAction
+                      showOnHover
+                      type="button"
+                    >
+                      <ng-icon aria-hidden="true" name="lucideEllipsis" />
+                    </button>
                   </li>
                 }
               }
@@ -128,3 +174,26 @@
     </hlm-sidebar-group>
   </hlm-sidebar-content>
 </hlm-sidebar>
+
+<hlm-alert-dialog (stateChanged)="onDialogState($event)" [state]="target() ? 'open' : 'closed'">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>Delete “{{ target()?.label }}”?</h2>
+      <p hlmAlertDialogDescription>{{ deleteDescription() }}</p>
+    </hlm-alert-dialog-header>
+    @if (deleteError(); as message) {
+      <p class="text-sm text-destructive" role="alert">{{ message }}</p>
+    }
+    <hlm-alert-dialog-footer>
+      <button [disabled]="deleting()" hlmAlertDialogCancel>Keep it</button>
+      <button
+        (click)="confirmDelete()"
+        [loading]="deleting()"
+        hlmAlertDialogAction
+        variant="destructive"
+      >
+        Delete
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

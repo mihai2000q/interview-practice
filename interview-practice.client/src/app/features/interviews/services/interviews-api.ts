@@ -96,6 +96,11 @@ export class InterviewsApi {
     );
   }
 
+  /** Deletes the Interview with its transcript and results. Irreversible. */
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id}`).pipe(mapApiError());
+  }
+
   abandon(id: string): Observable<Interview> {
     return this.http.post<unknown>(`${this.url}/${id}/abandon`, null).pipe(
       map((body) => interviewSchema.parse(body)),

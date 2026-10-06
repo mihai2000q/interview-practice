@@ -213,6 +213,17 @@ No body. The Interviewer-sidebar "Abandon interview" action. Marks `status: "aba
 if it already ended). Like a completed Interview, it is then evaluated by `PUT .../evaluation`
 (with `incomplete: true`).
 
+### `DELETE /api/interviews/:id`
+
+Deletes one Interview and everything hanging off it (`Message`s, question plan, evaluation
+criteria, phase settings, `Evaluation`, `InterviewerReview`), plus its stored persona portrait
+file (best effort, after the rows are gone). The sidebar offers it for a **standalone**
+Interview (one with no Application); for an Interview inside an Application the whole
+Application is deleted instead (`DELETE /api/applications/:id`), though the endpoint itself does
+not forbid deleting a single stage. The client confirms first; the API performs no
+confirmation step. Documents are not deleted. Response `204`, no body; `404` for an unknown
+Interview. Allowed in any status, including `in_progress`.
+
 ### `PUT /api/interviews/:id/evaluation`
 
 Results page call. No body. Makes the Interview's `Evaluation` (phase 5) **and** its
@@ -350,13 +361,19 @@ Application Overview page data: `companyName`, `jobTitle`, every stage (id,
 
 ### `PATCH /api/applications/:id`
 
-`{"companyName": "string", "jobTitle": "string"}` — sidebar context-menu rename.
+`{"companyName": "string", "jobTitle": "string"}` — sidebar context-menu rename. **Not built**:
+renaming is a known limitation (see `overview.md`); the sidebar menu only deletes.
 
 ### `DELETE /api/applications/:id`
 
 Cascades to every Interview under it and everything hanging off each (see
 [ADR 0008](./adr/0008-jobapplication-delete-cascades-to-interviews.md)) — the client must
-confirm before calling this; the API itself performs no confirmation step.
+confirm before calling this; the API itself performs no confirmation step. The Documents the
+Application and its Interviews point at are **not** deleted (they are managed on their own),
+but each Interview's stored persona portrait file is removed from disk, best effort and after
+the rows are gone, so a missing file never fails the call. Response `204`, no body. `404` for
+an unknown Application. Deleting is also allowed while one of its Interviews is `in_progress`
+(the confirmation says so); a model call still running for it simply finds nothing to store.
 
 ## `preferences` blueprint — `/api/preferences`
 

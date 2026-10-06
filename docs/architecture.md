@@ -90,9 +90,11 @@ navigation:
     still opens straight into its own Results page. Exact grouped-list visual treatment
     (collapsible groups vs. a simple label prefix) is an open item — see `overview.md`.
   - The group header itself is clickable, opening `/applications/:id` (the Application
-    Overview page — see the Progress summary section below). Its context menu (**rename**,
-    **delete**) has two ways in: a kebab/menu icon that only reveals on hover (not
-    always-visible), and right-click, both opening the same menu. Delete cascades to every
+    Overview page — see the Progress summary section below). Its context menu has two ways
+    in: a kebab/menu icon that only reveals on hover (not always-visible, but always visible
+    on touch screens, which have neither hover nor right-click), and right-click, both
+    opening the same menu. It offers **delete** only — **rename** is a known limitation,
+    see `overview.md`. A standalone Interview's entry has the same menu. Delete cascades to every
     Interview under it — see
     [ADR 0008](./adr/0008-jobapplication-delete-cascades-to-interviews.md) — so the UI
     needs its own confirmation prompt here, separate from the leave-confirmation guard

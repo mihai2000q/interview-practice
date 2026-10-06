@@ -1,0 +1,11 @@
+<!-- The text below carries the label and the score, so the chart itself is skipped by readers. -->
+<div aria-hidden="true" class="relative w-full max-w-32">
+  <tanstack-chart [options]="chart()" hlmChart />
+  <span
+    class="absolute inset-0 flex items-center justify-center text-2xl font-semibold tabular-nums"
+  >
+    {{ value() }}
+  </span>
+</div>
+<p class="text-sm font-medium">{{ label() }}</p>
+<p class="text-xs text-muted-foreground">{{ value() }} out of {{ max }}</p>

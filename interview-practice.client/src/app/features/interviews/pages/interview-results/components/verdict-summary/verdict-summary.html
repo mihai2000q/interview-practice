@@ -1,0 +1,27 @@
+<section aria-labelledby="verdict-heading" hlmCard>
+  <div hlmCardHeader>
+    <p class="text-sm text-muted-foreground">Verdict</p>
+    <h2
+      [class.text-destructive]="!hired()"
+      [class.text-success]="hired()"
+      class="flex items-center gap-2 text-3xl font-semibold tracking-tight"
+      id="verdict-heading"
+    >
+      <ng-icon [name]="hired() ? 'lucideCircleCheck' : 'lucideCircleX'" aria-hidden="true" />
+      {{ hired() ? 'Hire' : 'No hire' }}
+    </h2>
+  </div>
+  <div class="flex flex-col gap-4" hlmCardContent>
+    @if (incomplete()) {
+      <p class="flex items-start gap-2 rounded-lg bg-warning/20 px-3 py-2 text-sm" role="note">
+        <ng-icon aria-hidden="true" class="mt-0.5 shrink-0" name="lucideTriangleAlert" />
+        <span>
+          <span hlmBadge variant="secondary">Partial interview</span>
+          This interview was abandoned before it finished, so the verdict rests on only part of the
+          conversation.
+        </span>
+      </p>
+    }
+    <p class="leading-relaxed whitespace-pre-line">{{ reasoning() }}</p>
+  </div>
+</section>

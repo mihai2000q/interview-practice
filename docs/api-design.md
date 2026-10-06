@@ -228,11 +228,12 @@ The stored `Evaluation` (Results page data), never generates one:
 
 ### `GET /api/interviews/:id/interviewer-review`
 
-The `InterviewerReview` — dev-facing, not called by the candidate-facing Results page, but
-available for the reflection/debugging use case:
+The `InterviewerReview` — dev-facing, for the reflection/debugging use case. The Results page
+asks for it once the `PUT` has returned and shows it in its own section, set apart from the
+candidate's results and marked as being about the interviewer, not the candidate:
 `{judgeModel, scores: {questionRelevance, personaConsistency, pacing}, reasoning}`, scores
 from 1 to 5. Made by the same `PUT .../evaluation` call. `404` until then, and also if the
-judge's call failed there.
+judge's call failed there (the page then says there is no review).
 
 ## `documents` blueprint — `/api/documents`
 

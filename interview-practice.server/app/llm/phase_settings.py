@@ -72,6 +72,13 @@ def ensure_reasoning_effort_allowed(effort: str) -> None:
         )
 
 
+def ensure_overrides_allowed(rows: Iterable[InterviewPhaseSettings]) -> None:
+    """An Interview's overrides only name reasoning efforts Preferences could."""
+    for row in rows:
+        if row.reasoning_effort is not None:
+            ensure_reasoning_effort_allowed(row.reasoning_effort)
+
+
 def phase_config(
     phase: GenerationPhase,
     overrides: Iterable[InterviewPhaseSettings] = (),

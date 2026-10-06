@@ -2,7 +2,7 @@ import uuid
 
 from app.documents.shared import get_document_or_404
 from app.llm.factory import get_llm_client
-from app.llm.phase_settings import phase_config
+from app.llm.phase_settings import ensure_overrides_allowed, phase_config
 from app.llm.schemas import PhaseSettings
 from app.models import DocumentAnalysis, GenerationPhase
 from app.services import document_analysis
@@ -21,6 +21,7 @@ def analyze_document(
     """
     document = get_document_or_404(document_id)
     row = settings.to_row(GenerationPhase.jd_analysis) if settings else None
+    ensure_overrides_allowed([row] if row else [])
     model, completion = phase_config(
         GenerationPhase.jd_analysis, [row] if row else [], load_preferences()
     )

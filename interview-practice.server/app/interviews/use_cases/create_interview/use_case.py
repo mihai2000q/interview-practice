@@ -19,7 +19,11 @@ from app.interviews.use_cases.create_interview.planning import (
     plan_interview,
 )
 from app.llm.factory import get_llm_client
-from app.llm.phase_settings import ensure_judge_differs_from_interviewer, phase_config
+from app.llm.phase_settings import (
+    ensure_judge_differs_from_interviewer,
+    ensure_overrides_allowed,
+    phase_config,
+)
 from app.llm.timing import timed
 from app.models import (
     Document,
@@ -41,6 +45,7 @@ def create_interview(body: InterviewCreate) -> Interview:
     phase_settings = (
         body.phase_settings_override.to_rows() if body.phase_settings_override else []
     )
+    ensure_overrides_allowed(phase_settings)
     preferences = load_preferences()
     ensure_judge_differs_from_interviewer(phase_settings, preferences)
     client = get_llm_client()

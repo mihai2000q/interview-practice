@@ -4,9 +4,13 @@ request's overrides become rows. No database: rows are built unsaved."""
 import pytest
 from pydantic import ValidationError
 
-from app.errors.exceptions import ConflictError
+from app.errors.exceptions import BadRequestError, ConflictError
 from app.interviews.schemas import InterviewPublic, PhaseSettingsOverride
-from app.llm.phase_settings import ensure_judge_differs_from_interviewer, phase_config
+from app.llm.phase_settings import (
+    ensure_judge_differs_from_interviewer,
+    ensure_overrides_allowed,
+    phase_config,
+)
 from app.models import GenerationPhase, InterviewPhaseSettings
 
 DEFAULT_MODEL = "gpt-5-mini"
@@ -245,3 +249,23 @@ def test_unset_settings_and_phases_are_left_out_of_the_response() -> None:
     rows = [row(GenerationPhase.live_conversation, model="gpt-5-nano")]
     assert response_overrides(rows) == {"liveConversation": {"model": "gpt-5-nano"}}
     assert response_overrides([]) == {}
+
+
+# -- the overrides an Interview carries ------------------------------------------------
+
+
+def test_overrides_with_a_known_reasoning_effort_are_allowed() -> None:
+    ensure_overrides_allowed(
+        [
+            row(GenerationPhase.evaluation, reasoning_effort="high"),
+            row(GenerationPhase.question_plan, model=DEFAULT_MODEL),
+        ]
+    )
+
+
+def test_an_override_with_an_unknown_reasoning_effort_is_refused() -> None:
+    with pytest.raises(BadRequestError) as error:
+        ensure_overrides_allowed(
+            [row(GenerationPhase.evaluation, reasoning_effort="bogus")]
+        )
+    assert error.value.code == "REASONING_EFFORT_NOT_ALLOWED"

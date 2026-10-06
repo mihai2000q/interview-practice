@@ -16,9 +16,8 @@ request fails with `502` instead of being patched up. The model replies `{messag
 ends the Q&A phase is stored as the first `ask_back` message.
 
 One module, `app/interviews/shared/exchange/`, owns all of this: the pacing rules (pure, no
-model and no database), the prompt and reply contract, the coaching hint and its gating
-(a hint goes with each Q&A question, never with the wrap-up or in ask-back), and the final
-step of adding the Messages to the Interview. `create_interview` (the opening) and
+model and no database), the prompt and reply contract, and the final step of adding the Messages to the Interview. The coaching hint is not part of an exchange (it is its own endpoint,
+`PUT .../messages/:id/helper`, so no question waits for it). `open_interview` (the opening) and
 `send_message` (every later reply) both go through it and keep only what concerns their
 request: loading, the claim, the lock and the commit.
 
@@ -28,10 +27,18 @@ first. The Interview then becomes `completed` and `ended_at` is set. There is no
 "finish" action: the candidate declining is a message like any other, and it is itself a
 signal for the evaluation, as the workflow describes.
 
-The interviewer's opening message is generated at the end of `POST /api/interviews`, not on
-first read: an Interview then always has at least one message, `GET` never has side effects,
-and a failed opening fails the whole create. The cost is one more sequential LLM call in an
-already slow request (the open concern in `api-design.md`).
+The interviewer's opening message is **not** made by `POST /api/interviews`. The session
+page asks for it when it loads, with the idempotent `PUT /api/interviews/:id/opening`, so
+the candidate reaches the session as soon as the plan exists and sees the interviewer
+"typing" instead of an already-written question. (The first version generated it at the end
+of create, so an Interview always had a message and a failed opening failed the whole
+create; it was moved out because create was too slow and because a failed opening threw
+away the expensive plan.) The consequences: an Interview can briefly have no messages, a
+reply to such an Interview is refused with `409 INTERVIEW_NOT_OPENED`, and opening shares
+the in-progress marker below with replies, so two opening calls at once run the model only
+once (the second gets `409 TURN_IN_PROGRESS`). Opening an Interview that already has
+messages returns its first message and calls no model. A failed opening leaves the
+Interview as it is, and the client simply retries. `GET` still never has side effects.
 
 An exchange is all-or-nothing, and running it is separate from applying it. The model is
 asked first, using the stored transcript plus the new reply, and that step changes nothing;

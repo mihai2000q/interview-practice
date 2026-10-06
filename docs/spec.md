@@ -142,8 +142,6 @@ developer-facing preferences area kept apart from the candidate experience.
 45. As the developer, I want the OpenRouter API key sourced only from each developer's own
     machine, never written into any file in the repo, so that it's never accidentally
     committed or shared.
-46. As the developer, I want a Docker-based mock LLM option, so that I can exercise the
-    app's own request/response plumbing locally without real API cost.
 
 ## Implementation Decisions
 
@@ -202,8 +200,7 @@ developer-facing preferences area kept apart from the candidate experience.
   (400/404/409/500, one JSON error shape).
 - **File storage**: local disk under the Flask app's `instance/` folder, backed by a
   persisted Docker volume in deployment (see `deployment.md`).
-- **Deployment**: Docker Compose (`client`/`server`/`db`, plus opt-in `mock-llm` behind a
-  profile), project name pinned to `interview-practice`, nginx reverse-proxying `/api/*`
+- **Deployment**: Docker Compose (`client`/`server`/`db`), project name pinned to `interview-practice`, nginx reverse-proxying `/api/*`
   same-origin in the client container (no CORS in that path), CORS only relevant for local
   dev via `CLIENT_HOST`/`CLIENT_PORT`, discrete `POSTGRES_*` env vars assembled into the DB URI at
   runtime, `.env.dev` as a checked-in template copied to a real git-ignored `.env`,
@@ -218,10 +215,7 @@ No automated test suite for this pass — explicitly out of scope, given the tim
 a bootcamp project. If/when this changes, the natural seam is the Flask API layer itself
 (test through HTTP via the contract in `api-design.md`, not internal functions), with a
 thin OpenRouter client adapter as the one necessary fake boundary (the one real external
-dependency). Manual/local exercising of the real API is supported today via the opt-in
-`mock-llm` Docker Compose service (see `deployment.md`), which stands in for OpenRouter
-with canned responses at zero cost — useful for checking the app's own plumbing, not for
-judging output quality.
+dependency).
 
 ## Out of Scope
 
@@ -241,8 +235,9 @@ judging output quality.
 - This is a synthesis of a long documentation-only session, not a new design pass — if
   something here seems to contradict `docs/adr/`, the ADR is the source of truth, not this
   file.
-- The candidate-facing STAR evaluation's model (`gpt-5-mini`) is deliberately **not**
-  decoupled from the interview model — self-grading is an accepted tradeoff
+- The candidate-facing STAR evaluation's default model (`gpt-5-mini`, configurable like
+  every phase) is deliberately **not** decoupled from the interview model — self-grading
+  is an accepted tradeoff
   ([ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)).
   Don't "fix" this to look like the Interviewer Performance Review's decoupling; they're
   different by design.

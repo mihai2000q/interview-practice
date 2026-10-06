@@ -23,14 +23,6 @@ invoked from — relying on the directory-name default would break that grouping
 - **`server`** — Flask, Python 3.12, deps via `uv`. Run through a real WSGI server
   (gunicorn), not `flask run`'s dev server.
 - **`db`** — official `postgres` image.
-- **`mock-llm`** (local dev only, opt-in) — [MockServer](https://www.mock-server.com/mock_server/llm_response_mocking.html),
-  behind a Compose **profile** (e.g. `docker compose --profile mock up`) so it never runs
-  as part of the normal stack. Stands in for OpenRouter with canned/configurable
-  chat-completion responses — zero cost, deterministic, no GPU or real model needed.
-  Useful for exercising the app's own plumbing (does it call and parse responses
-  correctly) without real API spend; not a substitute for judging actual output quality.
-  Requires the server's OpenRouter base URL to be configurable rather than hardcoded —
-  see `OPENROUTER_BASE_URL` below.
 
 ## Volumes
 
@@ -74,10 +66,8 @@ One template, one real file, one exception:
     would otherwise reject uploads first). Compose passes the same `${MAX_UPLOAD_MB:-10}` to
     both services, the way it does `CLIENT_PORT`/`SERVER_PORT`.
   - **`OPENROUTER_BASE_URL`**: defaults to the real `https://openrouter.ai/api/v1`;
-    override to point at the `mock-llm` service instead when that profile is running.
-    Requires the backend's OpenRouter client to read this from config rather than
-    hardcoding the real URL — a small, cheap change worth making regardless of whether
-    `mock-llm` gets used.
+    override only to point the backend at another OpenRouter-compatible endpoint. The
+    backend's OpenRouter client reads it from config rather than hardcoding the URL.
   - **`PORTRAIT_GENERATION_ENABLED`**: defaults to `true`. Set it to `false` (also `0`, `no`,
     `off`) to skip the persona portrait, which is slow and billed: `PUT
     /api/interviews/:id/persona-image` then returns `personaImageUrl: null` without calling

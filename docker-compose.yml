@@ -48,13 +48,6 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
-  # Opt-in stand-in for OpenRouter. Off by default; only starts with `--profile mock`.
-  mock-llm:
-    image: mockserver/mockserver
-    profiles: ["mock"]
-    ports:
-      - "1080:1080"
-
 secrets:
   openrouter_api_key:
     # Read from the host shell's OPENROUTER_API_KEY, never from a file in this repo

@@ -73,7 +73,9 @@ navigation:
   "Abandon" action — see the Interviewer sidebar below for why that never belonged on the
   topbar — nor the "+ New Interview" CTA and the Preferences link, which the History sidebar
   owns for the reason given there.
-- **History sidebar** (left) — visible only on Home and Results, hidden on Create Interview
+- **History sidebar** (left) — built with Spartan's `sidebar`: a panel beside the page on wide
+  screens and a drawer on narrow ones, shown and hidden by a trigger at the left of the topbar
+  (only on the pages that have the sidebar). Visible only on Home and Results, hidden on Create Interview
   and Interview Session (keeps those flows free of distraction and of the temptation to
   jump into an unrelated past result mid-task). Anchored to the top: a **"+ New Interview"**
   CTA, and below it a **Preferences** link (icon *and* text, not either/or) to the

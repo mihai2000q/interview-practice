@@ -1,0 +1,130 @@
+<hlm-sidebar
+  sidebarContainerClass="top-[57px] h-[calc(100svh-57px)]"
+  srOnlySheetDescription="Your past interviews, and a way to start a new one."
+  srOnlySheetTitle="Your interviews"
+>
+  <hlm-sidebar-header>
+    <a (click)="closeMobile()" class="w-full" hlmBtn routerLink="/interviews/new">
+      <ng-icon aria-hidden="true" name="lucidePlus" />
+      New interview
+    </a>
+  </hlm-sidebar-header>
+
+  <hlm-sidebar-content>
+    <hlm-sidebar-group>
+      <div hlmSidebarGroupLabel>History</div>
+      <div hlmSidebarGroupContent>
+        @if (history.entries(); as entries) {
+          @if (entries.length === 0) {
+            <p class="px-2 text-sm text-muted-foreground">
+              Interviews you practice will show up here, so you can come back to their results.
+            </p>
+          } @else {
+            <ul hlmSidebarMenu>
+              @for (
+                entry of entries;
+                track entry.kind === 'group' ? entry.application.id : entry.interview.id
+              ) {
+                @if (entry.kind === 'group') {
+                  <li [expanded]="true" hlmCollapsible hlmSidebarMenuItem>
+                    <button
+                      class="group/trigger"
+                      hlmCollapsibleTrigger
+                      hlmSidebarMenuButton
+                      type="button"
+                    >
+                      <ng-icon aria-hidden="true" name="lucideBuilding2" />
+                      <span>{{ groupLabel(entry) }}</span>
+                      <ng-icon
+                        aria-hidden="true"
+                        class="ml-auto transition-transform group-data-[state=closed]/trigger:-rotate-90"
+                        name="lucideChevronDown"
+                      />
+                    </button>
+                    <div hlmCollapsibleContent>
+                      <ul hlmSidebarMenuSub>
+                        @for (stage of entry.stages; track stage.id) {
+                          @let outcome = outcomeOf(stage);
+                          <li hlmSidebarMenuSubItem>
+                            <a
+                              #active="routerLinkActive"
+                              [attr.aria-label]="
+                                roleLabel(stage.interviewerRole) + ', ' + outcome.label
+                              "
+                              [attr.title]="roleLabel(stage.interviewerRole)"
+                              [closeMobileSidebarOnClick]="true"
+                              [isActive]="active.isActive"
+                              [routerLink]="link(stage)"
+                              hlmSidebarMenuSubButton
+                              routerLinkActive
+                            >
+                              <ng-icon
+                                [class]="toneClass[outcome.tone]"
+                                [name]="outcome.icon"
+                                aria-hidden="true"
+                              />
+                              <span class="min-w-0 flex-1 truncate">{{
+                                roleLabel(stage.interviewerRole)
+                              }}</span>
+                              <span class="shrink-0 text-xs text-muted-foreground">
+                                {{ stage.createdAt | date: 'MMM d' }}
+                              </span>
+                            </a>
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  </li>
+                } @else {
+                  @let outcome = outcomeOf(entry.interview);
+                  <li hlmSidebarMenuItem>
+                    <a
+                      #active="routerLinkActive"
+                      [attr.aria-label]="entry.interview.jobTitle + ', ' + outcome.label"
+                      [closeMobileSidebarOnClick]="true"
+                      [isActive]="active.isActive"
+                      [routerLink]="link(entry.interview)"
+                      hlmSidebarMenuButton
+                      routerLinkActive
+                      size="lg"
+                    >
+                      <ng-icon
+                        [class]="toneClass[outcome.tone]"
+                        [name]="outcome.icon"
+                        aria-hidden="true"
+                      />
+                      <span class="flex min-w-0 flex-col">
+                        <span class="truncate font-medium">{{ entry.interview.jobTitle }}</span>
+                        <span class="truncate text-xs text-muted-foreground">
+                          {{
+                            entry.interview.companyName ??
+                              roleLabel(entry.interview.interviewerRole)
+                          }}
+                          · {{ entry.interview.createdAt | date: 'MMM d' }}
+                        </span>
+                      </span>
+                    </a>
+                  </li>
+                }
+              }
+            </ul>
+          }
+        } @else if (history.error(); as message) {
+          <div class="flex flex-col items-start gap-2 px-2 text-sm" role="alert">
+            <p class="text-destructive">{{ message }}</p>
+            <button (click)="history.refresh()" hlmBtn size="sm" type="button" variant="outline">
+              Retry
+            </button>
+          </div>
+        } @else {
+          <div aria-busy="true" class="flex flex-col gap-1" role="status">
+            <span class="sr-only">Loading your history…</span>
+            @for (row of placeholders; track row) {
+              <hlm-sidebar-menu-skeleton aria-hidden="true" showIcon />
+            }
+          </div>
+        }
+      </div>
+    </hlm-sidebar-group>
+  </hlm-sidebar-content>
+</hlm-sidebar>

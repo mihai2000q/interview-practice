@@ -2,6 +2,15 @@
   class="border-b border-border bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/70"
 >
   <div class="flex h-14 items-center gap-3 px-4 sm:px-6">
+    @if (route.hasHistory()) {
+      <!-- The trigger draws its own icon and label, which the linter cannot see. -->
+      <!-- eslint-disable-next-line @angular-eslint/template/elements-content -->
+      <button
+        class="-ml-2"
+        hlmSidebarTrigger
+        srOnlyText="Show or hide your interview history"
+      ></button>
+    }
     <nav aria-label="Breadcrumb" class="min-w-0" hlmBreadcrumb>
       <ol class="flex-nowrap gap-2 sm:gap-2.5" hlmBreadcrumbList>
         <li hlmBreadcrumbItem>
@@ -22,7 +31,7 @@
             </span>
           </a>
         </li>
-        @for (crumb of crumbs(); track crumb.label; let last = $last) {
+        @for (crumb of route.crumbs(); track crumb.label; let last = $last) {
           <li hlmBreadcrumbSeparator></li>
           <li class="min-w-0" hlmBreadcrumbItem>
             @if (crumb.link) {

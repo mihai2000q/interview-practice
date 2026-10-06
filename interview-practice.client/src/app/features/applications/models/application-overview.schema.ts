@@ -29,8 +29,17 @@ export const applicationOverviewSchema = z.object({
   /** 1-5; `null` until a progress summary has been generated. Always set with the summary. */
   progressScore: z.number().int().min(1).max(5).nullable(),
   progressSummary: z.string().nullable(),
+  /** There are 2+ Evaluations and the stored pair was not built from exactly those. */
+  progressOutdated: z.boolean(),
   createdAt: z.coerce.date(),
   /** Oldest first. */
   interviews: z.array(overviewStageSchema),
 });
 export type ApplicationOverview = z.infer<typeof applicationOverviewSchema>;
+
+/** `PUT /api/applications/:id/progress`: the score and summary, made together. */
+export const applicationProgressSchema = z.object({
+  progressScore: z.number().int().min(1).max(5),
+  progressSummary: z.string(),
+});
+export type ApplicationProgress = z.infer<typeof applicationProgressSchema>;

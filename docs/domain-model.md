@@ -77,15 +77,17 @@ header is also the click target into the `/applications/:id` Application Overvie
 - `job_description_document_id`: optional FK → Document (`type = job_description`)
 - `cv_document_id`: optional FK → Document (`type = cv`)
 - `cover_letter_document_id`: optional FK → Document (`type = cover_letter`)
-- `progress_score`: nullable integer, 1-5 — an aggregate performance-trend rating across
-  this Application's completed Interview stages, same scale as
+- `progress_score`: nullable integer, 1-5 — an aggregate rating of the candidate's overall
+  level across this Application's graded Interview stages, same scale as
   the `InterviewerReview` scores for consistency. Generated together with, and always
   regenerated alongside, `progress_summary` below — the two are one feature's output, not
   independently updatable.
-- `progress_summary`: nullable text — the narrative accompanying `progress_score` (e.g.
-  "you're doing great as usual on X, better now on Y, a bit worse this time on Z").
-  Regenerated after each stage's Evaluation completes, once 2+ stages have one — see
-  `architecture.md`'s Progress summary section.
+- `progress_summary`: nullable text — the narrative accompanying `progress_score`, which
+  carries the trend (e.g. "you're doing great as usual on X, better now on Y, a bit worse
+  this time on Z"). Generated on demand once 2+ stages have an Evaluation, and again whenever
+  that set changes — see `architecture.md`'s Progress summary section and ADR 0015.
+- `progress_basis`: nullable text — fingerprint of the Evaluations the pair above was built
+  from; internal, never returned by the API (it surfaces only as `progressOutdated`)
 - `created_at`
 
 ## Interview

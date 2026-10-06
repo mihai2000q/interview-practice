@@ -31,6 +31,8 @@ class JobApplication(Base):
     )
     progress_score: Mapped[int | None]
     progress_summary: Mapped[str | None] = mapped_column(Text)
+    # Fingerprint of the Evaluations the pair above was built from (ADR 0015).
+    progress_basis: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

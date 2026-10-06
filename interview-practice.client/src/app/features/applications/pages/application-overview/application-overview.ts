@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideFileText } from '@ng-icons/lucide';
 import { HlmBadge } from '@spartan-ng/helm/badge';
@@ -9,16 +10,33 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
+import {
+  ApplicationOverview,
+  OverviewStage,
+} from '@app/features/applications/models/application-overview.schema';
 import { InterviewStatus } from '@app/features/interviews/models/interview.enums';
 import { INTERVIEWER_ROLES, labelOf } from '@app/features/interviews/models/interview.options';
 import { OUTCOME_BADGE, outcomeOf } from '@app/features/interviews/models/interview-outcome';
 import { ScoreGauge } from '@app/shared/components/score-gauge/score-gauge';
+import { ResultsCache } from '@app/features/interviews/services/results-cache';
 import { ApplicationsApi } from '@app/features/applications/services/applications-api';
 
 /** A progress summary needs this many stages with an Evaluation to compare. */
 const STAGES_TO_COMPARE = 2;
+
+/** What making the progress summary is doing, for the card that shows it. */
+type Refresh =
+  | { kind: 'idle' }
+  | { kind: 'working'; step: 'grading' | 'summarizing' }
+  | { kind: 'failed'; message: string };
+
+/** A stage that has ended, so it can be graded. */
+const isFinished = (stage: OverviewStage) => stage.status !== 'in_progress';
+/** A finished stage still waiting for its Evaluation (it is made when Results is opened). */
+const isUngraded = (stage: OverviewStage) => isFinished(stage) && stage.verdict === null;
 
 /** One Application: its pipeline of stages, how they compare, and the documents behind it. */
 @Component({
@@ -30,6 +48,7 @@ const STAGES_TO_COMPARE = 2;
     HlmCardImports,
     HlmEmptyImports,
     HlmSkeleton,
+    HlmSpinnerImports,
     NgIcon,
     RouterLink,
     ScoreGauge,
@@ -42,6 +61,7 @@ export class ApplicationOverviewPage {
   readonly id = input.required<string>();
 
   private readonly api = inject(ApplicationsApi);
+  private readonly results = inject(ResultsCache);
   private readonly overviewResource = rxResource({
     params: () => ({ id: this.id() }),
     stream: ({ params }) => this.api.get(params.id),
@@ -59,10 +79,26 @@ export class ApplicationOverviewPage {
   protected readonly stagesToCompare = STAGES_TO_COMPARE;
   protected readonly placeholders = [1, 2, 3];
 
-  /** How many stages have a verdict, so the page can say how far it is from a comparison. */
-  protected readonly evaluatedCount = computed(
-    () => this.overview()?.interviews.filter((stage) => stage.verdict !== null).length ?? 0,
+  /** How many stages have ended: only those can be compared. */
+  protected readonly finishedCount = computed(
+    () => this.overview()?.interviews.filter(isFinished).length ?? 0,
   );
+
+  protected readonly refresh = signal<Refresh>({ kind: 'idle' });
+  protected readonly working = computed(() => this.refresh().kind === 'working');
+  protected readonly refreshStep = computed(() => {
+    const refresh = this.refresh();
+    return refresh.kind === 'working' ? refresh.step : null;
+  });
+  protected readonly refreshError = computed(() => {
+    const refresh = this.refresh();
+    return refresh.kind === 'failed' ? refresh.message : null;
+  });
+
+  /** The Application whose summary was last made here, so a visit tries once. */
+  private attemptedFor: string | null = null;
+  /** Counts the runs of `refreshProgress`, so an older one never overwrites a newer one's state. */
+  private runs = 0;
 
   protected readonly documents = computed(() => {
     const overview = this.overview();
@@ -75,8 +111,27 @@ export class ApplicationOverviewPage {
       : [];
   });
 
+  constructor() {
+    // The summary is made on demand (ADR 0015): grade the finished stages that have no
+    // Evaluation, then ask for the summary, whenever the page finds it missing or outdated.
+    effect(() => {
+      const overview = this.overview();
+      if (overview && this.attemptedFor !== overview.id && this.needsRefresh(overview)) {
+        this.attemptedFor = overview.id;
+        untracked(() => void this.refreshProgress(overview));
+      }
+    });
+  }
+
   protected retry(): void {
     this.overviewResource.reload();
+  }
+
+  protected retryProgress(): void {
+    const overview = this.overview();
+    if (overview && !this.working()) {
+      void this.refreshProgress(overview);
+    }
   }
 
   /** A running interview is resumed; a finished one opens its results. */
@@ -84,5 +139,60 @@ export class ApplicationOverviewPage {
     return stage.status === 'in_progress'
       ? ['/interviews', stage.id]
       : ['/interviews', stage.id, 'results'];
+  }
+
+  private needsRefresh(overview: ApplicationOverview): boolean {
+    const stages = overview.interviews;
+    return (
+      overview.progressOutdated ||
+      (stages.some(isUngraded) && stages.filter(isFinished).length >= STAGES_TO_COMPARE)
+    );
+  }
+
+  /**
+   * Grades every finished stage that has no Evaluation (the Results cache keeps what comes back,
+   * so opening those results later asks for nothing), then asks for the summary, then reads the
+   * page again. A stage with nothing to grade is simply left out; any other failure is told.
+   */
+  private async refreshProgress(overview: ApplicationOverview): Promise<void> {
+    const { id } = overview;
+    const ungraded = overview.interviews.filter(isUngraded);
+    let graded = overview.interviews.filter((stage) => stage.verdict !== null).length;
+    const run = ++this.runs;
+    let problem: string | null = null;
+
+    if (ungraded.length > 0) {
+      this.refresh.set({ kind: 'working', step: 'grading' });
+      const outcomes = await Promise.allSettled(
+        ungraded.map((stage) => firstValueFrom(this.results.evaluation(stage.id))),
+      );
+      for (const outcome of outcomes) {
+        if (outcome.status === 'fulfilled') {
+          graded++;
+        } else {
+          const error = toApiError(outcome.reason);
+          if (error.code !== 'NOTHING_TO_EVALUATE') {
+            problem ??= error.message;
+          }
+        }
+      }
+    }
+
+    if (graded >= STAGES_TO_COMPARE) {
+      this.refresh.set({ kind: 'working', step: 'summarizing' });
+      try {
+        await firstValueFrom(this.api.generateProgress(id));
+      } catch (err) {
+        problem ??= toApiError(err).message;
+      }
+    }
+
+    // Only the latest run speaks for the card, and only this page's own data is read again.
+    if (run === this.runs) {
+      this.refresh.set(problem ? { kind: 'failed', message: problem } : { kind: 'idle' });
+    }
+    if (this.id() === id) {
+      this.overviewResource.reload();
+    }
   }
 }

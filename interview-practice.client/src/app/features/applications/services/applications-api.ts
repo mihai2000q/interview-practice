@@ -6,6 +6,8 @@ import { mapApiError } from '@app/core/api/api-error';
 import {
   ApplicationOverview,
   applicationOverviewSchema,
+  ApplicationProgress,
+  applicationProgressSchema,
 } from '../models/application-overview.schema';
 import {
   ApplicationSummary,
@@ -28,6 +30,17 @@ export class ApplicationsApi {
   get(id: string): Observable<ApplicationOverview> {
     return this.http.get<unknown>(`${this.url}/${id}`).pipe(
       map((body) => applicationOverviewSchema.parse(body)),
+      mapApiError(),
+    );
+  }
+
+  /**
+   * Makes the progress summary if it is missing or outdated, from the Evaluations that exist
+   * (ADR 0015); answers at once when it is current. `409 NOT_ENOUGH_STAGES` below two.
+   */
+  generateProgress(id: string): Observable<ApplicationProgress> {
+    return this.http.put<unknown>(`${this.url}/${id}/progress`, null).pipe(
+      map((body) => applicationProgressSchema.parse(body)),
       mapApiError(),
     );
   }

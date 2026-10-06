@@ -12,24 +12,52 @@
         <h2 class="text-base" hlmCardTitle id="progress-heading">Progress</h2>
         <p hlmCardDescription>How your performance compares across the stages.</p>
       </div>
-      <div hlmCardContent>
+      <div class="flex flex-col gap-4" hlmCardContent>
+        @if (working()) {
+          <p class="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+            <hlm-spinner aria-hidden="true" />
+            {{
+              refreshStep() === 'grading'
+                ? 'Grading your finished stages…'
+                : 'Writing the comparison…'
+            }}
+          </p>
+        }
+        @if (refreshError(); as message) {
+          <div class="flex flex-wrap items-center gap-3 text-sm" role="alert">
+            <p class="text-destructive">{{ message }}</p>
+            <button (click)="retryProgress()" hlmBtn size="sm" type="button" variant="outline">
+              Try again
+            </button>
+          </div>
+        }
         @if (overview.progressScore !== null && overview.progressSummary !== null) {
-          <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <div
+            [class.opacity-60]="working()"
+            class="flex flex-col items-center gap-4 sm:flex-row sm:items-start"
+          >
             <app-score-gauge
               [score]="overview.progressScore"
               class="shrink-0"
               label="Progress score"
             />
-            <p class="leading-relaxed whitespace-pre-line">{{ overview.progressSummary }}</p>
+            <div class="flex flex-col gap-2">
+              <p class="leading-relaxed whitespace-pre-line">{{ overview.progressSummary }}</p>
+              @if (overview.progressOutdated && !working()) {
+                <p class="text-xs text-muted-foreground">
+                  This doesn't include your latest results yet.
+                </p>
+              }
+            </div>
           </div>
-        } @else if (evaluatedCount() < stagesToCompare) {
+        } @else if (finishedCount() < stagesToCompare) {
           <p class="text-sm text-muted-foreground">
-            A comparison needs the results of at least {{ stagesToCompare }} stages, and you have
-            {{ evaluatedCount() }}. Open a finished stage to get its results.
+            A comparison needs at least {{ stagesToCompare }} finished stages, and you have
+            {{ finishedCount() }}.
           </p>
-        } @else {
+        } @else if (!working() && !refreshError()) {
           <p class="text-sm text-muted-foreground">
-            No progress summary has been written for this application yet.
+            There is nothing to compare yet: the finished stages have no results to compare.
           </p>
         }
       </div>

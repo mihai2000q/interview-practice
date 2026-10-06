@@ -7,11 +7,16 @@ from datetime import UTC, datetime
 
 from app.app import create_app
 from app.applications.schemas import ApplicationOverview
+from app.applications.shared import progress_basis
 from app.models import Evaluation, JobApplication, Verdict
 from app.serialization import to_json
 from tests.support import build_interview
 
 STARTED = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
+
+
+def evaluation() -> Evaluation:
+    return Evaluation(id=uuid.uuid4(), verdict=Verdict.hire)
 
 
 def overview(*stages: dict[str, object], **fields: object) -> dict[str, object]:
@@ -39,6 +44,7 @@ def test_overview_has_exactly_the_contract_keys() -> None:
         "coverLetter",
         "progressScore",
         "progressSummary",
+        "progressOutdated",
         "createdAt",
         "interviews",
     }
@@ -56,6 +62,41 @@ def test_progress_is_returned_as_stored() -> None:
     body = overview(progress_score=4, progress_summary="Better on STAR.")
     assert body["progressScore"] == 4
     assert body["progressSummary"] == "Better on STAR."
+
+
+def test_one_evaluation_is_never_outdated() -> None:
+    body = overview({"evaluation": Evaluation(id=uuid.uuid4(), verdict=Verdict.hire)})
+    assert body["progressOutdated"] is False
+
+
+def test_two_evaluations_with_no_summary_are_outdated() -> None:
+    body = overview(*({"evaluation": evaluation()} for _ in range(2)))
+    assert body["progressOutdated"] is True
+
+
+def test_a_summary_built_from_these_evaluations_is_current() -> None:
+    first, second = evaluation(), evaluation()
+    basis = progress_basis([first.id, second.id])
+    body = overview(
+        {"evaluation": first},
+        {"evaluation": second},
+        progress_score=4,
+        progress_summary="Steady.",
+        progress_basis=basis,
+    )
+    assert body["progressOutdated"] is False
+    assert "progressBasis" not in body
+
+
+def test_a_summary_is_outdated_once_another_stage_is_graded() -> None:
+    first, second, third = evaluation(), evaluation(), evaluation()
+    body = overview(
+        {"evaluation": first},
+        {"evaluation": second},
+        {"evaluation": third},
+        progress_basis=progress_basis([first.id, second.id]),
+    )
+    assert body["progressOutdated"] is True
 
 
 def test_stage_has_exactly_the_contract_keys() -> None:

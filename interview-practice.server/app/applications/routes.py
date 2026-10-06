@@ -6,8 +6,13 @@ from flask import jsonify
 from flask.typing import ResponseReturnValue
 
 from app.applications import applications_bp
-from app.applications.schemas import ApplicationOverview, ApplicationSummary
+from app.applications.schemas import (
+    ApplicationOverview,
+    ApplicationProgress,
+    ApplicationSummary,
+)
 from app.applications.use_cases.delete_application import delete_application
+from app.applications.use_cases.generate_progress import generate_progress
 from app.applications.use_cases.get_application import get_application
 from app.applications.use_cases.list_applications import list_applications
 from app.serialization import to_json, to_json_list
@@ -21,6 +26,11 @@ def get_applications() -> ResponseReturnValue:
 @applications_bp.get("/<uuid:application_id>")
 def get_application_by_id(application_id: uuid.UUID) -> ResponseReturnValue:
     return jsonify(to_json(ApplicationOverview, get_application(application_id)))
+
+
+@applications_bp.put("/<uuid:application_id>/progress")
+def put_application_progress(application_id: uuid.UUID) -> ResponseReturnValue:
+    return jsonify(to_json(ApplicationProgress, generate_progress(application_id)))
 
 
 @applications_bp.delete("/<uuid:application_id>")

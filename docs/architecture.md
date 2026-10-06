@@ -332,19 +332,27 @@ usual on X, better now on Y, a bit worse this time on Z" — surfaced once there
 one data point to compare. Both outputs come from the same call and are always
 regenerated together; the score isn't derived separately from the narrative or vice versa.
 
-- **Trigger**: regenerated whenever an Interview under a `JobApplication` completes
-  (`completed` or `abandoned`) *and* that Application then has 2+ Interviews with an
-  `Evaluation` — not before, since there's nothing to compare against on the first stage.
-  Overwrites the previous score/summary each time, so it always reflects the full picture
-  so far rather than accumulating stale commentary.
-- **Inputs**: every completed stage's `Evaluation` under that `JobApplication` (`reasoning`,
-  `improvement_suggestions`, the STAR fields, plus the evaluation criteria each stage was
-  judged against) — deliberately not raw transcripts, since the comparison is about
-  assessed performance, not re-reading every conversation.
+- **Trigger**: on demand, by the idempotent `PUT /api/applications/:id/progress` that the
+  Application Overview page calls when the summary is missing or `progressOutdated` — see
+  [ADR 0015](./adr/0015-progress-summary-is-generated-on-demand-from-existing-evaluations.md).
+  Before it, the page grades every ended stage that has no `Evaluation` through the existing
+  `PUT /api/interviews/:id/evaluation` (in parallel; `NOTHING_TO_EVALUATE` stages are skipped,
+  `in_progress` ones left alone). Nothing is generated until 2+ stages have an Evaluation.
+  Each generation overwrites the previous pair, so it always reflects the full picture so far.
+- **Model**: the `evaluation` phase's model and settings from Preferences (an Application has
+  no overrides of its own); no seventh phase.
+- **Inputs**: every stage's `Evaluation` under that `JobApplication`, oldest stage first
+  (`reasoning`, `improvement_suggestions`, the STAR fields, the verdict, `incomplete`, plus the
+  stage's role, type, difficulty and evaluation criteria) — deliberately not raw transcripts,
+  since the comparison is about assessed performance, not re-reading every conversation.
+- **Output**: one structured-JSON call, `{score, summary}`. The score is the overall level across
+  the stages so far (1-5); the summary carries the trend.
 - **Display**: the `/applications/:id` Application Overview page, reachable from the
   sidebar's `JobApplication` group header (see UI layout & navigation above) — lists every
-  stage with its status/link to Results, plus the score and summary once they exist.
-- Persisted as `JobApplication.progress_score` / `progress_summary` (see `domain-model.md` /
+  stage with its status/link to Results, plus the score and summary once they exist. While a
+  summary is being refreshed the page keeps showing the previous one, marked as updating; if
+  the refresh fails it says so and offers a retry.
+- Persisted as `JobApplication.progress_score` / `progress_summary` / `progress_basis` (see `domain-model.md` /
   `database-schema.md`) rather than a separate entity, since it's a single regenerated pair
   of fields, not a history of past summaries.
 

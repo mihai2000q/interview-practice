@@ -51,6 +51,7 @@ def upgrade():
     sa.Column('cover_letter_document_id', sa.Uuid(), nullable=True),
     sa.Column('progress_score', sa.Integer(), nullable=True),
     sa.Column('progress_summary', sa.Text(), nullable=True),
+    sa.Column('progress_basis', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['cover_letter_document_id'], ['documents.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['cv_document_id'], ['documents.id'], ondelete='SET NULL'),

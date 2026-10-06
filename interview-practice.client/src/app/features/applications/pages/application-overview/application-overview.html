@@ -1,0 +1,138 @@
+<main class="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
+  @if (overview(); as overview) {
+    <header class="flex flex-col gap-1">
+      <p class="text-sm text-muted-foreground">
+        {{ overview.companyName ?? 'Job application' }}
+      </p>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ overview.jobTitle }}</h1>
+    </header>
+
+    <section aria-labelledby="progress-heading" hlmCard>
+      <div hlmCardHeader>
+        <h2 class="text-base" hlmCardTitle id="progress-heading">Progress</h2>
+        <p hlmCardDescription>How your performance compares across the stages.</p>
+      </div>
+      <div hlmCardContent>
+        @if (overview.progressScore !== null && overview.progressSummary !== null) {
+          <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+            <app-score-gauge
+              [score]="overview.progressScore"
+              class="shrink-0"
+              label="Progress score"
+            />
+            <p class="leading-relaxed whitespace-pre-line">{{ overview.progressSummary }}</p>
+          </div>
+        } @else if (evaluatedCount() < stagesToCompare) {
+          <p class="text-sm text-muted-foreground">
+            A comparison needs the results of at least {{ stagesToCompare }} stages, and you have
+            {{ evaluatedCount() }}. Open a finished stage to get its results.
+          </p>
+        } @else {
+          <p class="text-sm text-muted-foreground">
+            No progress summary has been written for this application yet.
+          </p>
+        }
+      </div>
+    </section>
+
+    <section aria-labelledby="stages-heading" hlmCard>
+      <div hlmCardHeader>
+        <h2 class="text-base" hlmCardTitle id="stages-heading">Stages</h2>
+        <p hlmCardDescription>Your interviews for this application, oldest first.</p>
+      </div>
+      <div class="px-2" hlmCardContent>
+        @if (overview.interviews.length === 0) {
+          <p class="px-4 text-sm text-muted-foreground">This application has no interviews left.</p>
+        } @else {
+          <ol class="flex flex-col">
+            @for (stage of overview.interviews; track stage.id; let index = $index) {
+              @let outcome = outcomeOf(stage);
+              @let badge = badgeOf[outcome.tone];
+              <li>
+                <a
+                  [routerLink]="link(stage)"
+                  class="flex items-center gap-3 rounded-lg px-4 py-2.5 outline-none transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums"
+                  >
+                    {{ index + 1 }}
+                  </span>
+                  <span class="flex min-w-0 flex-1 flex-col">
+                    <span class="truncate text-sm font-medium">
+                      {{ roleLabel(stage.interviewerRole) }}
+                    </span>
+                    <span class="truncate text-xs text-muted-foreground">
+                      Started {{ stage.createdAt | date: 'MMM d, y' }}
+                      @if (stage.status === 'in_progress') {
+                        · Resume
+                      } @else {
+                        · View results
+                      }
+                    </span>
+                  </span>
+                  <span [class]="badge.class" [variant]="badge.variant" hlmBadge>
+                    {{ outcome.label }}
+                  </span>
+                </a>
+              </li>
+            }
+          </ol>
+        }
+      </div>
+    </section>
+
+    <section aria-labelledby="documents-heading" hlmCard>
+      <div hlmCardHeader>
+        <h2 class="text-base" hlmCardTitle id="documents-heading">Documents</h2>
+        <p hlmCardDescription>What a new stage is prepared from.</p>
+      </div>
+      <div hlmCardContent>
+        <dl class="flex flex-col gap-3">
+          @for (item of documents(); track item.label) {
+            <div class="flex items-center justify-between gap-4">
+              <dt class="text-sm text-muted-foreground">{{ item.label }}</dt>
+              <dd class="flex min-w-0 items-center gap-2 text-sm">
+                @if (item.document; as document) {
+                  <ng-icon aria-hidden="true" class="shrink-0" name="lucideFileText" />
+                  <span class="truncate" [attr.title]="document.name">{{ document.name }}</span>
+                } @else {
+                  <span class="text-muted-foreground">Not attached</span>
+                }
+              </dd>
+            </div>
+          }
+        </dl>
+      </div>
+    </section>
+  } @else if (error(); as error) {
+    <div hlmEmpty>
+      <div hlmEmptyHeader>
+        <h2 hlmEmptyTitle>
+          {{ error.status === 404 ? 'Application not found' : 'Could not load this application' }}
+        </h2>
+        <p hlmEmptyDescription>{{ error.message }}</p>
+      </div>
+      <div hlmEmptyContent>
+        @if (error.status === 404) {
+          <a hlmBtn routerLink="/">Back to home</a>
+        } @else {
+          <button (click)="retry()" hlmBtn type="button">Try again</button>
+        }
+      </div>
+    </div>
+  } @else {
+    <div aria-busy="true" class="flex flex-col gap-6" role="status">
+      <span class="sr-only">Loading the application…</span>
+      <div aria-hidden="true" class="flex flex-col gap-2">
+        <div class="h-4 w-32" hlmSkeleton></div>
+        <div class="h-8 w-72" hlmSkeleton></div>
+      </div>
+      <div aria-hidden="true" class="h-40" hlmSkeleton></div>
+      @for (row of placeholders; track row) {
+        <div aria-hidden="true" class="h-14" hlmSkeleton></div>
+      }
+    </div>
+  }
+</main>

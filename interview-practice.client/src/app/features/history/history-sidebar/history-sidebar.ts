@@ -142,8 +142,8 @@ export class HistorySidebar {
       await this.history.remove(target);
       this.target.set(null);
       toast.success(`Deleted “${target.label}”`);
-      // The page on screen may be one of the deleted interviews.
-      if (target.interviewIds.some((id) => this.router.url.includes(id))) {
+      // The page on screen may be one of the deleted interviews, or the deleted application.
+      if ([target.id, ...target.interviewIds].some((id) => this.router.url.includes(id))) {
         await this.router.navigateByUrl('/');
       }
     } catch (err) {

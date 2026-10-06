@@ -4,6 +4,10 @@ import { map, Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import { mapApiError } from '@app/core/api/api-error';
 import {
+  ApplicationOverview,
+  applicationOverviewSchema,
+} from '../models/application-overview.schema';
+import {
   ApplicationSummary,
   applicationSummaryListSchema,
 } from '../models/application-summary.schema';
@@ -16,6 +20,14 @@ export class ApplicationsApi {
   list(): Observable<ApplicationSummary[]> {
     return this.http.get<unknown>(this.url).pipe(
       map((body) => applicationSummaryListSchema.parse(body)),
+      mapApiError(),
+    );
+  }
+
+  /** One Application with its stages and, once there is one, its progress summary. */
+  get(id: string): Observable<ApplicationOverview> {
+    return this.http.get<unknown>(`${this.url}/${id}`).pipe(
+      map((body) => applicationOverviewSchema.parse(body)),
       mapApiError(),
     );
   }

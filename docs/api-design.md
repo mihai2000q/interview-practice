@@ -358,10 +358,15 @@ an empty array when there are none.
 
 ### `GET /api/applications/:id`
 
-Application Overview page data: `companyName`, `jobTitle`, every stage (id,
-`interviewerRole`, `status`, link to its Results), plus `progressScore`/
-`progressSummary` once 2+ stages have an `Evaluation`. **Not built yet**: neither this route nor the
-progress summary exists, and the client has no Application Overview page; both are planned together.
+Application Overview page data: `id`, `companyName`, `jobTitle`, the documents
+`jobDescription`/`cv`/`coverLetter` (each `{id, name, analysisModel}` or `null`, as in the list),
+`progressScore`/`progressSummary` (both `null` until generated), `createdAt`, and `interviews` —
+every stage oldest first, each `{id, interviewerRole, status, verdict, createdAt, endedAt}`.
+`verdict` is read off the stored Evaluation and is `null` until one exists; the client links a
+stage to its Results (or, while `in_progress`, to the session). A stage that went stale is closed as
+it is read ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). `404` for an
+unknown Application. **Progress not built yet**: nothing writes `progressScore`/`progressSummary`,
+so both are always `null` today; the route and the client page exist.
 
 ### `PATCH /api/applications/:id`
 

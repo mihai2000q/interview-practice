@@ -8,7 +8,22 @@
       </p>
     </div>
 
-    <div class="flex flex-col gap-4" hlmCardContent>
+    <!-- `inert` keeps the pointer and the keyboard out while the save is in flight, so nothing can
+         be edited that the response would then overwrite. -->
+    <div
+      [attr.aria-busy]="saving()"
+      [attr.inert]="saving() ? '' : null"
+      class="relative flex flex-col gap-4"
+      hlmCardContent
+    >
+      @if (saving()) {
+        <div
+          aria-hidden="true"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-card/70"
+        >
+          <hlm-spinner />
+        </div>
+      }
       @for (phase of phases; track phase; let last = $last; let index = $index) {
         <div class="gap-1" hlmFieldGroup>
           <fieldset

@@ -11,6 +11,7 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmSlider } from '@spartan-ng/helm/slider';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { toApiError } from '@app/core/api/api-error';
@@ -88,6 +89,7 @@ function changesOf(saved: Preferences, draft: Preferences): PreferencesPatch {
     HlmSelectImports,
     HlmSkeleton,
     HlmSlider,
+    HlmSpinnerImports,
     HlmTooltipImports,
     NgIcon,
   ],

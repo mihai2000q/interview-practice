@@ -269,3 +269,28 @@ def test_an_override_with_an_unknown_reasoning_effort_is_refused() -> None:
             [row(GenerationPhase.evaluation, reasoning_effort="bogus")]
         )
     assert error.value.code == "REASONING_EFFORT_NOT_ALLOWED"
+
+
+def test_overrides_with_an_allowed_model_for_their_phase_are_allowed() -> None:
+    ensure_overrides_allowed(
+        [
+            row(GenerationPhase.live_conversation, model="gpt-4o-mini"),
+            row(GenerationPhase.interviewer_review, model="typesafe/jev-1.13"),
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    ("phase", "model"),
+    [
+        (GenerationPhase.question_plan, "typesafe/jev-1.13"),
+        (GenerationPhase.live_conversation, "made-up/model"),
+        (GenerationPhase.interviewer_review, "gpt-4o-mini"),
+    ],
+)
+def test_an_override_with_a_model_its_phase_cannot_run_on_is_refused(
+    phase: GenerationPhase, model: str
+) -> None:
+    with pytest.raises(BadRequestError) as error:
+        ensure_overrides_allowed([row(phase, model=model)])
+    assert error.value.code == "MODEL_NOT_ALLOWED"

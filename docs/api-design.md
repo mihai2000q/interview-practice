@@ -409,7 +409,8 @@ resource, same as `GET`.
 - `400 MODEL_NOT_ALLOWED` if a `model` is not one the phase may run on: `gpt-5-mini`,
   `gpt-5-nano` or `gpt-4o-mini` for the five candidate-facing phases; `google/gemini-2.5-flash`,
   `google/gemini-3.5-flash-lite`, `gpt-5-mini`, `gpt-5-nano` or `typesafe/jev-1.13` for
-  `interviewerReview` (see `architecture.md`).
+  `interviewerReview` (see `architecture.md`). `POST /api/interviews` and
+  `PUT /api/documents/<id>/analysis` answer it too, for the `model` of their overrides.
 - `400 REASONING_EFFORT_NOT_ALLOWED` if a `reasoningEffort` is not `minimal`, `low`, `medium`
   or `high` (`details` = `{reasoningEffort, allowed}`). `POST /api/interviews` and
   `PUT /api/documents/<id>/analysis` answer it too, for the `reasoningEffort` of their overrides.

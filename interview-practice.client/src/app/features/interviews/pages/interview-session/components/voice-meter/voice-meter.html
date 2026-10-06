@@ -1,0 +1,6 @@
+@for (level of levels(); track $index) {
+  <span
+    [style.height.%]="12 + level * 88"
+    class="min-w-0 flex-1 rounded-full bg-primary/70 transition-[height] duration-100"
+  ></span>
+}

@@ -1,0 +1,69 @@
+<form (submit)="$event.preventDefault(); submit()" class="flex flex-col gap-1.5">
+  <hlm-input-group>
+    <label class="sr-only" for="chat-reply">Your reply</label>
+    <textarea
+      (input)="onTyped()"
+      (keydown.enter)="onEnter($event)"
+      #reply
+      [formField]="replyForm"
+      [placeholder]="placeholder()"
+      class="max-h-40 min-h-12"
+      hlmInputGroupTextarea
+      id="chat-reply"
+      rows="1"
+    ></textarea>
+    <hlm-input-group-addon align="inline-end" class="self-end pb-1.5">
+      @if (showMic()) {
+        <button
+          (click)="toggleDictation()"
+          aria-label="Dictate your reply"
+          [attr.aria-pressed]="dictation.listening()"
+          [class.animate-pulse]="dictation.listening()"
+          [hlmTooltip]="
+            dictation.listening()
+              ? 'Stop dictation'
+              : 'Dictate your reply. Your browser may send the audio to its speech service.'
+          "
+          [variant]="dictation.listening() ? 'destructive' : 'default'"
+          class="motion-reduce:animate-none"
+          hlmInputGroupButton
+          position="top"
+          size="icon-sm"
+          type="button"
+        >
+          <ng-icon [name]="dictation.listening() ? 'lucideSquare' : 'lucideMic'" />
+        </button>
+      } @else {
+        <button
+          [disabled]="!canSend()"
+          aria-label="Send reply"
+          hlmInputGroupButton
+          size="icon-sm"
+          type="submit"
+          variant="default"
+        >
+          <ng-icon name="lucideSendHorizontal" />
+        </button>
+      }
+    </hlm-input-group-addon>
+  </hlm-input-group>
+  <p class="flex justify-between px-1 text-xs text-muted-foreground">
+    @if (dictation.error(); as message) {
+      <span class="text-destructive" role="alert">{{ message }}</span>
+    } @else if (dictation.listening()) {
+      <span class="flex min-w-0 flex-1 items-center pr-3" role="status">
+        @if (dictation.levels(); as levels) {
+          @if (levels.length > 0) {
+            <app-voice-meter [levels]="levels" />
+            <span class="sr-only">Listening</span>
+          } @else {
+            Listening… speak your answer
+          }
+        }
+      </span>
+    } @else {
+      <span>Enter to send · Shift + Enter for a new line</span>
+    }
+    <span [class.invisible]="!nearLimit()"> {{ draft().length }} / {{ maxLength }} </span>
+  </p>
+</form>

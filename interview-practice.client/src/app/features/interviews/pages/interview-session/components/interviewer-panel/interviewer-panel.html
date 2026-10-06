@@ -1,0 +1,80 @@
+<div class="flex flex-col gap-4">
+  <section aria-labelledby="interviewer-heading" hlmCard>
+    <div class="justify-items-center text-center" hlmCardHeader>
+      <hlm-avatar class="size-48 rounded-xl after:rounded-xl">
+        @if (personaImageUrl(); as src) {
+          <img
+            [ngSrc]="src"
+            alt=""
+            class="rounded-xl"
+            height="96"
+            hlmAvatarImage
+            priority
+            width="96"
+          />
+        }
+        <span class="rounded-xl text-3xl" hlmAvatarFallback>{{ initials() }}</span>
+      </hlm-avatar>
+      <h2 class="mt-2 text-lg font-semibold tracking-tight" id="interviewer-heading">
+        {{ interview().personaName }}
+      </h2>
+      <p class="text-sm text-muted-foreground">{{ interview().personaTitle }}</p>
+      <div class="mt-1 flex flex-wrap justify-center gap-1.5">
+        <span hlmBadge variant="secondary">{{ role() }}</span>
+        <span hlmBadge variant="outline">{{ tone() }}</span>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2" hlmCardContent>
+      @if (interview().status === 'in_progress') {
+        <div class="flex items-baseline justify-between text-sm">
+          <span class="font-medium">{{ inQa() ? 'Questions' : 'Your questions' }}</span>
+          @if (inQa()) {
+            <span class="text-muted-foreground">
+              {{ progress().asked }} of {{ progress().target }}
+            </span>
+          }
+        </div>
+        <hlm-progress [value]="inQa() ? progress().percent : 100" aria-label="Interview progress">
+          <hlm-progress-indicator />
+        </hlm-progress>
+        @if (!inQa()) {
+          <p class="text-xs text-muted-foreground">
+            The interview questions are done. Now it's your turn to ask.
+          </p>
+        }
+      } @else {
+        <span class="self-center -mt-1.5 -mb-2.5" hlmBadge variant="secondary">
+          {{ interview().status === 'completed' ? 'Completed' : 'Abandoned' }}
+        </span>
+      }
+    </div>
+  </section>
+
+  <section aria-labelledby="details-heading" hlmCard>
+    <div hlmCardHeader>
+      <h2 class="text-base" hlmCardTitle id="details-heading">Interview details</h2>
+    </div>
+    <div class="flex flex-col gap-3 text-sm" hlmCardContent>
+      <dl class="flex flex-col gap-1.5">
+        @for (row of job(); track row.label) {
+          <div class="flex justify-between gap-4">
+            <dt class="flex shrink-0 items-center gap-2 text-muted-foreground">
+              <ng-icon [name]="row.icon" />
+              {{ row.label }}
+            </dt>
+            <dd class="min-w-0 text-right font-medium wrap-break-word">{{ row.value }}</dd>
+          </div>
+        }
+      </dl>
+      <dl class="flex flex-col gap-1.5 border-t pt-3">
+        @for (detail of details(); track detail.label) {
+          <div class="flex justify-between gap-4">
+            <dt class="shrink-0 text-muted-foreground">{{ detail.label }}</dt>
+            <dd class="min-w-0 text-right font-medium wrap-break-word">{{ detail.value }}</dd>
+          </div>
+        }
+      </dl>
+    </div>
+  </section>
+</div>

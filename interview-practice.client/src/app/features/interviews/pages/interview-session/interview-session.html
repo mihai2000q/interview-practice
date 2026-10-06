@@ -1,4 +1,121 @@
-<main class="mx-auto flex max-w-3xl flex-col gap-2 px-6 py-10">
-  <h1 class="text-2xl font-semibold tracking-tight">Interview</h1>
-  <p class="text-muted-foreground">{{ id() }}</p>
+<main class="mx-auto grid max-w-6xl gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+  @if (interview(); as interview) {
+    <section
+      aria-labelledby="chat-heading"
+      class="flex h-[calc(100dvh-6.5rem)] min-h-120 flex-col overflow-hidden rounded-xl border bg-card"
+    >
+      <header class="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+        <h1 class="truncate text-base font-semibold tracking-tight" id="chat-heading">
+          Interview with {{ interview.personaName }}
+        </h1>
+        <div class="flex shrink-0 items-center gap-2">
+          @if (!ended()) {
+            <app-voice-toggle />
+          }
+          <span class="h-8 px-4 text-sm" hlmBadge variant="outline">{{ phaseLabel() }}</span>
+        </div>
+      </header>
+
+      <app-chat-transcript
+        [animatedMessageId]="animatedMessageId()"
+        [helperPendingIds]="helperPending()"
+        [interviewerTyping]="interviewerTyping()"
+        [messages]="interview.messages"
+        [pendingReply]="pendingReply()"
+        (typed)="lastMessageShown.set(true)"
+        [status]="interview.status"
+        [personaImageUrl]="personaImageUrl()"
+        [personaName]="interview.personaName"
+      />
+
+      <footer class="flex flex-col gap-2 border-t p-3 sm:p-4">
+        @if (sendError(); as message) {
+          <p class="text-sm text-destructive" role="alert">{{ message }}</p>
+        }
+        @if (openingError(); as message) {
+          <p class="flex items-center gap-2 text-sm text-destructive" role="alert">
+            {{ message }}
+            <button
+              (click)="retryOpening()"
+              class="h-auto p-0"
+              hlmBtn
+              size="xs"
+              type="button"
+              variant="link"
+            >
+              Retry
+            </button>
+          </p>
+        }
+        @if (ended() && lastMessageShown()) {
+          <a [routerLink]="['/interviews', interview.id, 'results']" class="self-center" hlmBtn
+            >View results</a
+          >
+        } @else {
+          @if (inAskBack()) {
+            <div class="flex flex-wrap items-center gap-1">
+              @if (suggestionsAvailable()) {
+                <app-ask-back-suggestions
+                  (picked)="onSuggestionPicked($event)"
+                  (unavailable)="onSuggestionsUnavailable()"
+                  [interviewId]="interview.id"
+                  [used]="usedSuggestions()"
+                />
+              }
+              <button
+                (click)="declineQuestions()"
+                [disabled]="replyBlocked()"
+                class="text-muted-foreground"
+                hlmBtn
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <ng-icon name="lucideCheck" />
+                No questions, thank you
+              </button>
+            </div>
+          }
+          <app-chat-composer
+            [draft]="draft()"
+            (draftChange)="onDraftChange($event)"
+            [busy]="replyBlocked() || ended()"
+            [placeholder]="placeholder()"
+            (send)="onSend($event)"
+          />
+        }
+      </footer>
+    </section>
+
+    <aside aria-label="Interview information" class="flex flex-col gap-4 lg:self-start">
+      <app-interviewer-panel
+        [interview]="interview"
+        [personaImageUrl]="personaImageUrl()"
+        [questionsAsked]="questionsAsked()"
+      />
+      @if (!ended()) {
+        <app-abandon-interview (abandoned)="onAbandoned()" [interviewId]="interview.id" />
+      }
+    </aside>
+  } @else if (loadError(); as error) {
+    <div class="lg:col-span-2" hlmEmpty>
+      <div hlmEmptyHeader>
+        <h1 hlmEmptyTitle>
+          {{ error.status === 404 ? 'Interview not found' : 'Could not load the interview' }}
+        </h1>
+        <p hlmEmptyDescription>{{ error.message }}</p>
+      </div>
+      <div hlmEmptyContent>
+        <a hlmBtn routerLink="/" variant="outline">Back home</a>
+      </div>
+    </div>
+  } @else {
+    <div aria-busy="true" class="flex flex-col gap-4" role="status">
+      <span class="sr-only">Loading the interview…</span>
+      <div class="h-14 w-2/3" hlmSkeleton></div>
+      <div class="h-24 w-1/2" hlmSkeleton></div>
+      <div class="ml-auto h-16 w-1/3" hlmSkeleton></div>
+    </div>
+    <div class="h-72" hlmSkeleton></div>
+  }
 </main>

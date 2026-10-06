@@ -1,0 +1,62 @@
+<div autoScroll hlmMessageScrollerProvider>
+  <hlm-message-scroller>
+    <div aria-label="Interview transcript" hlmMessageScrollerViewport>
+      <div class="gap-4 p-4 sm:p-6" hlmMessageScrollerContent>
+        @for (message of messages(); track message.id) {
+          @if (message.id === askBackStartId()) {
+            <div [messageId]="'phase-' + message.id" hlmMessageScrollerItem>
+              <div hlmMarker variant="separator">
+                <span hlmMarkerContent>Ask-back phase</span>
+              </div>
+            </div>
+          }
+          <div [messageId]="message.id" hlmMessageScrollerItem>
+            <app-chat-message
+              [animate]="message.id === animatedMessageId()"
+              [answered]="answeredIds().has(message.id)"
+              [content]="message.content"
+              [helperLoading]="helperPendingIds().has(message.id)"
+              [helperText]="message.helperText"
+              [personaImageUrl]="personaImageUrl()"
+              [personaName]="personaName()"
+              [role]="message.role"
+              (typed)="onTyped()"
+            />
+          </div>
+        }
+
+        @if (pendingReply(); as reply) {
+          <div hlmMessageScrollerItem messageId="pending-reply">
+            <app-chat-message [content]="reply" role="candidate" />
+          </div>
+        }
+
+        @if (endLabel(); as label) {
+          <div hlmMessageScrollerItem messageId="interview-ended">
+            <div hlmMarker variant="separator">
+              <span hlmMarkerContent>{{ label }}</span>
+            </div>
+          </div>
+        }
+
+        @if (interviewerTyping()) {
+          <div hlmMessageScrollerItem messageId="interviewer-typing">
+            <div hlmMessage>
+              <div class="min-w-0 bg-transparent" hlmMessageAvatar>
+                <app-persona-avatar [imageUrl]="personaImageUrl()" [name]="personaName()" />
+              </div>
+              <div hlmMessageContent>
+                <div hlmBubble variant="muted">
+                  <div hlmBubbleContent>
+                    <app-typing-indicator [label]="personaName() + ' is typing'" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+    <button aria-label="Scroll to the latest message" hlmMessageScrollerButton></button>
+  </hlm-message-scroller>
+</div>

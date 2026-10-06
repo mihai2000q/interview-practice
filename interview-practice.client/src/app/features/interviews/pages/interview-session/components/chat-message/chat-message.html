@@ -1,0 +1,36 @@
+<div class="flex flex-col gap-2">
+  <div [align]="fromCandidate() ? 'end' : 'start'" hlmMessage>
+    @if (!fromCandidate()) {
+      <div class="min-w-0 bg-transparent" hlmMessageAvatar>
+        <app-persona-avatar [imageUrl]="personaImageUrl()" [name]="personaName()" />
+      </div>
+    }
+    <div hlmMessageContent>
+      <div
+        [align]="fromCandidate() ? 'end' : 'start'"
+        [variant]="fromCandidate() ? 'default' : 'muted'"
+        hlmBubble
+      >
+        <div hlmBubbleContent>
+          <span class="sr-only">{{ fromCandidate() ? 'You' : personaName() }}: </span>
+          @if (fromCandidate()) {
+            <span class="whitespace-pre-wrap">{{ content() }}</span>
+          } @else {
+            <app-typewriter (finished)="onTyped()" [animate]="animate()" [text]="content()" />
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  @if (helperText(); as hint) {
+    @if (hintVisible()) {
+      <app-hint-card
+        [answered]="answered()"
+        [hint]="hint"
+        class="ml-10.5 max-w-[calc((100%_-_2.625rem)_*_0.8)]"
+      />
+    }
+  } @else if (helperLoading() && hintVisible() && !answered()) {
+    <div aria-hidden="true" class="ml-10.5 h-7 w-28 rounded-full" hlmSkeleton></div>
+  }
+</div>

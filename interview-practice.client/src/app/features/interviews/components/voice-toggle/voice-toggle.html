@@ -1,0 +1,14 @@
+@if (voice.supported) {
+  <button
+    (stateChange)="voice.setEnabled($event === 'on')"
+    [hlmTooltip]="voice.enabled() ? 'Interviewer voice is on' : 'Interviewer voice is off'"
+    [state]="voice.enabled() ? 'on' : 'off'"
+    aria-label="Interviewer voice"
+    class="text-muted-foreground hover:text-foreground aria-pressed:border-primary/50 aria-pressed:bg-primary/20 aria-pressed:text-primary"
+    hlmToggle
+    position="top"
+    variant="outline"
+  >
+    <ng-icon [name]="voice.enabled() ? 'lucideVolume2' : 'lucideVolumeX'" />
+  </button>
+}

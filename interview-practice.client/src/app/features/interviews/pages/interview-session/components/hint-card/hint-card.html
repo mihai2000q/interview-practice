@@ -1,0 +1,16 @@
+<div [(expanded)]="open" class="group/hint flex flex-col items-start" hlmCollapsible>
+  <button
+    class="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full bg-amber-500/5 px-3 text-xs text-amber-800 outline-none transition-colors hover:bg-amber-500/10 focus-visible:ring-3 focus-visible:ring-ring/50 dark:text-amber-200"
+    hlmCollapsibleTrigger
+  >
+    <ng-icon name="lucideLightbulb" />
+    {{ open() ? 'Hide hint' : 'Show hint' }}
+  </button>
+  <div (transitionend)="onTransitionEnd($event)" #content class="w-full" hlmCollapsibleContent>
+    <p
+      class="mt-1.5 rounded-lg border-l-2 border-amber-500/70 bg-amber-500/5 px-3 py-2 text-sm leading-relaxed"
+    >
+      {{ hint() }}
+    </p>
+  </div>
+</div>

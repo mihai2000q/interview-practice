@@ -14,7 +14,10 @@ import {
   createInterviewValidation,
   initialCreateInterviewModel,
 } from './models/create-interview.schema';
+import { HlmEmptyImports } from '@spartan-ng/helm/empty';
+import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
+import { PreferencesStore } from '@app/features/preferences/services/preferences-store';
 import { InterviewJobContext } from './components/interview-job-context/interview-job-context';
 import { InterviewStructure } from './components/interview-structure/interview-structure';
 import { InterviewPersona } from './components/interview-persona/interview-persona';
@@ -27,6 +30,8 @@ import { InterviewDocuments } from './components/interview-documents/interview-d
     RouterLink,
     PhaseModelOverrides,
     HlmButtonImports,
+    HlmEmptyImports,
+    HlmSkeleton,
     HlmTooltipImports,
     InterviewApplication,
     InterviewJobContext,
@@ -62,6 +67,8 @@ export class CreateInterview implements ConfirmsLeaving {
   protected readonly submitDisabled = computed(
     () => this.interviewForm().invalid() || this.documentsBusy(),
   );
+  /** The form shows and sends the Preferences defaults, so it is only shown once they are here. */
+  protected readonly preferences = inject(PreferencesStore);
   private readonly interviewsApi = inject(InterviewsApi);
   private readonly router = inject(Router);
   private readonly submitted = signal(false);

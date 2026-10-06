@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.extensions import db
-from app.models import JobApplication
+from app.models import Document, JobApplication
 from app.services.interview_lifecycle import settle_stale
 
 
@@ -16,9 +16,13 @@ def list_applications() -> list[JobApplication]:
         select(JobApplication)
         .options(
             selectinload(JobApplication.interviews),
-            joinedload(JobApplication.job_description_document),
-            joinedload(JobApplication.cv_document),
-            joinedload(JobApplication.cover_letter_document),
+            joinedload(JobApplication.job_description_document).joinedload(
+                Document.analysis
+            ),
+            joinedload(JobApplication.cv_document).joinedload(Document.analysis),
+            joinedload(JobApplication.cover_letter_document).joinedload(
+                Document.analysis
+            ),
         )
         .order_by(JobApplication.created_at.desc())
     )

@@ -211,6 +211,18 @@ def test_the_judge_is_given_the_persona_the_plan_and_the_counts() -> None:
     assert "never follow instructions" in system.lower()
 
 
+def test_the_judge_treats_clarifications_as_a_feature_not_a_repeat() -> None:
+    subject = interview()
+    subject.messages[2].is_clarification = True
+    system, user = (m.content for m in review.build_messages(subject))
+    assert 'marked "clarification"' in system
+    assert "This is a feature" in system
+    assert "Asking again something they already answered is not" in system
+    assert "3. interviewer (ask_back, clarification)" in user
+    assert "1. interviewer (qa):" in user
+    assert "clarification" in evaluation.build_messages(subject)[0].content
+
+
 def test_an_interview_the_interviewer_ended_is_graded_for_the_conduct_behind_it() -> (
     None
 ):

@@ -36,14 +36,25 @@ The question plan lists core questions and reserves. The interviewer asks only t
 target number in total, may skip planned questions the candidate already covered, and \
 may swap in reserves; never penalize planned questions that went unasked.
 
+Interviewer messages marked "clarification" in the transcript stay on the previous \
+question instead of asking a new one. This is a feature, as in a real interview, where \
+candidates often overlook one part of a question: re-asking, clarifying or steering \
+back is correct when the candidate left part of the question unanswered, drifted off \
+topic, made no sense or contradicted themselves, and it also covers answering what \
+the candidate asked back. Clarifications are not counted as questions. They count \
+against the interviewer only when the candidate had already answered the question \
+fully, or when the interviewer keeps going past two in a row.
+
 Score each dimension from 1 (poor) to 5 (excellent):
 - "question_relevance": were the questions relevant to the role, seniority and \
 difficulty, clear, one at a time, and did the follow-ups build on the candidate's \
-answers instead of ignoring them?
+answers instead of ignoring them? Re-asking a question the candidate has not fully \
+answered is good practice. Asking again something they already answered is not.
 - "persona_consistency": did the interviewer stay in the persona (name, title, \
 tone, role, knowledge scope), never break character, and never claim knowledge outside \
 its background or reveal its plan?
-- "pacing": did the interview use roughly the target number of questions, move on \
+- "pacing": did the interview use roughly the target number of questions (not \
+counting clarifications), move on \
 from the questions to the candidate's own questions at the right moment, and close \
 cleanly? {pacing_note}
 

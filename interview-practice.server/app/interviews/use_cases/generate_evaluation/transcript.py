@@ -27,9 +27,12 @@ def setup_block(interview: Interview) -> str:
 
 
 def transcript_block(interview: Interview) -> str:
-    """The messages in order, each tagged with its number, speaker and phase."""
+    """The messages in order, each tagged with its number, speaker and phase, and
+    "clarification" when the interviewer stayed on the previous question."""
     lines = [
-        f"{m.sequence}. {m.role.value} ({m.phase.value}): {' '.join(m.content.split())}"
+        f"{m.sequence}. {m.role.value} "
+        f"({m.phase.value}{', clarification' if m.is_clarification else ''}): "
+        f"{' '.join(m.content.split())}"
         for m in interview.messages
     ]
     return fence("transcript", "\n".join(lines))

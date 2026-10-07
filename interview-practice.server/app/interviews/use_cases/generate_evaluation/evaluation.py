@@ -58,9 +58,10 @@ Grade against these evaluation criteria. {weighting}
 Also use the STAR framework (Situation, Task, Action, Result): across the whole \
 interview, assess how well the candidate's stories and answers set out each part. If \
 the interview gave no occasion for a part, say so plainly instead of inventing \
-evidence. The ask-back phase (the candidate's own questions) is evidence too: of \
-preparation, interest and judgment. A candidate who declines to ask anything shows \
-less of it.
+evidence. An interviewer message marked clarification stays on the previous \
+question, so what the candidate says in reply completes their answer to it. The \
+ask-back phase (the candidate's own questions) is evidence too: of preparation, \
+interest and judgment. A candidate who declines to ask anything shows less of it.
 {caveat}
 Rules:
 - Ground every claim in the transcript; quote or point to what the candidate said. \

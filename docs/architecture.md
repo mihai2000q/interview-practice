@@ -320,6 +320,13 @@ actually satisfies the assignment's Hard optional task "assess the performance o
 prompt and/or model via LLM-as-a-judge." Not shown on the candidate-facing Results page by
 default; it's a reflection/debugging tool for the developer.
 
+The judge knows the interviewer may stay on a question (a clarification, marked in the
+transcript): re-asking or steering back is right when the candidate left part of the question
+unanswered, drifted or contradicted themselves, and counts against relevance only when the
+question had already been answered or it goes on past two in a row. It also knows the plan
+has unasked reserves and that an interview the interviewer ended early shouldn't be
+penalized for pacing.
+
 - Runs against the separate **interviewer-judge model**, default `google/gemini-2.5-flash`
   — selected in Preferences (see below) globally, or overridable per-interview via the
   `interviewer_review` key in advanced settings above. Deliberately a different vendor from

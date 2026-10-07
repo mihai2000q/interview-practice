@@ -24,15 +24,15 @@ _DEFAULT_MODELS = {phase: _INTERVIEW_MODEL for phase in GenerationPhase} | {
     GenerationPhase.interviewer_review: _JUDGE_MODEL
 }
 
-# The models each kind of phase may run on (docs/architecture.md). `typesafe/jev-1.13`
-# is a decision model: it can judge but cannot write a persona or an interviewer reply.
+# The models each kind of phase may run on (docs/architecture.md). The judge's set is
+# deliberately not a subset of the interview's: it centers on a different vendor
+# (ADR 0009).
 _INTERVIEW_MODELS = ("gpt-5-mini", "gpt-5-nano", "gpt-4o-mini")
 _JUDGE_MODELS = (
     "google/gemini-2.5-flash",
     "google/gemini-3.5-flash-lite",
     "gpt-5-mini",
     "gpt-5-nano",
-    "typesafe/jev-1.13",
 )
 
 # The reasoning efforts Preferences may set, the same four the client offers.

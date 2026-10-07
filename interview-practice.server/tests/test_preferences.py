@@ -79,18 +79,31 @@ def test_candidate_facing_phases_accept_the_chat_models(model: str) -> None:
     ensure_model_allowed(P.live_conversation, model)
 
 
-@pytest.mark.parametrize("model", ["typesafe/jev-1.13", "google/gemini-2.5-flash"])
+@pytest.mark.parametrize(
+    "model", ["google/gemini-3.5-flash-lite", "google/gemini-2.5-flash"]
+)
 def test_candidate_facing_phases_refuse_the_judge_only_models(model: str) -> None:
     with pytest.raises(BadRequestError) as caught:
         ensure_model_allowed(P.question_plan, model)
     assert caught.value.code == "MODEL_NOT_ALLOWED"
 
 
-def test_the_judge_accepts_its_own_set_but_not_gpt_4o_mini() -> None:
-    for model in ("google/gemini-3.5-flash-lite", "typesafe/jev-1.13"):
+def test_the_judge_accepts_its_own_set() -> None:
+    for model in (
+        "google/gemini-2.5-flash",
+        "google/gemini-3.5-flash-lite",
+        "gpt-5-nano",
+    ):
         ensure_model_allowed(P.interviewer_review, model)
-    with pytest.raises(BadRequestError):
-        ensure_model_allowed(P.interviewer_review, "gpt-4o-mini")
+
+
+@pytest.mark.parametrize("model", ["gpt-4o-mini", "typesafe/jev-1.13"])
+def test_the_judge_refuses_models_outside_its_set(model: str) -> None:
+    """`jev` is a decisions model: OpenRouter refuses it on /chat/completions, which the
+    judge call uses, so offering it would only make the review fail without a trace."""
+    with pytest.raises(BadRequestError) as caught:
+        ensure_model_allowed(P.interviewer_review, model)
+    assert caught.value.code == "MODEL_NOT_ALLOWED"
 
 
 @pytest.mark.parametrize("effort", ["minimal", "low", "medium", "high"])

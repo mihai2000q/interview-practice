@@ -304,18 +304,22 @@ global Preferences defaults (`gpt-5-mini`, Preferences' temperature, etc.).
   setting, which would be a wide, mostly-null `interviews` table; the API still takes and
   returns the nested `phaseSettingsOverride` object.
 - **Model choice**: for the 5 candidate-facing phases, the chat models (`gpt-5-mini`,
-  `gpt-5-nano`, `gpt-4o-mini`). `typesafe/jev-1.13` is not among them: it is a decision
-  model (typed questions in, typed answers with probabilities out, on a separate endpoint),
-  so it cannot write a persona, questions or an interviewer reply. It is offered only as a
-  judge, whose job is a decision.
+  `gpt-5-nano`, `gpt-4o-mini`).
 - **`interviewer_review`'s model choice is deliberately a different, narrower set**:
   `google/gemini-2.5-flash` (the default — see below), `google/gemini-3.5-flash-lite`,
-  `gpt-5-mini`, `gpt-5-nano`,
-  `typesafe/jev-1.13`. No `gpt-4o-mini` here — the OpenAI options exist as quick, cheap
+  `gpt-5-mini`, `gpt-5-nano`. No `gpt-4o-mini` here — the OpenAI options exist as quick, cheap
   experimentation, not an expected path; Gemini stays the recommendation. This is intentionally asymmetric with the
   other 5 phases, not an oversight: the judge's whole point is being a different vendor
   from the interview model, so its override set centers on that instead of mirroring the
   candidate-facing phases' allow-list.
+- **`typesafe/jev-1.13` is deliberately not offered, for any phase.** It was considered as a
+  judge, being a decisions model (typed questions in, typed answers with probabilities out),
+  but OpenRouter refuses it on `/chat/completions`, the only endpoint the server's client
+  uses (`400`: "a decisions model and cannot be used with the chat/completions endpoint",
+  use `/api/alpha/decisions`). Offering it would have made every review fail, and silently,
+  since a judge failure is logged and dropped rather than shown. Supporting it would mean a
+  second client for that alpha endpoint and mapping the judge's three scores onto typed
+  decisions; not worth it while four chat models already work.
 - **Anti-collision rule**: whichever model actually produced this Interview's `question_plan`
   and `live_conversation` phases (accounting for their own per-phase overrides, if set) is
   always excluded from the `interviewer_review` model choices here — so picking, say,

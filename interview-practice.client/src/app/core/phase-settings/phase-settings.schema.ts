@@ -46,13 +46,12 @@ export const INTERVIEW_MODELS = ['gpt-5-mini', 'gpt-5-nano', 'gpt-4o-mini'] as c
 export function builtInModelOf(phase: Phase): string {
   return phase === 'interviewerReview' ? DEFAULT_JUDGE_MODEL : DEFAULT_INTERVIEW_MODEL;
 }
-/** Not a subset of `INTERVIEW_MODELS` on purpose, see docs/architecture.md and ADR 0009. Jev is a decision model, so only the judge can use it. */
+/** Not a subset of `INTERVIEW_MODELS` on purpose, see docs/architecture.md and ADR 0009. */
 export const JUDGE_MODELS = [
   'google/gemini-2.5-flash',
   'google/gemini-3.5-flash-lite',
   'gpt-5-mini',
   'gpt-5-nano',
-  'typesafe/jev-1.13',
 ] as const;
 /** Where a slider rests when neither the Interview nor Preferences set the value; it is not sent. */
 export const DEFAULT_TEMPERATURE = 0.7;

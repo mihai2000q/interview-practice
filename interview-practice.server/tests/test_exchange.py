@@ -297,6 +297,15 @@ def test_the_interviewer_is_told_not_to_follow_off_topic_tangents() -> None:
         assert "never ask about it or follow it up" in system
 
 
+def test_the_interviewer_is_not_an_assistant() -> None:
+    interview = ask_back_interview()
+    transcript = [(m.role, m.content) for m in interview.messages]
+    system = build_messages(interview, transcript, ExchangeKind.answer, 1)[0].content
+    assert "Never offer or suggest mock interviews" in system
+    assert "never as an encyclopedia" in system
+    assert "never make a figure or a fact up" in system
+
+
 def test_the_prompt_says_how_many_clarifications_are_left() -> None:
     def ask_prompt(count: int) -> str:
         interview = with_clarifications(count)

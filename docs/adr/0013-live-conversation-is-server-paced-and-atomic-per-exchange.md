@@ -15,7 +15,9 @@ model (`clarification`), stored as `Message.is_clarification`, and left out of t
 (and of the coaching hint, which is for questions). At most two in a row (`MAX_CLARIFICATIONS`):
 the prompt says how many are left, and a clarification the model sends past the limit is
 stored as a question, so the budget still bounds the interview. A clarification can only
-come from an `ask` exchange; when the budget is already spent the wrap-up is forced as usual.
+come from an `ask` exchange, and the prompt says when one is called for: a vague, off-topic
+(steered back gently), nonsensical, contradictory or rude answer, or a wrong claim the persona's
+own background lets it check. A claim outside that background is taken as given; when the budget is already spent the wrap-up is forced as usual.
 When the budget is spent the server forces the wrap-up, and if the model's reply breaks the
 exchange's contract (it asks another question when it had to close, or the reverse) the
 request fails with `502` instead of being patched up. The model replies `{message, done, clarification}`;

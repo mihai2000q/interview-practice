@@ -21,6 +21,7 @@ from app.models import (
     Difficulty,
     Interview,
     InterviewCategory,
+    InterviewerRole,
     InterviewStatus,
     InterviewType,
     ResponseStyle,
@@ -49,6 +50,8 @@ Grade against these evaluation criteria. {weighting}
 {criteria}
 
 {bar}
+
+{checkability}
 
 Also use the STAR framework (Situation, Task, Action, Result): across the whole \
 interview, assess how well the candidate's stories and answers set out each part. If \
@@ -153,6 +156,37 @@ _BAR: dict[str, str] = {
     ),
 }
 
+_CHECKABILITY: dict[str, str] = {
+    InterviewerRole.technical_screener: (
+        "The interviewer has the technical depth to check claims: a technical answer "
+        "that is wrong, or contradicts the candidate's own earlier answers, counts "
+        "against them."
+    ),
+    InterviewerRole.hiring_manager: (
+        "The interviewer has the technical depth to check claims: a technical answer "
+        "that is wrong, or contradicts the candidate's own earlier answers, counts "
+        "against them."
+    ),
+    InterviewerRole.recruiter: (
+        "The interviewer is not an engineer and could not check technical details. Do "
+        "not penalize a technical claim just because it may be wrong; judge how "
+        "clearly and honestly it was put, and mention that it could not be verified. "
+        "A contradiction visible in the transcript still counts."
+    ),
+    InterviewerRole.hr: (
+        "The interviewer is not an engineer and could not check technical details. Do "
+        "not penalize a technical claim just because it may be wrong; judge how "
+        "clearly and honestly it was put, and mention that it could not be verified. "
+        "A contradiction visible in the transcript still counts."
+    ),
+}
+# Whatever the interviewer could check, conduct always counts.
+_CONDUCT = (
+    "Rudeness, abuse, deliberate nonsense and answers that ignore the question always "
+    "count against the candidate. Drifting off-topic and coming back when asked, or a "
+    "vague answer that a follow-up cleared up, does not."
+)
+
 _WEIGHTING: dict[str, str] = {
     InterviewType.technical: (
         "This is a technical interview: weigh the technical criteria more heavily."
@@ -176,6 +210,7 @@ def build_messages(interview: Interview) -> list[ChatMessage]:
     system = _SYSTEM_PROMPT.format(
         weighting=_WEIGHTING[interview.interview_type],
         bar=_BAR[interview.difficulty.value],
+        checkability=f"{_CHECKABILITY[interview.interviewer_role]} {_CONDUCT}",
         criteria=_criteria_lines(interview),
         caveat=(
             _INCOMPLETE_CAVEAT if interview.status is InterviewStatus.abandoned else ""

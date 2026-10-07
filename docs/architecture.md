@@ -212,7 +212,11 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    (`hire`/`no_hire`), reasoning, strengths, weaknesses, and improvement suggestions. The
    verdict's bar scales with the Interview's `difficulty`: lenient on `easy` (an acceptable
    performance passes, only a very poor or disrespectful one doesn't), balanced on `medium`,
-   demanding on `hard`. Technique:
+   demanding on `hard`. What the interviewer could check also matters: a recruiter or HR
+   interviewer can't judge technical details, so a possibly wrong technical claim isn't
+   penalized (and is noted as unverified), while rudeness, nonsense and ignoring the question
+   always count against the candidate, and drifting off-topic and returning when asked doesn't.
+   Technique:
    **chain-of-thought** reasoning constrained to a structured JSON output;
    `Interview.response_style` shapes how long/detailed the reasoning and improvement
    suggestions are. Runs on the `evaluation` phase's model (the Interview's override, else Preferences, else

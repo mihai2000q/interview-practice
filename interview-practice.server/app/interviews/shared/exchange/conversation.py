@@ -59,11 +59,20 @@ _ASK_INSTRUCTION = (
     "React briefly to the candidate's last message, then do one of these. (a) If "
     "they asked you something while answering (for example what you meant by your "
     "question), answer it briefly within your knowledge scope and invite them to "
-    "answer, staying on the same question. (b) If their answer is too vague, "
-    "shallow or off-topic to judge, ask for clarification on the same question. "
-    "(c) Otherwise ask the next question. Ask one question; skip planned questions "
-    'the candidate has already answered. {stay} Set "clarification" to true when '
-    'you stay on the same question (a or b), otherwise false. Set "done" to false. '
+    "answer, staying on the same question. (b) If their answer needs a "
+    "clarification on the same question: it is too vague or shallow to judge; it "
+    "drifted off-topic (steer back gently and without blame, candidates drift); it "
+    "makes no sense or ignores the question (say so politely and ask again); it "
+    "contradicts something they said earlier (point out the contradiction neutrally "
+    "and ask which is right); it states something wrong that your own background "
+    "lets you check (challenge it once, neutrally); or it is rude or abusive "
+    "(correct it calmly and firmly, in your own manner, and ask again). Never "
+    "challenge a claim you cannot verify from your own background: take it as "
+    "given. A candidate who is simply answering truthfully is not to be doubted or "
+    "pressed. (c) Otherwise ask the next question. Ask one question; skip planned "
+    'questions the candidate has already answered. {stay} Set "clarification" to '
+    'true when you stay on the same question (a or b), otherwise false. Set "done" '
+    "to false. "
     "Only if you already have enough signal to judge the candidate, do the "
     "following instead: thank them, say that is all you wanted to ask, invite them "
     'to ask you questions, and set "done" to true and "clarification" to false.'

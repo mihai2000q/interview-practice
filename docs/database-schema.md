@@ -177,6 +177,7 @@ Unique: `(interview_id, sequence)`.
 | `role` | `enum(interviewer, candidate)` | |
 | `content` | `text` | |
 | `helper_text` | `text`, nullable | populated only for `interviewer`/`qa` rows when `interviews.coaching_helpers_enabled` is true |
+| `is_clarification` | `boolean`, default false | an interviewer message that stays on the previous question; not counted as a question — see ADR 0013 |
 | `sequence` | `integer` | ordering within the interview |
 | `created_at` | `timestamptz` | default now() |
 

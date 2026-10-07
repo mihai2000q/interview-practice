@@ -190,6 +190,7 @@ def upgrade():
     sa.Column('role', sa.Enum('interviewer', 'candidate', name='messagerole'), nullable=False),
     sa.Column('content', sa.Text(), nullable=False),
     sa.Column('helper_text', sa.Text(), nullable=True),
+    sa.Column('is_clarification', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('sequence', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['interview_id'], ['interviews.id'], ondelete='CASCADE'),

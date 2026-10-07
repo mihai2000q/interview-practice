@@ -121,6 +121,7 @@ class MessagePublic(ApiModel):
     role: MessageRole
     content: str
     helper_text: str | None
+    is_clarification: bool
     sequence: int
     created_at: datetime
 

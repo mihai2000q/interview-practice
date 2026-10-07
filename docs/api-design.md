@@ -112,7 +112,7 @@ which stay hidden from the candidate. It has no messages yet.
 
 No body. Creates the interviewer's opening message (a greeting and the first question, phase
 `qa`; its coaching helper is asked for separately) and returns it as a `Message`
-(`{id, phase, role, content, helperText, sequence, createdAt}`). **Idempotent**: an
+(`{id, phase, role, content, helperText, isClarification, sequence, createdAt}`). **Idempotent**: an
 Interview that already has messages returns its first message and calls no model. Two calls
 at once run the model once; the other gets `409 TURN_IN_PROGRESS`, and the client should
 re-read the Interview. A failure (`502`/`503`/`504`) leaves the Interview untouched, and
@@ -149,7 +149,7 @@ The client groups the entries under their Application with `GET /api/application
 Fetch an Interview plus its `Message`s (ordered by `sequence`), for rendering the session
 or resuming one already in progress. Response `200`: the Interview fields (as in the create
 response, plus `endedAt`), `phase` (`"qa"` | `"ask_back"`, the phase of the last message)
-and `messages: [{id, phase, role, content, helperText, sequence, createdAt}]`. An
+and `messages: [{id, phase, role, content, helperText, isClarification, sequence, createdAt}]`. An
 `in_progress` Interview with no activity for 30 minutes is flipped to `abandoned` as it is
 read ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). `404` for
 an unknown id.

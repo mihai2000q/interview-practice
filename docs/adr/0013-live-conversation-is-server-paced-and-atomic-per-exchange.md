@@ -7,15 +7,18 @@ own how the interview is structured. For each call the server works out what kin
 exchange it is and tells the model: `open` (greet and ask the first question), `ask` (next
 question, with the option to end the questions early), `close_questions` (budget spent: thank
 the candidate and invite their questions), `answer` (ask-back) and `close_interview`. Every
-interviewer message in the Q&A phase counts as one question toward `target_question_count`,
-follow-ups included; the plan has exactly that many questions and is a guide, not a script.
-A follow-up may stay on the same question, to answer what the candidate asked back or to ask
-for clarification of a thin answer; the prompt limits that to two in a row, after which the
-interviewer accepts what it has and moves on. The limit lives in the prompt, not the server,
-so the budget (which clarifications also spend) is what ultimately bounds it.
+interviewer question in the Q&A phase counts toward `target_question_count`; the plan has
+exactly that many questions and is a guide, not a script. A **clarification** is not a
+question: an interviewer message that stays on the previous one, to answer what the
+candidate asked back or to ask for clarification of a thin answer. It is flagged by the
+model (`clarification`), stored as `Message.is_clarification`, and left out of the count
+(and of the coaching hint, which is for questions). At most two in a row (`MAX_CLARIFICATIONS`):
+the prompt says how many are left, and a clarification the model sends past the limit is
+stored as a question, so the budget still bounds the interview. A clarification can only
+come from an `ask` exchange; when the budget is already spent the wrap-up is forced as usual.
 When the budget is spent the server forces the wrap-up, and if the model's reply breaks the
 exchange's contract (it asks another question when it had to close, or the reverse) the
-request fails with `502` instead of being patched up. The model replies `{message, done}`;
+request fails with `502` instead of being patched up. The model replies `{message, done, clarification}`;
 `done` means the current phase is over after this message, so the interviewer message that
 ends the Q&A phase is stored as the first `ask_back` message.
 

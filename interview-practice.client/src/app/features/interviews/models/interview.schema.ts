@@ -17,6 +17,8 @@ export const messageSchema = z.object({
   role: messageRoleSchema,
   content: z.string(),
   helperText: z.string().nullable(),
+  /** The interviewer stayed on the previous question: not a question of its own. */
+  isClarification: z.boolean(),
   sequence: z.number(),
   createdAt: z.coerce.date(),
 });

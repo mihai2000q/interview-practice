@@ -10,13 +10,17 @@ from app.interviews.shared.exchange import run_exchange
 from app.interviews.shared.exchange.conversation import build_messages
 from app.interviews.shared.exchange.pacing import (
     MAX_ASK_BACK_QUESTIONS,
+    MAX_CLARIFICATIONS,
     ExchangeKind,
+    clarification_streak,
     decide_kind,
+    questions_asked,
 )
 from app.llm.openrouter import CompletionSettings
 from app.models import (
     Interview,
     InterviewStatus,
+    Message,
     MessagePhase,
     MessageRole,
 )
@@ -93,8 +97,12 @@ class FakeModel:
         self.replies: list[dict[str, object]] = []
         self.client = fake_client(self.handle)
 
-    def say(self, message: str, *, done: bool = False) -> "FakeModel":
-        self.replies.append({"message": message, "done": done})
+    def say(
+        self, message: str, *, done: bool = False, clarification: bool = False
+    ) -> "FakeModel":
+        self.replies.append(
+            {"message": message, "done": done, "clarification": clarification}
+        )
         return self
 
     def handle(self, request: httpx.Request) -> httpx.Response:
@@ -221,3 +229,84 @@ def test_an_ask_back_close_that_keeps_going_is_an_error() -> None:
     interview = ask_back_interview(MAX_ASK_BACK_QUESTIONS - 1)
     with pytest.raises(LlmUpstreamError):
         run(FakeModel().say("Ask me more!", done=False), interview, "One more")
+
+
+# -- clarifications -------------------------------------------------------------------
+
+
+def with_clarifications(count: int, *, target: int = 3) -> Interview:
+    """One question, then `count` clarifications of it, each after a candidate reply."""
+    messages = [(INTERVIEWER, QA)]
+    for _ in range(count):
+        messages += [(CANDIDATE, QA), (INTERVIEWER, QA)]
+    interview = build_interview(target=target, messages=messages)
+    for message in interview.messages[1:]:
+        message.is_clarification = message.role is INTERVIEWER
+    return interview
+
+
+def test_clarifications_are_not_counted_as_questions() -> None:
+    interview = with_clarifications(2, target=1)
+    assert questions_asked(interview) == 1
+    # One question asked against a target of one: wrap up, whatever came after it.
+    assert decide_kind(interview, has_reply=True) is ExchangeKind.close_questions
+    assert decide_kind(with_clarifications(2), has_reply=True) is ExchangeKind.ask
+
+
+@pytest.mark.parametrize("count", [0, 1, 2])
+def test_the_streak_counts_the_clarifications_ending_the_transcript(
+    count: int,
+) -> None:
+    assert clarification_streak(with_clarifications(count)) == count
+
+
+def test_a_new_question_ends_the_streak() -> None:
+    interview = with_clarifications(2)
+    interview.messages.append(
+        Message(
+            role=CANDIDATE, phase=QA, content="a", sequence=6, is_clarification=False
+        )
+    )
+    interview.messages.append(
+        Message(
+            role=INTERVIEWER, phase=QA, content="q", sequence=7, is_clarification=False
+        )
+    )
+    assert clarification_streak(interview) == 0
+
+
+def test_a_clarification_is_stored_and_not_counted() -> None:
+    interview = with_clarifications(0)
+    model = FakeModel().say("Do you mean in production?", clarification=True)
+    applied = run(model, interview).apply_to(interview)
+    assert applied.interviewer_message.is_clarification
+    assert not applied.interviewer_message.is_question
+    assert not applied.candidate_message.is_clarification  # type: ignore[union-attr]
+    assert questions_asked(interview) == 1
+
+
+def test_past_the_limit_a_reply_counts_as_a_question() -> None:
+    interview = with_clarifications(MAX_CLARIFICATIONS)
+    model = FakeModel().say("Still unclear, say more?", clarification=True)
+    applied = run(model, interview).apply_to(interview)
+    assert not applied.interviewer_message.is_clarification
+    assert questions_asked(interview) == 2
+
+
+def test_only_an_ask_exchange_that_continues_can_be_a_clarification() -> None:
+    wrapping_up = build_interview(target=1, messages=qa_exchanges(1))
+    model = FakeModel().say("Any questions?", done=True, clarification=True)
+    assert not run(model, wrapping_up).interviewer_is_clarification
+
+
+def test_the_prompt_says_how_many_clarifications_are_left() -> None:
+    def ask_prompt(count: int) -> str:
+        interview = with_clarifications(count)
+        transcript = [(m.role, m.content) for m in interview.messages]
+        return build_messages(interview, transcript, ExchangeKind.ask, 1, count)[
+            0
+        ].content
+
+    assert "allowed 2 more times" in ask_prompt(0)
+    assert "allowed 1 more time;" in ask_prompt(1)
+    assert "may not stay on it again" in ask_prompt(MAX_CLARIFICATIONS)

@@ -245,6 +245,9 @@ One turn in the interview transcript. Ordered, phase-tagged, role-tagged.
 - `helper_text`: nullable text — a coaching-hint card, populated only for `interviewer` /
   `qa`-phase messages when `Interview.coaching_helpers_enabled` is true, and written after the
   message exists, so it is null until the session page asks for it (see `architecture.md`)
+- `is_clarification`: boolean, default false — an `interviewer` / `qa` message that stays on the
+  previous question (answers the candidate's question or asks them to clarify) instead of asking
+  a new one. Not counted toward `target_question_count`; at most two in a row (ADR 0013)
 - `sequence`: ordering index within the interview, from 1. The first message of every
   Interview is the interviewer's opening, created when the session page first asks for it (an
   Interview may briefly have no messages). The Interview's current phase is

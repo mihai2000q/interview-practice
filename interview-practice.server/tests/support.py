@@ -94,6 +94,12 @@ def build_interview(
     )
     for number, (role, phase) in enumerate(messages or [], start=1):
         interview.messages.append(
-            Message(role=role, phase=phase, content=f"m{number}", sequence=number)
+            Message(
+                role=role,
+                phase=phase,
+                content=f"m{number}",
+                sequence=number,
+                is_clarification=False,
+            )
         )
     return interview

@@ -329,10 +329,6 @@ global Preferences defaults (`gpt-5-mini`, Preferences' temperature, etc.).
   since a judge failure is logged and dropped rather than shown. Supporting it would mean a
   second client for that alpha endpoint and mapping the judge's three scores onto typed
   decisions; not worth it while three chat models already work.
-- **`google/gemini-3.5-flash-lite` was offered as a judge and removed.** It was redundant next
-  to `google/gemini-2.5-flash`, and OpenRouter can refuse it per workspace (a guardrail answers
-  `404`), which makes the review call fail; a failed review is logged and dropped, so the
-  interview would just have no review. Nothing stored refers to it.
 - **Anti-collision rule**: whichever model actually produced this Interview's `question_plan`
   and `live_conversation` phases (accounting for their own per-phase overrides, if set) is
   always excluded from the `interviewer_review` model choices here — so picking, say,

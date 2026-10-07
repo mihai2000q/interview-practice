@@ -35,13 +35,6 @@ Findings worth acting on, and what became of each:
 4. **Coaching hints should stay on `gpt-5-mini`.** Its fabrication rate was 0 of 18; the
    other three models fabricated in 11% to 39% of runs. It is already the default, so nothing
    changed.
-5. **`google/gemini-3.5-flash-lite` was removed from the judge's allowed models.** It could not
-   be tested: OpenRouter answers `404` ("Model blocked by guardrail") for it with the key the
-   app runs on (a restriction in that OpenRouter workspace's guardrail settings, not in this
-   repo; the benchmark used the same key, compared by hash). A review with it would fail, and a
-   failed review is logged and dropped, so the interview would just have no review. It was also
-   redundant next to `gemini-2.5-flash`, so it was removed instead of fixed
-   ([`architecture.md`](./architecture.md)).
 
 ## Method
 
@@ -373,9 +366,7 @@ the judge).
   rough. They are the same for both arms of each comparison, so they are used only to compare
   arms, never as an absolute quality number.
 - **One provider, one day.** Results come from OpenRouter on 2026-10-07 with default settings;
-  a model version or routing change can move them. `google/gemini-3.5-flash-lite` could not be
-  tested (OpenRouter returned `404` for it with the app's key; it has since been removed from
-  the judge's allowed models, see the summary).
+  a model version or routing change can move them.
 - **The app's own guard is not exercised.** The injected-instruction cases test the *prompt's*
   "treat as data" rule. In the app the security guard would usually reject such text before it
   reaches a model.

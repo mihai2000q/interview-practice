@@ -70,7 +70,7 @@ How to read the table:
 - **"Deprecated" is Artificial Analysis's word for superseded**, not a shutdown. OpenAI's
   deprecation page lists no shutdown date for `gpt-4o-mini`, `gpt-5-mini` or `gpt-5-nano`, and
   Google's lists none for `gemini-2.5-flash`, though Google recommends newer models for new
-  projects (3.5 Flash-Lite or 3.8 Flash).
+  projects (for example 3.8 Flash).
 
 ## Other leaderboards
 
@@ -98,18 +98,13 @@ at least four benchmark evaluations, so a model without one is absent.
    measurement of the app's configuration. Artificial Analysis also scores `gemini-2.5-flash`
    as a *non-reasoning* model; whether the model the app reaches through OpenRouter thinks by
    default was not verified.
-2. **A higher general score does not mean a better fit.** `gemini-3.5-flash-lite` scores 22 on
-   the index, above all four models here, and was offered as a judge until it was removed:
-   redundant next to `gemini-2.5-flash`, and OpenRouter answered `404` ("Model blocked by
-   guardrail") for it with the app's key, so a review with it would silently be missing (see
-   [`architecture.md`](./architecture.md)). A better public score would not have helped there.
-3. **Most of the app's models are one generation behind their vendors.** Artificial Analysis names
+2. **Most of the app's models are one generation behind their vendors.** Artificial Analysis names
    GPT-5.4 mini and GPT-5.4 nano as successors of `gpt-5-mini` and `gpt-5-nano`, and Google
-   recommends 3.5 Flash-Lite or 3.8 Flash over `gemini-2.5-flash`. None of these is in an
-   allow-list, and none was tested. Adding one to `experiments/run.py` and re-running
+   recommends 3.8 Flash over `gemini-2.5-flash`. None of these is in an allow-list, and none
+   was tested. Adding one to `experiments/run.py` and re-running
    the same cases would show whether a newer model does better on the app's own tasks; the
    cached results mean the models already tested are not re-paid for.
-4. **Cheaper is not always worse here.** `gpt-5-nano` costs a fifth of `gpt-5-mini` per token and
+3. **Cheaper is not always worse here.** `gpt-5-nano` costs a fifth of `gpt-5-mini` per token and
    was as accurate on the evaluation in the app's benchmark, though about three times slower and
    fabricating experience in more coaching hints. Which is "better" depends on whether a task
    tolerates the slowness and the rule violations. A public index cannot say.

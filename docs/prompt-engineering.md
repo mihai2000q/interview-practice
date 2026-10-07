@@ -256,6 +256,12 @@ incomplete if it has no reasoning, strengths, weaknesses, suggestions or STAR pa
 on the same model as the interview by default, self-grading on purpose
 ([ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)).
 
+*Known weakness:* `analysis` must be a string, and `gpt-4o-mini` (a selectable model for this
+phase) wrote it as a JSON object in 18 of 45 benchmark replies, which the app rejects; so did
+`gemini-2.5-flash` in 4 of 45, though it cannot be chosen here. `gpt-5-mini` and `gpt-5-nano`
+never did (0 of 90). `gpt-4o-mini` is kept on offer, but it is unreliable for evaluation. See
+[`prompt-benchmark.md`](./prompt-benchmark.md).
+
 ### 6. Interviewer review: LLM-as-a-judge
 
 *Goal:* a developer-facing assessment of the AI interviewer's conduct, not the candidate's,
@@ -431,9 +437,12 @@ How the app handles them:
 - **Constraints:** a model outside a phase's allowed set is a `400 MODEL_NOT_ALLOWED`, and the
   judge may never be a model that ran the interview (`409 JUDGE_MODEL_COLLISION`).
 - **Parameter support varies by model.** Not every model honours every setting; the OpenRouter
-  page of each model lists which parameters it supports.
+  page of each model lists which parameters it supports. Measured for temperature: `gpt-5-mini`
+  and `gpt-5-nano` ignore it (their output varies as much at 0 as at 1.4), while `gpt-4o-mini`
+  and `gemini-2.5-flash` honor it. The temperature controls in the client carry an info icon
+  that says so (`TEMPERATURE_HINT` in `phase-settings.schema.ts`).
 
-Sensible starting points when tuning (general guidance, **not measured results of this app**):
+Sensible starting points when tuning (general guidance; the benchmark confirmed only that temperature changes nothing on `gpt-5-mini`, see [`prompt-benchmark.md`](./prompt-benchmark.md)):
 a low temperature for extraction, evaluation and the judge, where repeatability matters; a
 higher one for the persona and for the live interviewer, where variety helps; a generous max
 tokens for evaluation and planning, whose JSON is long; a higher reasoning effort only where a
@@ -460,35 +469,42 @@ messages):
 | 2026-10-07 | `794ea023` | models miscounted the plan | the core number is exact, the reserves are tolerant, the server drops extras |
 | 2026-10-07 | `2ce0f4d5` | the judge penalized re-asking and clarifying | the judge is told clarifications are a feature |
 
-## What has not been measured
+## What has been measured, and what has not
 
-Stated honestly, because the prompts above are reasoned, not benchmarked:
+The techniques above were chosen by reasoning about each task. They have since been compared
+in a benchmark of about 2,900 real model calls: see [`prompt-benchmark.md`](./prompt-benchmark.md)
+for the method, the numbers and the limits. What it found, in one line each:
 
-- There is **no side-by-side comparison** of techniques. Each phase uses the technique that
-  fits its task (and the five differ on purpose), but no experiment shows, for example, how
-  prompt 4 would perform zero-shot, or prompt 5 without the scratchpad.
-- There is **no fixed set of test interviews** and no scoring of prompt versions. The changes in
-  the table above were driven by trying the app, not by a regression suite of model outputs.
+- **Few-shot (prompt 4)** made no measurable difference to the suggestions over the same prompt
+  without the examples (-0.02 on a 1 to 5 scale, 95% CI -0.11 to +0.07). The examples roughly
+  double the prompt. They stay because few-shot is one of the required techniques, not because
+  they were shown to help.
+- **The `analysis` scratchpad (prompt 5)** did not improve verdicts, and on `gpt-4o-mini` and
+  `gemini-2.5-flash` it made replies fail the contract (the model wrote `analysis` as an
+  object, not a string). Where the model already reasons internally it changed nothing.
+- **Temperature** has no effect on `gpt-5-mini` or `gpt-5-nano`. On
+  models that honor it, it changes variety and wording more than verdicts.
+- **Model by task**: `gpt-5-mini` was the most reliable all-rounder, `gemini-2.5-flash` matched
+  it as the judge at a fraction of the cost, and `gpt-4o-mini` cannot be a judge.
+- **Zero-shot extraction (prompt 1)** was enough: all four models found every gold skill and
+  none repeated the instruction injected into a document.
+- The checkability rule of prompt 5 (do not penalize what a recruiter cannot verify) is
+  **mostly not followed** by the models; see the probe in the benchmark.
+
+Still not measured, stated honestly:
+
+- The benchmark's cases are small and synthetic, mostly clear-cut, and its gold labels are the
+  author's. It cannot show how the prompts behave on close calls or on real candidates.
 - The evaluation is **self-graded** by default (ADR 0003) and the judge's 1 to 5 scores are not
   calibrated against human ratings.
-- The server's tests cover the prompt-building and checking code (guard, pacing, planning,
-  results, helper) against a fake model. They do not call a real model.
+- There is no regression suite that runs in CI: the benchmark is run by hand
+  (`experiments/`), and the server's tests cover the prompt-building and checking code against
+  a fake model, not a real one.
+- Whether the judge is stricter than the interviewer model (the pairing ADR 0009 relies on)
+  was not tested directly; only that three of the four models detect planted flaws.
 
-### A way to compare, when you want evidence
-
-The app already supports the experiments, because every phase's model and settings can be
-overridden per interview. A proportionate protocol (**proposed, not yet run**):
-
-| Question | Compare | Measure |
-|---|---|---|
-| Does few-shot help ask-back suggestions? | the current prompt vs the same prompt with the four examples removed | specificity to company and role, duplicates, how many a person would actually ask, over about 5 setups |
-| Does the scratchpad help the evaluation? | with the `analysis` key vs without it | agreement with a hand-written verdict on about 5 saved transcripts; whether each claim points at a real message |
-| Does temperature matter for the persona? | low vs high on the same setup, 3 runs each | variety of names and backstories, plausibility |
-| Is the judge stricter than the interviewer model? | review the same interviews with two judge models | spread of scores, whether the reasoning cites real messages |
-| Is zero-shot enough for documents? | the current extraction on 3 or 4 different CVs and job descriptions | field accuracy by eye, invented skills (should be none) |
-
-Save the setups and the outputs next to the findings, so a later change to a prompt can be
-checked against the same cases.
+To check a prompt change against the same cases, edit the prompt, re-run the affected stage of
+`experiments/run.py` and compare with `experiments/results/tables.md`.
 
 ## Changing a prompt
 

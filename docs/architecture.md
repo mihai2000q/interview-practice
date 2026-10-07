@@ -309,7 +309,11 @@ global Preferences defaults (`gpt-5-mini`, Preferences' temperature, etc.).
   setting, which would be a wide, mostly-null `interviews` table; the API still takes and
   returns the nested `phaseSettingsOverride` object.
 - **Model choice**: for the 5 candidate-facing phases, the chat models (`gpt-5-mini`,
-  `gpt-5-nano`, `gpt-4o-mini`).
+  `gpt-5-nano`, `gpt-4o-mini`). `gpt-4o-mini` stays on offer but is **unreliable for the
+  `evaluation` phase**: in the [benchmark](./prompt-benchmark.md#experiment-2-chain-of-thought-scratchpad-star-evaluation)
+  about 4 in 10 of its evaluations were rejected, because it sometimes writes the `analysis`
+  scratchpad as an object instead of a string. A rejected evaluation stores nothing and can be
+  requested again, but the default `gpt-5-mini` did not fail once.
 - **`interviewer_review`'s model choice is deliberately a different, narrower set**:
   `google/gemini-2.5-flash` (the default — see below), `google/gemini-3.5-flash-lite`,
   `gpt-5-mini`, `gpt-5-nano`. No `gpt-4o-mini` here — the OpenAI options exist as quick, cheap

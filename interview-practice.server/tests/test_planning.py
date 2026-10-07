@@ -13,7 +13,7 @@ from flask import Flask
 from app.errors.exceptions import LlmUpstreamError
 from app.interviews.schemas import InterviewCreate
 from app.interviews.use_cases.create_interview.planning import plan_interview
-from app.interviews.use_cases.create_interview.planning.limits import plan_size
+from app.interviews.use_cases.create_interview.planning.limits import plan_range
 from app.interviews.use_cases.create_interview.use_case import _previous_questions
 from app.llm.openrouter import CompletionSettings
 from app.models import (
@@ -192,7 +192,7 @@ def test_text_is_trimmed_and_bounded() -> None:
 # -- the parts must follow their contracts --------------------------------------------
 
 
-@pytest.mark.parametrize("returned", [3, 5, 7, 0])
+@pytest.mark.parametrize("returned", [3, 5, 0])
 def test_a_wrong_number_of_questions_is_an_error(returned: int) -> None:
     with pytest.raises(LlmUpstreamError, match="wrong number"):
         plan(FakeModel(questions_reply=questions(returned)))
@@ -256,26 +256,42 @@ def test_with_no_domain_anywhere_a_placeholder_is_used(returned: str | None) -> 
 # -- what each prompt asks for --------------------------------------------------------
 
 
-def test_the_questions_prompt_asks_for_the_core_plan_and_reserves() -> None:
-    model = FakeModel(questions_reply=questions(10))
+def test_the_questions_prompt_asks_for_the_core_plan_and_a_few_reserves() -> None:
+    model = FakeModel(questions_reply=questions(9))
     plan(model, request(targetQuestionCount=5))
     system = model.system("questions")
-    assert "exactly 10 questions" in system
+    assert "between 8 and 9 questions" in system
     assert "The first 5 are the core plan" in system
-    assert "The other 5 are reserves" in system
 
 
 @pytest.mark.parametrize(
     ("target", "expected"),
-    [(1, 2), (3, 6), (5, 10), (8, 13), (10, 15), (20, 28), (30, 41)],
+    [
+        (1, (2, 2)),
+        (3, (6, 6)),
+        (5, (8, 9)),
+        (10, (13, 15)),
+        (20, (23, 28)),
+        (30, (33, 41)),
+    ],
 )
-def test_the_plan_holds_the_target_plus_reserves(target: int, expected: int) -> None:
-    assert plan_size(target) == expected
+def test_the_plan_holds_the_target_plus_a_range_of_reserves(
+    target: int, expected: tuple[int, int]
+) -> None:
+    assert plan_range(target) == expected
 
 
 def test_the_plan_never_shrinks_as_the_target_grows() -> None:
-    sizes = [plan_size(n) for n in range(1, 31)]
-    assert sizes == sorted(sizes)
+    ranges = [plan_range(n) for n in range(1, 31)]
+    assert [r[0] for r in ranges] == sorted(r[0] for r in ranges)
+    assert [r[1] for r in ranges] == sorted(r[1] for r in ranges)
+
+
+def test_surplus_reserves_are_dropped_but_missing_core_questions_fail() -> None:
+    result = plan(FakeModel(questions_reply=questions(10)))  # target 3: 6 allowed
+    assert len(result.questions) == 6
+    with pytest.raises(LlmUpstreamError, match="wrong number"):
+        plan(FakeModel(questions_reply=questions(5)))
 
 
 @pytest.mark.parametrize("interview_type", ["technical", "behavioral"])

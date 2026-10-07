@@ -151,8 +151,8 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    title, tone, and a knowledge scope/backstory shaped by `interviewer_role`), the question
    plan (skewed
    technical vs. behavioral by `interview_type`: at least 70% of the questions are of the
-   interview's own type; the plan holds `target_question_count` core questions plus reserves, in
-   all 5→10, 8→13, 10→15, 20→28, 30→41: the interviewer asks only the target number and swaps in a
+   interview's own type; the plan holds `target_question_count` core questions plus 3 to `3 + target/4`
+   reserves (never more than the target), in all 5→8-9, 10→13-15, 20→23-28, 30→33-41: the interviewer asks only the target number and swaps in a
    reserve when a core question no longer fits, e.g. after a rude candidate, so it never ends on
    salary expectations), and a
    structured set of **Evaluation criteria**
@@ -173,8 +173,9 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    `backstory`), the questions, and the evaluation criteria — because none depends on
    another, only on the shared inputs; so it takes as long as the slowest one, not one
    long reply (reasoning effort is deliberately not lowered to save time). Each reply is
-   validated before anything is stored; an incomplete persona, no usable criteria, or a
-   question count other than the plan size (target plus reserves) fails the request with `502` and
+   validated before anything is stored; an incomplete persona, no usable criteria, or
+   fewer questions than the target plus 3 reserves (extra reserves are just dropped) fails the
+   request with `502` and
    creates nothing, and the other calls are abandoned. The persona call also returns the
    Interview's `domain`, but only when no analyzed Document supplied one; the persona call
    sees only the setup, while the questions and criteria also get the JD/CV analyses. The backstory is stored as

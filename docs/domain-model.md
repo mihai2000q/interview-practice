@@ -217,8 +217,8 @@ shown to the candidate.
 
 - `interview_id`: FK → Interview
 - `sequence`: order within the plan, from 1. The first `target_question_count` are the core
-  questions, the rest reserves the interviewer may swap in (the plan holds the target plus
-  reserves: 5→10, 10→15, 20→28)
+  questions, the rest reserves the interviewer may swap in (the plan holds the target plus 3 to
+  `3 + target/4` reserves: 10→13-15, 20→23-28)
 - `category`: `technical` | `behavioral` — the plan is skewed between the two by
   `Interview.interview_type`
 - `question`: text

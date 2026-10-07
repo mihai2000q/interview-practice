@@ -143,7 +143,9 @@ navigation:
 
 The assignment requires at least 5 system prompts using different prompting techniques.
 Each one corresponds to a distinct backend phase of the interview lifecycle, rather than to
-5 separate standalone tools:
+5 separate standalone tools. This section is the design of each phase; how the prompts are
+actually written (the techniques, rules, output contracts, settings and how they were
+iterated) is in [`prompt-engineering.md`](./prompt-engineering.md):
 
 All five run on **`gpt-5-mini`** by default (selectable among the allowed OpenRouter
 chat models via Preferences), using 5 deliberately distinct techniques:
@@ -153,12 +155,15 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    runs it at submit only for a Document with no analysis, or when the Interview overrides
    the `jd_analysis` model) — one small call **per Document**
    (job description, CV, cover letter; run in parallel at submit): extracts skills, likely topics,
-   the role's domain (job description / CV) and the employer's name (job description /
-   cover letter). The result is stored as that Document's `DocumentAnalysis` and reused by
+   the role's domain and the employer's name. The job description and the CV are the substantive
+   inputs (skills and topics come from them). The cover letter is a secondary input, often not
+   uploaded and rarely decisive: its analysis has no skills or topics, and only contributes the
+   employer's name and a fallback domain. The result is stored as that Document's
+   `DocumentAnalysis` and reused by
    every later Interview that uses the Document, unless that Interview's `jd_analysis`
    model differs, in which case it is re-run and overwritten — see
    [ADR 0012](./adr/0012-document-analysis-cached-per-document-and-model.md). The
-   Interview's `domain` is proposed by the job description's analysis, else the cover letter's, else the CV's, but phase 2 checks the proposal against the job title and company and ignores it when it makes no sense (a software CV for a barista job); the cover letter's analysis therefore also holds a `domain`.
+   Interview's `domain` is proposed by the job description's analysis, else the cover letter's, else the CV's, but phase 2 checks the proposal against the job title and company and ignores it when it makes no sense (a software CV for a barista job).
    Technique: **zero-shot** extraction with a structured JSON output contract. Plain context-injection, not RAG —
    see [ADR 0004](./adr/0004-job-description-context-is-not-rag.md).
 2. **Question-plan & persona generation** — produces the interviewer persona (name, job

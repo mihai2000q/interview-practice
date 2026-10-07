@@ -41,6 +41,10 @@
     />
     <app-star-breakdown [breakdown]="evaluation.starBreakdown" />
     <app-improvement-suggestions [text]="evaluation.improvementSuggestions" />
+    <app-strengths-weaknesses
+      [strengths]="evaluation.strengths"
+      [weaknesses]="evaluation.weaknesses"
+    />
 
     @if (interview(); as interview) {
       <section

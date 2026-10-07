@@ -10,6 +10,10 @@ export type StarCompleteness = z.infer<typeof starCompletenessSchema>;
 export const evaluationSchema = z.object({
   verdict: verdictSchema,
   reasoning: z.string(),
+  /** Text with one strength per line. */
+  strengths: z.string(),
+  /** Text with one weakness per line. */
+  weaknesses: z.string(),
   /** Text with one suggestion per line. */
   improvementSuggestions: z.string(),
   starBreakdown: z.object({

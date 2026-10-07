@@ -249,8 +249,8 @@ stored; the client retries).
 ### `GET /api/interviews/:id/evaluation`
 
 The stored `Evaluation` (Results page data), never generates one:
-`{verdict, reasoning, improvementSuggestions, starBreakdown, incomplete}`. `verdict` is
-`"hire"` | `"no_hire"`; `improvementSuggestions` is text with one suggestion per line;
+`{verdict, reasoning, strengths, weaknesses, improvementSuggestions, starBreakdown, incomplete}`. `verdict` is
+`"hire"` | `"no_hire"`; `strengths`, `weaknesses` and `improvementSuggestions` are text with one item per line;
 `starBreakdown` is `{situation, task, action, result, completeness}` where `completeness` is
 `"strong"` | `"partial"` | `"weak"`; `incomplete` is `true` when the Interview was abandoned
 (the evaluation then says it rests on a partial interview). `404` until `PUT` has made it.

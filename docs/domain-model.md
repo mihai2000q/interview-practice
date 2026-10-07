@@ -259,6 +259,8 @@ The outcome of an Interview. One-to-one with Interview, created once the session
 - `interview_id`: FK → Interview (unique)
 - `verdict`: `hire` | `no_hire`
 - `reasoning`: explanation for the verdict
+- `strengths`, `weaknesses`: what went well and where it fell short, one per line; at least
+  one of each
 - `improvement_suggestions`: what the candidate should work on
 - `star_situation`, `star_task`, `star_action`, `star_result`: one short assessment per
   STAR letter, aggregated across the whole interview (not per-question)

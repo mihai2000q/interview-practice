@@ -21,9 +21,9 @@ ROLE_GUIDANCE: dict[str, str] = {
         "The title is an engineering role in the candidate's domain."
     ),
     InterviewerRole.hr: (
-        "Culture, values and soft-skills fit; procedural in tone. Not an engineer: asks "
-        "about teamwork, conflict, motivation, working style, salary and notice period, "
-        "never about low-level technical details. Typical titles: "
+        "Culture, values and soft-skills fit; procedural in tone. Not an engineer: "
+        "asks about teamwork, conflict, motivation, working style, salary and notice "
+        "period, never about low-level technical details. Typical titles: "
         '"HR Business Partner", "People Operations Manager".'
     ),
     InterviewerRole.hiring_manager: (

@@ -118,6 +118,8 @@ def upgrade():
     sa.Column('interview_id', sa.Uuid(), nullable=False),
     sa.Column('verdict', sa.Enum('hire', 'no_hire', name='verdict'), nullable=False),
     sa.Column('reasoning', sa.Text(), nullable=False),
+    sa.Column('strengths', sa.Text(), nullable=False),
+    sa.Column('weaknesses', sa.Text(), nullable=False),
     sa.Column('improvement_suggestions', sa.Text(), nullable=False),
     sa.Column('star_situation', sa.Text(), nullable=False),
     sa.Column('star_task', sa.Text(), nullable=False),

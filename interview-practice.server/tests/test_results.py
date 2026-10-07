@@ -57,6 +57,8 @@ def evaluation_reply(**overrides: Any) -> dict[str, Any]:
         "analysis": "notes",
         "verdict": "hire",
         "reasoning": "  You were clear.  ",
+        "strengths": ["You were clear.", " "],
+        "weaknesses": ["No numbers."],
         "improvement_suggestions": ["Add numbers.", " ", "Name the result."],
         "star_situation": "Set the scene.",
         "star_task": "Stated the goal.",
@@ -159,6 +161,8 @@ def test_the_reply_becomes_a_draft_without_the_scratchpad() -> None:
     draft = grade(client)
     assert draft.verdict is Verdict.hire
     assert draft.reasoning == "You were clear."
+    assert draft.strengths == "You were clear."
+    assert draft.weaknesses == "No numbers."
     assert draft.improvement_suggestions == "Add numbers.\nName the result."
     assert draft.star_completeness is StarCompleteness.partial
     assert not hasattr(draft, "analysis")
@@ -181,6 +185,8 @@ def test_suggestions_and_star_texts_are_capped() -> None:
     [
         {"reasoning": "  "},
         {"improvement_suggestions": []},
+        {"strengths": [" "]},
+        {"weaknesses": []},
         {"star_task": ""},
         {"verdict": "maybe"},
         {"star_completeness": "great"},
@@ -235,6 +241,8 @@ def test_the_evaluation_response_groups_the_star_fields() -> None:
     row = Evaluation(
         verdict=Verdict.no_hire,
         reasoning="r",
+        strengths="x",
+        weaknesses="y",
         improvement_suggestions="a\nb",
         star_situation="s",
         star_task="t",
@@ -247,6 +255,8 @@ def test_the_evaluation_response_groups_the_star_fields() -> None:
     assert to_json(EvaluationPublic, row) == {
         "verdict": "no_hire",
         "reasoning": "r",
+        "strengths": "x",
+        "weaknesses": "y",
         "improvementSuggestions": "a\nb",
         "starBreakdown": {
             "situation": "s",

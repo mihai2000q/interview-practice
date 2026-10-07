@@ -9,6 +9,10 @@ question, with the option to end the questions early), `close_questions` (budget
 the candidate and invite their questions), `answer` (ask-back) and `close_interview`. Every
 interviewer message in the Q&A phase counts as one question toward `target_question_count`,
 follow-ups included; the plan has exactly that many questions and is a guide, not a script.
+A follow-up may stay on the same question, to answer what the candidate asked back or to ask
+for clarification of a thin answer; the prompt limits that to two in a row, after which the
+interviewer accepts what it has and moves on. The limit lives in the prompt, not the server,
+so the budget (which clarifications also spend) is what ultimately bounds it.
 When the budget is spent the server forces the wrap-up, and if the model's reply breaks the
 exchange's contract (it asks another question when it had to close, or the reverse) the
 request fails with `502` instead of being patched up. The model replies `{message, done}`;

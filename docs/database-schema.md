@@ -190,6 +190,8 @@ Index: `(interview_id, sequence)` for ordered transcript retrieval.
 | `interview_id` | FK → `interviews.id`, unique, not null | one-to-one |
 | `verdict` | `enum(hire, no_hire)` | |
 | `reasoning` | `text` | |
+| `strengths` | `text` | one strength per line; at least one |
+| `weaknesses` | `text` | same, for weaknesses |
 | `improvement_suggestions` | `text` | |
 | `star_situation` | `text` | short assessment of the Situation, aggregated across the whole interview |
 | `star_task` | `text` | same, for Task |

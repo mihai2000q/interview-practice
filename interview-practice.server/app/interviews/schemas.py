@@ -178,6 +178,8 @@ class EvaluationPublic(ApiModel):
 
     verdict: Verdict
     reasoning: str
+    strengths: str
+    weaknesses: str
     improvement_suggestions: str
     star_breakdown: StarBreakdown
     incomplete: bool
@@ -191,6 +193,8 @@ class EvaluationPublic(ApiModel):
         return {
             "verdict": evaluation.verdict,
             "reasoning": evaluation.reasoning,
+            "strengths": evaluation.strengths,
+            "weaknesses": evaluation.weaknesses,
             "improvement_suggestions": evaluation.improvement_suggestions,
             "incomplete": evaluation.incomplete,
             "star_breakdown": {

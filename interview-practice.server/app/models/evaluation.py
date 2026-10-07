@@ -34,6 +34,8 @@ class Evaluation(Base):
     )
     verdict: Mapped[Verdict] = mapped_column(Enum(Verdict))
     reasoning: Mapped[str] = mapped_column(Text)
+    strengths: Mapped[str] = mapped_column(Text)  # one per line
+    weaknesses: Mapped[str] = mapped_column(Text)  # one per line
     improvement_suggestions: Mapped[str] = mapped_column(Text)
     # STAR breakdown, aggregated across the whole interview
     star_situation: Mapped[str] = mapped_column(Text)

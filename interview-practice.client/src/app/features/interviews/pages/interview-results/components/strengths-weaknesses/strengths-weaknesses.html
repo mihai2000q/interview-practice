@@ -1,0 +1,43 @@
+<div class="grid gap-6 md:grid-cols-2">
+  <section aria-labelledby="strengths-heading" hlmCard>
+    <div hlmCardHeader>
+      <h2 class="text-base" hlmCardTitle id="strengths-heading">Strengths</h2>
+      <p hlmCardDescription>What worked, and is worth repeating.</p>
+    </div>
+    <div hlmCardContent>
+      <ul class="flex flex-col gap-3">
+        @for (item of strengthItems(); track $index) {
+          <li class="flex items-start gap-3 text-sm leading-relaxed">
+            <ng-icon
+              aria-hidden="true"
+              class="mt-0.5 shrink-0 text-success"
+              name="lucideCircleCheck"
+            />
+            <span>{{ item }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="weaknesses-heading" hlmCard>
+    <div hlmCardHeader>
+      <h2 class="text-base" hlmCardTitle id="weaknesses-heading">Weaknesses</h2>
+      <p hlmCardDescription>Where the answers fell short.</p>
+    </div>
+    <div hlmCardContent>
+      <ul class="flex flex-col gap-3">
+        @for (item of weaknessItems(); track $index) {
+          <li class="flex items-start gap-3 text-sm leading-relaxed">
+            <ng-icon
+              aria-hidden="true"
+              class="mt-0.5 shrink-0 text-destructive"
+              name="lucideCircleAlert"
+            />
+            <span>{{ item }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+</div>

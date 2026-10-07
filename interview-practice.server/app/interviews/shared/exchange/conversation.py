@@ -39,12 +39,20 @@ _INSTRUCTIONS = {
         'Set "done" to false.'
     ),
     ExchangeKind.ask: (
-        "React briefly to the candidate's last answer, then ask the next question. "
-        "Ask one question. A follow-up on a vague or shallow answer is fine (at most "
-        "one per planned question); skip planned questions the candidate has already "
-        'answered. Set "done" to false. Only if you already have enough signal to '
-        "judge the candidate, do the following instead: thank them, say that is all "
-        'you wanted to ask, invite them to ask you questions, and set "done" to true.'
+        "React briefly to the candidate's last message, then do one of these. (a) If "
+        "they asked you something while answering (for example what you meant by your "
+        "question), answer it briefly within your knowledge scope and invite them to "
+        "answer, staying on the same question. (b) If their answer is too vague, "
+        "shallow or off-topic to judge, ask for clarification on the same question. "
+        "(c) Otherwise ask the next question. Ask one question; skip planned questions "
+        "the candidate has already answered. Staying on the same question (a or b) is "
+        "allowed at most twice in a row: count your messages since you first asked it. "
+        "After that, accept what the candidate has said, their clarifications "
+        "included, as their answer to it, and move on to the next question; never ask "
+        'for clarification a third time. Set "done" to false. Only if you already '
+        "have enough signal to judge the candidate, do the following instead: thank "
+        "them, say that is all you wanted to ask, invite them to ask you questions, "
+        'and set "done" to true.'
     ),
     ExchangeKind.close_questions: (
         "You have no questions left. Thank the candidate for their answers, say that "

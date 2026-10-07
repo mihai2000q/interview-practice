@@ -31,6 +31,8 @@ from app.models import (
 MAX_REASONING_CHARS = 2_000
 MAX_SUGGESTIONS = 8
 MAX_SUGGESTION_CHARS = 400
+MAX_POINTS = 6
+MAX_POINT_CHARS = 400
 MAX_STAR_CHARS = 600
 
 _SYSTEM_PROMPT = """\
@@ -70,6 +72,11 @@ these keys in this order:
 evidence for and against. Not shown to the candidate.
 - "verdict": "hire" | "no_hire"
 - "reasoning": string, why this verdict
+- "strengths": [string], what the candidate did well, most important first. Each \
+points to something they actually said. At least one, even after a weak interview.
+- "weaknesses": [string], where the candidate fell short, most important first. Each \
+points to something they actually said or left out. At least one, even after a \
+strong interview: name the least developed area.
 - "improvement_suggestions": [string], what to work on, most important first
 - "star_situation", "star_task", "star_action", "star_result": string, one short \
 assessment each
@@ -84,11 +91,13 @@ that the evaluation rests on a partial interview.
 
 _STYLE = {
     ResponseStyle.concise: (
-        "Be concise: reasoning in 2 to 4 sentences, 3 improvement suggestions of one "
-        "sentence each, one sentence per STAR assessment."
+        "Be concise: reasoning in 2 to 4 sentences, 2 to 3 strengths and 2 to 3 "
+        "weaknesses of one sentence each, 3 improvement suggestions of one sentence "
+        "each, one sentence per STAR assessment."
     ),
     ResponseStyle.detailed: (
-        "Be detailed: reasoning of up to 8 sentences, 3 to 6 improvement suggestions "
+        "Be detailed: reasoning of up to 8 sentences, 3 to 5 strengths and 3 to 5 "
+        "weaknesses of one or two sentences each, 3 to 6 improvement suggestions "
         "that each name a concrete example from the transcript and what to do "
         "instead, up to two sentences per STAR assessment."
     ),
@@ -99,6 +108,8 @@ class _Reply(BaseModel):
     analysis: str
     verdict: Verdict
     reasoning: str
+    strengths: list[str]
+    weaknesses: list[str]
     improvement_suggestions: list[str]
     star_situation: str
     star_task: str
@@ -113,6 +124,8 @@ class EvaluationDraft:
 
     verdict: Verdict
     reasoning: str
+    strengths: str  # one strength per line
+    weaknesses: str  # one weakness per line
     improvement_suggestions: str  # one suggestion per line
     star_situation: str
     star_task: str
@@ -135,7 +148,8 @@ _BAR: dict[str, str] = {
     ),
     Difficulty.hard.value: (
         'Difficulty was hard, so the bar is demanding: "hire" needs strong, '
-        "well-reasoned answers across the criteria, including trade-offs and edge cases."
+        "well-reasoned answers across the criteria, including trade-offs and edge "
+        "cases."
     ),
 }
 
@@ -172,6 +186,11 @@ def build_messages(interview: Interview) -> list[ChatMessage]:
     return [ChatMessage("system", system), ChatMessage("user", user)]
 
 
+def _lines(items: list[str], limit: int, max_chars: int) -> list[str]:
+    """The non-blank items, trimmed, capped in length and in number."""
+    return [item.strip()[:max_chars] for item in items if item.strip()][:limit]
+
+
 def evaluate(
     client: OpenRouterClient,
     model: str,
@@ -181,11 +200,11 @@ def evaluate(
     reply = client.chat_structured(_Reply, model, messages, settings)
 
     reasoning = reply.reasoning.strip()[:MAX_REASONING_CHARS]
-    suggestions = [
-        s.strip()[:MAX_SUGGESTION_CHARS]
-        for s in reply.improvement_suggestions
-        if s.strip()
-    ][:MAX_SUGGESTIONS]
+    strengths = _lines(reply.strengths, MAX_POINTS, MAX_POINT_CHARS)
+    weaknesses = _lines(reply.weaknesses, MAX_POINTS, MAX_POINT_CHARS)
+    suggestions = _lines(
+        reply.improvement_suggestions, MAX_SUGGESTIONS, MAX_SUGGESTION_CHARS
+    )
     star = [
         text.strip()[:MAX_STAR_CHARS]
         for text in (
@@ -195,11 +214,13 @@ def evaluate(
             reply.star_result,
         )
     ]
-    if not reasoning or not suggestions or not all(star):
+    if not (reasoning and strengths and weaknesses and suggestions and all(star)):
         raise LlmUpstreamError("The model returned an incomplete evaluation.")
     return EvaluationDraft(
         verdict=reply.verdict,
         reasoning=reasoning,
+        strengths="\n".join(strengths),
+        weaknesses="\n".join(weaknesses),
         improvement_suggestions="\n".join(suggestions),
         star_situation=star[0],
         star_task=star[1],

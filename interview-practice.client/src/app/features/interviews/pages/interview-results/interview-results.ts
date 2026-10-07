@@ -21,6 +21,7 @@ import { InterviewsApi } from '@app/features/interviews/services/interviews-api'
 import { ResultsCache } from '@app/features/interviews/services/results-cache';
 import { ChatTranscript } from '@app/features/interviews/components/chat-transcript/chat-transcript';
 import { PersonaAvatar } from '@app/features/interviews/components/persona-avatar/persona-avatar';
+import { StrengthsWeaknesses } from './components/strengths-weaknesses/strengths-weaknesses';
 import { ImprovementSuggestions } from './components/improvement-suggestions/improvement-suggestions';
 import { InterviewerReviewPanel } from './components/interviewer-review-panel/interviewer-review-panel';
 import { StarBreakdown } from './components/star-breakdown/star-breakdown';
@@ -77,6 +78,7 @@ function problemOf(error: ApiError): Problem {
     HlmSeparatorImports,
     HlmSkeleton,
     ImprovementSuggestions,
+    StrengthsWeaknesses,
     InterviewerReviewPanel,
     NgIcon,
     PersonaAvatar,

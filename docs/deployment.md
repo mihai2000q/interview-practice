@@ -92,10 +92,6 @@ One template, one real file, one exception:
   never needs to be written to disk inside the project, and it isn't a plain env var in
   the container (doesn't show up in `docker inspect`).
 
-`config.py` also has a `SECRET_KEY` placeholder, but it isn't wired to anything yet — not
-a real configuration requirement right now, so it's deliberately not in `.env.dev`/`.env`
-either.
-
 ## Explicitly out of scope here
 
 - CI/CD pipeline, cloud hosting choice — containerizing the app and running it via Compose

@@ -11,6 +11,7 @@ logging, testing, etc.); right now it covers what's been decided through the fir
 pass. See [`workflow.md`](./workflow.md) for the end-to-end flow,
 [`domain-model.md`](./domain-model.md) for the data model,
 [`architecture.md`](./architecture.md) for the technical design,
+[`prompt-engineering.md`](./prompt-engineering.md) for how every prompt is written and why,
 [`database-schema.md`](./database-schema.md) for the concrete schema,
 [`api-design.md`](./api-design.md) for the REST contract between client and server,
 [`deployment.md`](./deployment.md) for how it's containerized and run,
@@ -42,7 +43,9 @@ The assignment requires at least 5 system prompts using different prompting tech
 Rather than building 5 disconnected standalone tools, each prompt corresponds to one
 functional phase of the single interview lifecycle above, each using a genuinely distinct
 technique. Full detail is in
-[`architecture.md`](./architecture.md#the-5-system-prompts--phases):
+[`architecture.md`](./architecture.md#the-5-system-prompts--phases), and how each prompt is
+written (the technique, the rules, the output contract, the settings, how they were
+iterated) is in [`prompt-engineering.md`](./prompt-engineering.md):
 
 1. JD/CV analysis — zero-shot
 2. Question-plan & persona generation — instruction/constraint-based prompting
@@ -99,9 +102,3 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
   levels, format, destination or retention. See `architecture.md`.
 - **No TTS voice/rate tuning and no per-message replay button.** The interviewer's voice uses
   the browser's default voice, once per message as it appears. See `architecture.md`.
-
-## Open items (not yet designed)
-
-- Exact wording/trigger sensitivity of the JobApplication progress summary's narrative
-  (e.g. how much data before it says "doing great as usual" vs staying neutral) — see
-  `architecture.md`'s Progress summary section.

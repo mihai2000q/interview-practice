@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from app.models import InterviewStatus, Verdict
+from app.models import InterviewerRole, InterviewStatus, Verdict
 from app.serialization import ApiModel
 
 
@@ -21,7 +21,7 @@ class RecentInterview(ApiModel):
     id: uuid.UUID
     job_title: str
     company_name: str | None
-    interviewer_role: str
+    interviewer_role: InterviewerRole
     status: InterviewStatus
     verdict: Verdict | None
     ended_at: datetime

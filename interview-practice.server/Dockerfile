@@ -13,6 +13,6 @@ COPY . .
 ENV SERVER_PORT=8001
 EXPOSE ${SERVER_PORT}
 
-# Real WSGI server, not flask run's dev server — see ../docs/deployment.md.
-# Once flask-migrate is added, this becomes `uv run flask db upgrade && uv run gunicorn ...`.
-CMD ["sh", "-c", "exec uv run gunicorn --bind 0.0.0.0:${SERVER_PORT} 'app.app:create_app()'"]
+# Apply pending migrations, then start a real WSGI server (not flask run's dev server) —
+# see ../docs/deployment.md.
+CMD ["sh", "-c", "uv run flask --app app.app db upgrade && exec uv run gunicorn --bind 0.0.0.0:${SERVER_PORT} 'app.app:create_app()'"]

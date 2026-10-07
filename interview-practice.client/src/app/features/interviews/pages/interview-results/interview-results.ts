@@ -10,6 +10,7 @@ import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { ApiError, toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
 import {
@@ -77,6 +78,7 @@ function problemOf(error: ApiError): Problem {
     HlmEmptyImports,
     HlmSeparatorImports,
     HlmSkeleton,
+    HlmTooltipImports,
     ImprovementSuggestions,
     StrengthsWeaknesses,
     InterviewerReviewPanel,
@@ -149,10 +151,10 @@ export class InterviewResults {
   protected readonly statusLabel = computed(() =>
     this.interview()?.status === 'abandoned' ? 'Abandoned' : 'Completed',
   );
-  /** The Interview's settings, as the short chips under the heading. */
+  /** The Interview's settings, as the short chips under the heading (the label is the tooltip). */
   protected readonly facts = computed(() => {
     const interview = this.interview();
-    return interview ? interviewSettings(interview).map((setting) => setting.value) : [];
+    return interview ? interviewSettings(interview) : [];
   });
   protected readonly subtitle = computed(() => {
     const interview = this.interview();

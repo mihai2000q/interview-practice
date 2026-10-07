@@ -28,8 +28,11 @@
     @if (interview()) {
       <div class="-mt-2 flex flex-wrap items-center gap-2">
         <span hlmBadge variant="secondary">{{ statusLabel() }}</span>
-        @for (fact of facts(); track fact) {
-          <span hlmBadge variant="outline">{{ fact }}</span>
+        @for (fact of facts(); track fact.label) {
+          <span [hlmTooltip]="fact.label" hlmBadge position="bottom" variant="outline">
+            <span class="sr-only">{{ fact.label }}:</span>
+            {{ fact.value }}
+          </span>
         }
       </div>
     }

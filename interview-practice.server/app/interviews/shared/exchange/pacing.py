@@ -30,6 +30,12 @@ def questions_asked(interview: Interview) -> int:
     return sum(m.is_question for m in interview.messages)
 
 
+def clarifications_left(kind: ExchangeKind, streak: int) -> int:
+    """How many more times the interviewer may stay on the question in this exchange:
+    only an `ask` exchange can, and only up to `MAX_CLARIFICATIONS` in a row."""
+    return max(0, MAX_CLARIFICATIONS - streak) if kind is ExchangeKind.ask else 0
+
+
 def clarification_streak(interview: Interview) -> int:
     """How many interviewer messages in a row, ending the Q&A so far, stayed on one
     question instead of asking a new one."""

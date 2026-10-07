@@ -14,7 +14,11 @@ from dataclasses import dataclass
 from pydantic import BaseModel
 
 from app.errors.exceptions import LlmUpstreamError
-from app.interviews.shared.exchange.pacing import MAX_CLARIFICATIONS, ExchangeKind
+from app.interviews.shared.exchange.pacing import (
+    MAX_CLARIFICATIONS,
+    ExchangeKind,
+    clarifications_left,
+)
 from app.interviews.shared.guidance import (
     DIFFICULTY_GUIDANCE,
     ROLE_GUIDANCE,
@@ -82,8 +86,8 @@ _ASK_INSTRUCTION = (
 def _instruction(kind: ExchangeKind, clarifications: int) -> str:
     if kind is not ExchangeKind.ask:
         return _INSTRUCTIONS[kind]
-    left = MAX_CLARIFICATIONS - clarifications
-    if left <= 0:
+    left = clarifications_left(kind, clarifications)
+    if left == 0:
         stay = (
             f"You have already stayed on this question {MAX_CLARIFICATIONS} times, so "
             "you may not stay on it again: accept what the candidate has said, their "
@@ -148,7 +152,7 @@ class _Reply(BaseModel):
 class InterviewerReply:
     message: str
     done: bool  # the current phase is over after this message
-    clarification: bool  # stays on the previous question, so is not counted as one
+    is_clarification: bool  # stays on the previous question, so is not counted as one
 
 
 def _plan_lines(interview: Interview) -> str:
@@ -229,12 +233,11 @@ def ask_interviewer(
     # the message counts as a question, so the budget still bounds the interview.
     clarification = (
         reply.clarification
-        and kind is ExchangeKind.ask
         and not reply.done
-        and clarifications < MAX_CLARIFICATIONS
+        and clarifications_left(kind, clarifications) > 0
     )
     return InterviewerReply(
-        message=message, done=reply.done, clarification=clarification
+        message=message, done=reply.done, is_clarification=clarification
     )
 
 

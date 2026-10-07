@@ -20,7 +20,6 @@ from app.llm.openrouter import CompletionSettings
 from app.models import (
     Interview,
     InterviewStatus,
-    Message,
     MessagePhase,
     MessageRole,
 )
@@ -239,10 +238,8 @@ def with_clarifications(count: int, *, target: int = 3) -> Interview:
     messages = [(INTERVIEWER, QA)]
     for _ in range(count):
         messages += [(CANDIDATE, QA), (INTERVIEWER, QA)]
-    interview = build_interview(target=target, messages=messages)
-    for message in interview.messages[1:]:
-        message.is_clarification = message.role is INTERVIEWER
-    return interview
+    flagged = {number for number in range(3, len(messages) + 1, 2)}
+    return build_interview(target=target, messages=messages, clarifications=flagged)
 
 
 def test_clarifications_are_not_counted_as_questions() -> None:
@@ -261,16 +258,9 @@ def test_the_streak_counts_the_clarifications_ending_the_transcript(
 
 
 def test_a_new_question_ends_the_streak() -> None:
-    interview = with_clarifications(2)
-    interview.messages.append(
-        Message(
-            role=CANDIDATE, phase=QA, content="a", sequence=6, is_clarification=False
-        )
-    )
-    interview.messages.append(
-        Message(
-            role=INTERVIEWER, phase=QA, content="q", sequence=7, is_clarification=False
-        )
+    interview = build_interview(
+        messages=[(INTERVIEWER, QA), (CANDIDATE, QA), (INTERVIEWER, QA)] * 2,
+        clarifications={3},
     )
     assert clarification_streak(interview) == 0
 

@@ -58,7 +58,6 @@ class ExchangeOutcome:
             candidate = Message(
                 role=MessageRole.candidate,
                 phase=self.candidate_phase,
-                is_clarification=False,
                 content=self.candidate_content,
                 sequence=count,
             )
@@ -110,7 +109,7 @@ def run_exchange(
         candidate_phase=interview.phase,
         interviewer_content=result.message,
         interviewer_phase=phase_after(kind, result),
-        interviewer_is_clarification=result.clarification,
+        interviewer_is_clarification=result.is_clarification,
         completes_interview=(
             kind in (ExchangeKind.answer, ExchangeKind.close_interview) and result.done
         ),

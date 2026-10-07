@@ -21,8 +21,14 @@ invoked from — relying on the directory-name default would break that grouping
   CORS in this deployment shape entirely (local dev outside Docker still needs
   `flask-cors`, already a dependency, for the separate `ng serve`/`flask run` origins).
 - **`server`** — Flask, Python 3.12, deps via `uv`. Run through a real WSGI server
-  (gunicorn), not `flask run`'s dev server.
-- **`db`** — official `postgres` image.
+  (gunicorn), not `flask run`'s dev server. On every start the container first runs
+  `flask db upgrade`, then gunicorn, so a fresh `docker compose up` builds the schema by
+  itself and a redeploy picks up new migrations. This is safe to repeat (an up-to-date
+  database is left alone — see `database-schema.md`, Migrations). If the upgrade fails the
+  container exits without serving, rather than running against a wrong schema. It waits
+  for `db` to be *healthy* (Compose `depends_on: condition: service_healthy`), not merely
+  started, because Postgres takes a few seconds to accept connections on a first boot.
+- **`db`** — official `postgres` image, with a `pg_isready` healthcheck.
 
 ## Volumes
 
@@ -68,6 +74,10 @@ One template, one real file, one exception:
   - **`OPENROUTER_BASE_URL`**: defaults to the real `https://openrouter.ai/api/v1`;
     override only to point the backend at another OpenRouter-compatible endpoint. The
     backend's OpenRouter client reads it from config rather than hardcoding the URL.
+  - **`LLM_TIMEOUT_SECONDS`**: how long the backend waits for one OpenRouter chat call
+    before giving up, in seconds (default 60). A call that runs out of time comes back to the
+    client as `504 LLM_TIMEOUT`. Persona portrait generation is not governed by it: that call
+    has its own fixed, longer limit (120 seconds).
   - **`PORTRAIT_GENERATION_ENABLED`**: defaults to `true`. Set it to `false` (also `0`, `no`,
     `off`) to skip the persona portrait, which is slow and billed: `PUT
     /api/interviews/:id/persona-image` then returns `personaImageUrl: null` without calling

@@ -9,7 +9,7 @@ shape, not the entities themselves. See [`architecture.md`](./architecture.md) f
 ## Backend structure
 
 Flask **application factory** (`create_app()`) with one **Blueprint** per domain area:
-`interviews`, `documents`, `applications`, `preferences`. Each blueprint owns its own
+`interviews`, `documents`, `applications`, `preferences`, `dashboard`. Each blueprint owns its own
 Pydantic request/response models, colocated with its routes (e.g.
 `app/interviews/schemas.py`). No blueprint per Evaluation/InterviewerReview/Message — those
 are sub-resources of `interviews`, not independent areas.
@@ -45,6 +45,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 | 503 | The provider can't serve us right now (rate limit, credits, key); `details.retryAfterSeconds` when known | `LLM_UNAVAILABLE` |
 | 504 | The provider took too long | `LLM_TIMEOUT` |
 | 500 | Unexpected server error | `INTERNAL_ERROR` (no internals leaked in `message`) |
+| 405, 415, other | Errors Flask itself raises before a route runs, returned in the same shape: a wrong HTTP method on a route (`405`), a body of an unsupported type (`415`), and any other HTTP error | `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `HTTP_ERROR` |
 
 ## `interviews` blueprint — `/api/interviews`
 
@@ -148,7 +149,8 @@ The client groups the entries under their Application with `GET /api/application
 
 Fetch an Interview plus its `Message`s (ordered by `sequence`), for rendering the session
 or resuming one already in progress. Response `200`: the Interview fields (as in the create
-response, plus `endedAt`), `phase` (`"qa"` | `"ask_back"`, the phase of the last message)
+response, plus `endedAt` and `lastActivityAt`, the time of the latest message, which the
+30-minute staleness check below runs on), `phase` (`"qa"` | `"ask_back"`, the phase of the last message)
 and `messages: [{id, phase, role, content, helperText, isClarification, sequence, createdAt}]`. An
 `in_progress` Interview with no activity for 30 minutes is flipped to `abandoned` as it is
 read ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). `404` for
@@ -174,7 +176,11 @@ stored in the same call, the current `phase`
 turn works: the server counts the interviewer's questions against `target_question_count`
 and forces the wrap-up when the budget is spent; the interviewer message that ends the Q&A
 phase is the first `ask_back` message (it invites the candidate's questions); the Interview
-becomes `completed` when the interviewer closes the ask-back phase. A turn is
+becomes `completed` when the interviewer closes the ask-back phase, or earlier, with no
+ask-back phase at all, when the interviewer ends it for a rude or abusive candidate (after a
+warning; see ADR 0013). There is no field or status for that: the response is an ordinary
+`completed` Interview whose last message is a Q&A one, and the client derives "ended by the
+interviewer" from there being no `ask_back` message. A turn is
 all-or-nothing: if the model fails, nothing is stored and the candidate can send the reply
 again. `409 INTERVIEW_ALREADY_ENDED` if the Interview is no longer `in_progress`, and
 `409 TURN_IN_PROGRESS` if the previous reply is still being answered (the client should wait

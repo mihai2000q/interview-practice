@@ -87,7 +87,7 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `interview_type` | `text` | technical / behavioral (the API's `InterviewType`); plain text, same extensibility reasoning as `tone` |
 | `interviewer_role` | `text` | recruiter / technical_screener / hr / hiring_manager (the API's `InterviewerRole`); plain text, same extensibility reasoning as `tone` |
 | `target_question_count` | `integer` | soft cap, seeded by difficulty; 1–30 (`CHECK`) |
-| `status` | `enum(in_progress, completed, abandoned)` | |
+| `status` | `enum(in_progress, completed, abandoned)` | an Interview the interviewer ended early (a rude or abusive candidate) is `completed` with no `ask_back` message; no column or status marks it, it is derived — see domain-model.md |
 | `turn_started_at` | `timestamptz`, nullable | set while a Q&A turn is being processed so a second reply is refused (`409 TURN_IN_PROGRESS`); cleared when the turn commits or fails; ignored once older than 5 minutes — see ADR 0013 |
 | `last_activity_at` | `timestamptz` | updated on every new message; staleness timeout 30 minutes — lazily detects a stale/ungracefully-closed session and marks it `abandoned` — see domain-model.md |
 | `persona_name` | `text` | |
@@ -299,7 +299,10 @@ Postgres must be running and reachable at `POSTGRES_HOST:POSTGRES_PORT` — loca
 
 - **Never edit a migration that has been committed or shared.** Write a new one. A
   migration that exists only on your machine can be undone with `downgrade`, deleted, and
-  regenerated after fixing the model.
+  regenerated after fixing the model. (The one `initial` migration was reworked several
+  times while the schema was still being shaped and no database outside a developer's own
+  machine existed; that was the exception for the initial project. From now on, schema
+  changes are new migrations.)
 - **Re-running is safe.** `upgrade` applies only what is missing — Alembic records the
   current revision in the `alembic_version` table — so running it on an up-to-date
   database does nothing.
@@ -308,5 +311,6 @@ Postgres must be running and reachable at `POSTGRES_HOST:POSTGRES_PORT` — loca
 - **Starting over locally:** `docker compose down -v` deletes the `db-data` volume (and the
   uploads volume with it), then `docker compose up -d db` and `scripts/db.sh upgrade`
   rebuild an empty database.
-- Migrations only run when you run them — nothing migrates on app start, and the app
-  factory (`create_app()`) never touches the schema.
+- Outside Docker, migrations only run when you run them (`scripts/db.sh upgrade`); the app
+  factory (`create_app()`) never touches the schema. The `server` container is the one
+  exception: it runs `flask db upgrade` before starting gunicorn (see `deployment.md`).

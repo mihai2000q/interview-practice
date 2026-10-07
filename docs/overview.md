@@ -67,6 +67,15 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
   `JobApplication` and `Interview`, endpoints to set it, and a decision about where else the
   name shows (Home, Results).
 
+- **No one-click "add stage" on an application in the sidebar.** The sidebar offers
+  "+ New Interview", and the application groups only open the Application Overview page or
+  delete. Adding the next stage of an existing application is done inside Create Interview,
+  by choosing "Next stage of an existing application" in its Application card (which then
+  pre-fills and locks the company, title, seniority and documents). Starting that form
+  already pointed at a given application (from the sidebar group or the Application Overview
+  page) would need the application to be passed to Create Interview, for example in the URL,
+  and was left out for now.
+
 - **Prototype scope, no authentication.** No login, no per-user isolation, no access
   control — see [ADR 0002](./adr/0002-single-user-prototype-no-auth.md).
 - **Job description context is not RAG** — plain-text injection, no vector database or
@@ -77,19 +86,26 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
   (closing the tab, navigating away) leaves an unreferenced Document
   (row, extracted text, file on disk) that nothing deletes — see
   [ADR 0011](./adr/0011-documents-are-uploaded-before-the-interview-is-created.md). A
-  production deployment would need a scheduled cleanup job for this (and, with object
+  deployment in the cloud would need a scheduled cleanup job for this (and, with object
   storage instead of local disk, a bucket lifecycle rule such as S3's for the file side).
+  Not needed for this app as it runs today (a single host, local disk).
+- **Partial test coverage.** The server has automated tests for its critical parts (the
+  security guard, the OpenRouter client, pacing, planning, the lifecycle and staleness,
+  results, phase settings and preferences, concurrency, the application progress summary),
+  but not for everything (document upload and parsing and the HTTP routes are untested), and
+  the client has none, deliberately.
+- **No logging strategy.** There is some logging (the OpenRouter client, the security guard,
+  the error handlers, the live conversation, and a per-step timing log), but no decided
+  levels, format, destination or retention. See `architecture.md`.
+- **No TTS voice/rate tuning and no per-message replay button.** The interviewer's voice uses
+  the browser's default voice, once per message as it appears. See `architecture.md`.
 
 ## Open items (not yet designed)
 
-- Exact grouped-history visual treatment for `JobApplication`s (collapsible groups vs. a
-  simple label prefix).
-- Exact visual layout of the interviewer sidebar's now-finalized content list (portrait,
-  name/title, tone badge, company name, question progress, Abandon), and of the main-page
-  phase indicator label.
-- **Nice to have: per-prompt cost tracking** (export-only, see `architecture.md`) —
-  design-resolved, not built yet. (The interviewer's voice and dictated replies are built;
-  see `architecture.md`.)
+- **Nice to have: per-prompt cost tracking** — design-resolved only in outline, not built.
+  The token counts OpenRouter returns are read but not stored, and there is no price lookup
+  or report yet. (The interviewer's voice and dictated replies are built; see
+  `architecture.md`.)
 - Exact wording/trigger sensitivity of the JobApplication progress summary's narrative
   (e.g. how much data before it says "doing great as usual" vs staying neutral) — see
   `architecture.md`'s Progress summary section.

@@ -163,7 +163,13 @@ One mock interview session, from creation through evaluation.
   server, so a typo can't produce an hours-long interview
 - `status`: `in_progress` | `completed` | `abandoned` — `abandoned` either when the
   candidate explicitly quits mid-session, or when the session goes stale (see
-  `last_activity_at` below); evaluation still runs in both cases but is flagged incomplete
+  `last_activity_at` below); evaluation still runs in both cases but is flagged incomplete.
+  A third way for an Interview to stop early has **no status of its own**: the interviewer
+  ending it for a rude or abusive candidate (after a warning, see ADR 0013). That Interview
+  is `completed` but never reached the ask-back phase, so it has no `ask_back` Message;
+  "ended by the interviewer" is derived from exactly that (`Interview.ended_by_interviewer`
+  on the server) rather than stored, and the evaluation and the interviewer review are told
+  about it so the unasked questions aren't penalized
 - `turn_started_at`: nullable timestamptz — set while a turn is being processed so a second reply is refused with `TURN_IN_PROGRESS`, cleared when the turn ends, and treated as expired after 5 minutes if its request died (see ADR 0013). An Interview with a live marker is never marked stale
 - `last_activity_at`: timestamptz, updated on every new `Message`. Staleness timeout: **30
   minutes** — long enough that a candidate thinking mid-answer isn't falsely flagged, short

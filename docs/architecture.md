@@ -24,7 +24,7 @@ reasoning behind decisions only gestured at here.
   actually apply at all.
 - **Backend**: `interview-practice.server` — Flask, managed with `uv`, structured as an
   **application factory** (`create_app()`) with **Blueprints** per domain area
-  (`interviews`, `documents`, `applications`, `preferences` — see `api-design.md`). Owns
+  (`interviews`, `documents`, `applications`, `preferences`, `dashboard` — see `api-design.md`). Owns
   every OpenRouter call and the security guard. The OpenRouter API key and all prompt
   construction stay server-side — the client never sees a system prompt or an API key. A
   **Pydantic v2** validation layer sits between the API routes and the app's internals —
@@ -42,10 +42,19 @@ reasoning behind decisions only gestured at here.
   is single-host Docker Compose, not multi-instance (see `deployment.md`), as long as that
   folder is a persisted volume.
 - **Deployment**: Docker Compose, single-host — see `deployment.md`.
-- **Logging/observability**: not designed yet — genuinely absent, not an oversight being
-  hidden. Revisit before this goes anywhere beyond a local prototype.
-- **Testing**: no testing strategy designed yet either side (client or server); explicitly
-  deferred, not part of this documentation pass.
+- **Logging/observability**: some logging exists on the server, but there is **no logging
+  strategy** yet (levels, format, destination, retention are undecided), and no
+  observability beyond that. What exists: the OpenRouter client, the security guard (the
+  category of a rejection goes to the log, never to the client), the error handlers (an
+  unexpected 500 is logged with its traceback), the live conversation (for example a model
+  that tried to end an interview without a warning), and a per-step timing log under the
+  `app.timing` logger (`app/llm/timing.py`). Not a hidden gap: decide the strategy before
+  this goes anywhere beyond a local prototype.
+- **Testing**: the server has automated tests for its critical parts (security guard,
+  OpenRouter client, pacing, planning, lifecycle and staleness, results, phase settings,
+  preferences, concurrency, the progress summary), DB-free and against a fake LLM transport;
+  coverage is partial, not complete. The client has no tests, deliberately. See the Testing
+  Decisions in `spec.md`.
 
 ## Routes
 
@@ -75,9 +84,10 @@ navigation:
   owns for the reason given there.
 - **History sidebar** (left) — built with Spartan's `sidebar`: a panel beside the page on wide
   screens and a drawer on narrow ones, shown and hidden by a trigger at the left of the topbar
-  (only on the pages that have the sidebar). Visible only on Home and Results, hidden on Create Interview
-  and Interview Session (keeps those flows free of distraction and of the temptation to
-  jump into an unrelated past result mid-task). Anchored to the top: a **"+ New Interview"**
+  (only on the pages that have the sidebar). Visible on Home, Results, Preferences and the
+  Application Overview, hidden on Create Interview and Interview Session (keeps those
+  flows free of distraction and of the temptation to jump into an unrelated past result
+  mid-task). A route opts in with `data: showsHistory()`. Anchored to the top: a **"+ New Interview"**
   CTA, and below it a **Preferences** link (icon *and* text, not either/or) to the
   **Preferences page** (`/preferences`). The history list fills the rest, below both.
   Putting the Preferences link here rather than in the topbar means its availability just
@@ -87,8 +97,8 @@ navigation:
     (e.g. "Acme Corp — Senior Software Engineer" as a group header, showing each pipeline
     stage's status at a glance — done/in progress/not started), falling back to a flat,
     ungrouped entry for standalone Interviews with no Application. Each Interview entry
-    still opens straight into its own Results page. Exact grouped-list visual treatment
-    (collapsible groups vs. a simple label prefix) is an open item — see `overview.md`.
+    still opens straight into its own Results page. Groups are collapsible, and each stage
+    shows an outcome icon, its interviewer role and its date.
   - The group header itself is clickable, opening `/applications/:id` (the Application
     Overview page — see the Progress summary section below). Its context menu has two ways
     in: a kebab/menu icon that only reveals on hover (not always-visible, but always visible
@@ -188,8 +198,11 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    `target_question_count`). Technique: **role/persona prompting**. `Interview.response_style`
    (concise/detailed) shapes how elaborate the interviewer's phrasing is. The model gets
    the persona (name, title, backstory), the role, tone, the question plan and the
-   transcript, and returns `{message, done}`; the server decides what kind of turn it is
-   (open, ask, wrap up, answer, close) and enforces the budget — see
+   transcript, and returns `{message, done, end_interview}`; the server decides what kind of
+   turn it is (open, ask, wrap up, answer, close) and enforces the budget. `end_interview`
+   is how it ends the whole interview, with no ask-back phase, on a rude or abusive
+   candidate: it is honored only after the interviewer has first warned the candidate
+   (inside a clarification), and ignored (and logged) otherwise — see
    [ADR 0013](./adr/0013-live-conversation-is-server-paced-and-atomic-per-exchange.md). The
    evaluation criteria are deliberately not shown to it. The model comes from the
    Interview's `live_conversation` setting.
@@ -377,15 +390,16 @@ regenerated together; the score isn't derived separately from the narrative or v
   `database-schema.md`) rather than a separate entity, since it's a single regenerated pair
   of fields, not a history of past summaries.
 
-## Per-prompt cost tracking (nice to have)
+## Per-prompt cost tracking (nice to have, not built)
 
 Compute and report the cost of each OpenRouter call (input/output tokens × that model's
 price, from OpenRouter's models/pricing endpoint), satisfying the assignment's "calculate
-and provide the price of the prompt" optional task. Aggregate per Interview and export as an
-Excel report — reusing the same reporting format the assignment suggests for jailbreak-test
-results, so both nice-to-haves can share one export mechanism. **Export-only** for v1 — a
-live running-cost display is real UI work that isn't core to the candidate experience, and
-the Excel export alone satisfies the assignment's optional task.
+and provide the price of the prompt" optional task, aggregated per Interview. There is **no
+Excel export** (dropped) and how the figure would be shown is undecided; a live
+running-cost display is real UI work that isn't core to the candidate experience.
+
+State today: the OpenRouter client already reads the `prompt_tokens` and `completion_tokens`
+of every response, but nothing stores or uses them, and there is no price lookup.
 
 ## Security guard
 
@@ -557,7 +571,9 @@ Interview Session
   Q&A phase:
     loop: interviewer prompt → candidate reply (guard-checked) → ...
     ends when: target_question_count reached, OR interviewer judges enough signal,
-               OR candidate quits explicitly (→ status = abandoned, skip to Evaluation)
+               OR candidate quits explicitly (→ status = abandoned, skip to Evaluation),
+               OR interviewer ends it for a rude/abusive candidate, after a warning
+               (→ status = completed with no ask-back phase, skip to Evaluation)
   Ask-back phase (always offered, declinable):
     optional: candidate-question-suggestions prompt
     candidate asks 0+ questions (guard-checked) or declines
@@ -568,7 +584,7 @@ Interview Session
 [No graceful exit: Alt+F4 / process kill / crash / power loss — see ADR 0006]
   → status is left at in_progress, last_activity_at stops advancing
   → next time this Interview is read (history list, reopening it) and
-    last_activity_at is older than the staleness timeout (TBD):
+    last_activity_at is older than the staleness timeout (30 minutes):
     → status = abandoned, ended_at = last_activity_at, then the same Evaluation request
     (same path as an explicit quit, just detected lazily instead of live)
 

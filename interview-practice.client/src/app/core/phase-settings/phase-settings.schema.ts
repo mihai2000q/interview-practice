@@ -34,6 +34,10 @@ export const PHASE_HINTS: Partial<Record<Phase, string>> = {
   coachingHelpers: 'Covers both the coaching hints and the ask-back suggestions.',
 };
 
+/** Shown beside every temperature control: not every model honors it. */
+export const TEMPERATURE_HINT =
+  'Some models are not affected by changes to this setting (e.g. gpt-5-mini, gpt-5-nano).';
+
 export function isSubStep(phase: Phase): boolean {
   return PHASE_STEPS[phase].includes('.');
 }

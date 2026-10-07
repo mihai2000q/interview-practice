@@ -45,7 +45,22 @@ export function isModelTaken(phase: Phase, model: string, models: JudgeRuleModel
   return isInterviewerPhase(phase) && model === models.judge;
 }
 
-/** Who holds the models `isModelTaken` rules out for `phase`, shown next to them. */
-export function takenNote(phase: Phase): string {
-  return phase === 'interviewerReview' ? 'used by the interviewer' : 'used by the judge';
+/** What each interviewer phase is called in the note, as the page names the phase. */
+const HOLDER_NAMES: Record<InterviewerPhase, string> = {
+  questionPlan: 'the planner',
+  liveConversation: 'the interviewer',
+};
+
+/**
+ * Who holds `model`, which `isModelTaken` rules out for `phase`, shown next to it: for the
+ * judge, the interviewer phases running on it (the planner, the interviewer, or both).
+ */
+export function takenNote(phase: Phase, model: string, models: JudgeRuleModels): string {
+  if (phase !== 'interviewerReview') {
+    return 'used by the judge';
+  }
+  const holders = models.interviewers
+    .filter((interviewer) => interviewer.model === model)
+    .map(({ phase: holder }) => HOLDER_NAMES[holder]);
+  return `used by ${new Intl.ListFormat('en').format(holders)}`;
 }

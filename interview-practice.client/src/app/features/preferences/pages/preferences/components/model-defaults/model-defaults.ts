@@ -37,6 +37,7 @@ import {
   PHASE_STEPS,
   PHASES,
   REASONING_EFFORTS,
+  TEMPERATURE_HINT,
   TEMPERATURE_RANGE,
 } from '@app/core/phase-settings/phase-settings.schema';
 import {
@@ -102,6 +103,7 @@ export class ModelDefaults {
   protected readonly phaseLabels = PHASE_LABELS;
   protected readonly phaseSteps = PHASE_STEPS;
   protected readonly phaseHints = PHASE_HINTS;
+  protected readonly temperatureHint = TEMPERATURE_HINT;
   protected readonly isSubStep = isSubStep;
   protected readonly reasoningEfforts = REASONING_EFFORTS;
   protected readonly defaultTemperature = DEFAULT_TEMPERATURE;
@@ -125,8 +127,6 @@ export class ModelDefaults {
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
 
-  protected readonly takenNote = takenNote;
-
   protected modelsFor(phase: Phase): readonly string[] {
     return phase === 'interviewerReview' ? JUDGE_MODELS : INTERVIEW_MODELS;
   }
@@ -135,6 +135,12 @@ export class ModelDefaults {
   protected isTaken(phase: Phase, model: string): boolean {
     const draft = this.draft();
     return !!draft && isModelTaken(phase, model, judgeRuleModels(draft));
+  }
+
+  /** Who holds a model `isTaken` rules out, shown next to it. */
+  protected takenBy(phase: Phase, model: string): string {
+    const draft = this.draft();
+    return draft ? takenNote(phase, model, judgeRuleModels(draft)) : '';
   }
 
   /**

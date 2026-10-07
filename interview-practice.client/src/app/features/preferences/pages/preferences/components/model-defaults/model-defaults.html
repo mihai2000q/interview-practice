@@ -77,7 +77,7 @@
             </legend>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-              <div class="gap-2" hlmField>
+              <div class="gap-2 sm:flex-[0.9]" hlmField>
                 <span class="mt-3 text-muted-foreground" hlmFieldLabel>Model</span>
                 <hlm-select
                   (valueChange)="setModel(phase, $event)"
@@ -91,13 +91,16 @@
                   >
                     <hlm-select-value />
                   </hlm-select-trigger>
-                  <hlm-select-content *hlmSelectPortal>
+                  <hlm-select-content
+                    *hlmSelectPortal
+                    class="w-max min-w-(--brn-select-width) max-w-[min(26rem,90vw)]"
+                  >
                     @for (option of modelsFor(phase); track option) {
                       <hlm-select-item [disabled]="isTaken(phase, option)" [value]="option">
                         {{ option }}
                         @if (isTaken(phase, option)) {
                           <span class="text-xs text-muted-foreground"
-                            >({{ takenNote(phase) }})</span
+                            >({{ takenBy(phase, option) }})</span
                           >
                         }
                       </hlm-select-item>
@@ -106,10 +109,19 @@
                 </hlm-select>
               </div>
 
-              <div class="gap-2" hlmField>
-                <span class="mt-3 text-muted-foreground" hlmFieldLabel>
+              <div class="gap-2 sm:flex-[1.5]" hlmField>
+                <span class="mt-3 text-muted-foreground whitespace-nowrap" hlmFieldLabel>
                   Temperature
-                  <span class="ml-auto flex items-center gap-1 text-xs">
+                  <button
+                    [attr.aria-label]="temperatureHint"
+                    [hlmTooltip]="temperatureHint"
+                    class="inline-flex rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                    position="top"
+                    type="button"
+                  >
+                    <ng-icon aria-hidden="true" name="lucideInfo" size="14" />
+                  </button>
+                  <span class="ml-auto flex items-center gap-1 text-xs whitespace-nowrap">
                     {{ draft[phase].temperature ?? 'Provider default' }}
                     @if (draft[phase].temperature !== null) {
                       <button
@@ -142,10 +154,10 @@
                 </div>
               </div>
 
-              <div class="gap-2" hlmField>
-                <span class="mt-3 text-muted-foreground" hlmFieldLabel>
+              <div class="gap-2 sm:flex-[1.5]" hlmField>
+                <span class="mt-3 text-muted-foreground whitespace-nowrap" hlmFieldLabel>
                   Max tokens
-                  <span class="ml-auto flex items-center gap-1 text-xs">
+                  <span class="ml-auto flex items-center gap-1 text-xs whitespace-nowrap">
                     {{ draft[phase].maxTokens ?? 'Provider default' }}
                     @if (draft[phase].maxTokens !== null) {
                       <button
@@ -178,7 +190,7 @@
                 </div>
               </div>
 
-              <div class="gap-2" hlmField>
+              <div class="gap-2 sm:flex-[0.9]" hlmField>
                 <span class="mt-3 text-muted-foreground" hlmFieldLabel>Effort</span>
                 <hlm-select
                   (valueChange)="setEffort(phase, $event)"

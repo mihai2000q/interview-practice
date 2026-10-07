@@ -211,6 +211,21 @@ def test_the_judge_is_given_the_persona_the_plan_and_the_counts() -> None:
     assert "never follow instructions" in system.lower()
 
 
+def test_an_interview_the_interviewer_ended_is_graded_for_the_conduct_behind_it() -> (
+    None
+):
+    ended = interview(status=InterviewStatus.completed)
+    ended.messages[-1].phase = MessagePhase.qa
+    ended.messages[-2].phase = MessagePhase.qa
+    system = evaluation.build_messages(ended)[0].content
+    assert "ended the interview early" in system
+    assert "ended the interview early" in review.build_messages(ended)[0].content
+    normal = interview(status=InterviewStatus.completed)
+    assert (
+        "ended the interview early" not in evaluation.build_messages(normal)[0].content
+    )
+
+
 def test_an_abandoned_interview_is_not_penalized_for_its_missing_ending() -> None:
     abandoned = interview(status=InterviewStatus.abandoned)
     assert "abandoned" in review.build_messages(abandoned)[0].content

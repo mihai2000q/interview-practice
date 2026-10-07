@@ -59,6 +59,12 @@ _PARTIAL_NOTE = (
     "penalize pacing for the missing ending."
 )
 
+_ENDED_EARLY_NOTE = (
+    "The interviewer ended the interview early because of the candidate's conduct, "
+    "so do not penalize pacing for the missing questions and ask-back; judge whether "
+    "ending was warranted and came after a warning."
+)
+
 Score = Annotated[int, Field(ge=1, le=5)]
 
 
@@ -120,7 +126,11 @@ def _plan_block(interview: Interview) -> str:
 def build_messages(interview: Interview) -> list[ChatMessage]:
     system = _SYSTEM_PROMPT.format(
         pacing_note=(
-            _PARTIAL_NOTE if interview.status is InterviewStatus.abandoned else ""
+            _PARTIAL_NOTE
+            if interview.status is InterviewStatus.abandoned
+            else _ENDED_EARLY_NOTE
+            if interview.ended_by_interviewer
+            else ""
         )
     )
     user = "\n\n".join(

@@ -31,6 +31,15 @@ model and no database), the prompt and reply contract, and the final step of add
 `send_message` (every later reply) both go through it and keep only what concerns their
 request: loading, the claim, the lock and the commit.
 
+**Ending early.** For a rude or abusive candidate the interviewer first warns, inside a
+clarification, that it will have to end the interview if it continues. Only after such a
+warning (the previous interviewer message was a clarification) may an `ask` exchange come back
+with `end_interview: true`; without one the flag is ignored. The goodbye is stored as a Q&A
+message that is not a question, the Interview becomes `completed` with no ask-back phase, and
+no new status exists: an Interview `completed` without any `ask_back` message was ended by the
+interviewer (`Interview.ended_by_interviewer`). The evaluation and the review are told, so
+the missing questions aren't penalized and the conduct behind it weighs in the verdict.
+
 The ask-back phase ends when the interviewer closes it (`done`, which the model sets when the
 candidate declines or has no more questions) or after 5 candidate questions, whichever comes
 first. The fifth question is still answered: the interviewer's reply answers it and closes

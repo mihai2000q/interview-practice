@@ -31,13 +31,15 @@ from app.llm.concurrency import fan_out
 from app.llm.openrouter import CompletionSettings, OpenRouterClient
 from app.services.document_analysis import JobContext
 
-# For Interviews with no analyzed domain when the model gives none either.
+# For when the persona call gives no domain.
 FALLBACK_DOMAIN = "general"
 
 
 @dataclass(frozen=True)
 class InterviewPlan:
-    domain: str  # the analyzed one, else the model's, else a placeholder
+    domain: (
+        str  # the persona call's (the documents' hint if it fits), else a placeholder
+    )
     company_name: str | None  # the candidate's, else the documents'
     persona_name: str
     persona_title: str
@@ -54,7 +56,8 @@ def plan_interview(
     context: JobContext,
     previous_questions: Sequence[str] = (),
 ) -> InterviewPlan:
-    """Run phase 2. The domain is asked of the model only when the context has none.
+    """Run phase 2. The domain is the persona call's: it checks the documents' hint
+    against the job title and company and ignores it when it doesn't fit.
 
     `previous_questions` are those of the finished stages of the same Application, which
     the new question plan must not repeat.
@@ -77,7 +80,7 @@ def plan_interview(
     questions = cast(list[QuestionDraft], results[1])
     criteria = cast(list[CriterionDraft], results[2])
     return InterviewPlan(
-        domain=context.domain or persona.domain or FALLBACK_DOMAIN,
+        domain=persona.domain or FALLBACK_DOMAIN,
         company_name=company_of(request, context),
         persona_name=persona.name,
         persona_title=persona.title,

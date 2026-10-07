@@ -144,7 +144,7 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    every later Interview that uses the Document, unless that Interview's `jd_analysis`
    model differs, in which case it is re-run and overwritten — see
    [ADR 0012](./adr/0012-document-analysis-cached-per-document-and-model.md). The
-   Interview's `domain` comes from the job description's (else the CV's) analysis.
+   Interview's `domain` is proposed by the job description's analysis, else the cover letter's, else the CV's, but phase 2 checks the proposal against the job title and company and ignores it when it makes no sense (a software CV for a barista job); the cover letter's analysis therefore also holds a `domain`.
    Technique: **zero-shot** extraction with a structured JSON output contract. Plain context-injection, not RAG —
    see [ADR 0004](./adr/0004-job-description-context-is-not-rag.md).
 2. **Question-plan & persona generation** — produces the interviewer persona (name, job

@@ -44,7 +44,10 @@ evasive candidate; the interviewer asks {target} in total). Each question has a 
 category, "technical" or "behavioral". {skew} Difficulty is {difficulty}. Calibrate \
 depth to the seniority. The interviewer's role: {role} Ground technical questions \
 in the skills and topics given; never invent facts about the candidate, and only \
-probe experience that the candidate analysis lists. Every question must be one \
+probe experience that the candidate analysis lists. Stick to the position (job_title) \
+and the company in the setup: the candidate analysis shows what they have done, so \
+use it only where it bears on this position, ignore experience from another field, \
+and never invent a mixed or different position. Every question must be one \
 that interviewer would realistically ask given their position: a recruiter or HR \
 interviewer asks about background, motivation, how the candidate works with a team, \
 salary and logistics, never low-level technical details. This overrides the \

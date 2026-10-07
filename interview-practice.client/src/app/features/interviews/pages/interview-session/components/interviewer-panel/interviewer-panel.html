@@ -45,7 +45,7 @@
         }
       } @else {
         <span class="self-center -mt-1.5 -mb-2.5" hlmBadge variant="secondary">
-          {{ interview().status === 'completed' ? 'Completed' : 'Abandoned' }}
+          {{ statusLabel() }}
         </span>
       }
     </div>

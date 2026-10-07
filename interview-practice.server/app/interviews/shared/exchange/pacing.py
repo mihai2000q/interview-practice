@@ -36,6 +36,13 @@ def clarifications_left(kind: ExchangeKind, streak: int) -> int:
     return max(0, MAX_CLARIFICATIONS - streak) if kind is ExchangeKind.ask else 0
 
 
+def may_end_interview(kind: ExchangeKind, streak: int) -> bool:
+    """Whether the interviewer may end the interview on the spot (an abusive candidate,
+    no ask-back): only in an `ask` exchange, and only after it stayed on the question
+    at least once, which is where the warning is given."""
+    return kind is ExchangeKind.ask and streak >= 1
+
+
 def clarification_streak(interview: Interview) -> int:
     """How many interviewer messages in a row, ending the Q&A so far, stayed on one
     question instead of asking a new one."""

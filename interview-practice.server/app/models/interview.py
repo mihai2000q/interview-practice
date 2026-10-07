@@ -190,6 +190,14 @@ class Interview(Base):
         return self.messages[-1].phase if self.messages else MessagePhase.qa
 
     @property
+    def ended_by_interviewer(self) -> bool:
+        """Completed without ever reaching the ask-back phase: the interviewer ended it
+        early (an abusive candidate), the only way an Interview completes in Q&A."""
+        return (
+            self.status is InterviewStatus.completed and self.phase is MessagePhase.qa
+        )
+
+    @property
     def persona_image_url(self) -> str | None:
         """Where the portrait can be fetched, or None if there isn't one."""
         if self.persona_image_path is None:

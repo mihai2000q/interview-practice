@@ -10,6 +10,19 @@ export interface Outcome {
   icon: string;
 }
 
+/**
+ * Completed without ever reaching the ask-back phase: the interviewer ended it early, because of
+ * the candidate's conduct. It is the only way an Interview completes in the Q&A phase.
+ */
+export function endedByInterviewer(interview: {
+  status: InterviewStatus;
+  messages: readonly { phase: string }[];
+}): boolean {
+  return (
+    interview.status === 'completed' && !interview.messages.some((m) => m.phase === 'ask_back')
+  );
+}
+
 /** How an Interview is described wherever it is listed: where it stands, or how it went. */
 export function outcomeOf(interview: {
   status: InterviewStatus;

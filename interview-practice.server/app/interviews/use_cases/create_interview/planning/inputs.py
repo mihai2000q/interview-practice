@@ -28,7 +28,11 @@ def setup_block(request: InterviewCreate, context: JobContext) -> str:
     if company:
         lines.append(f"company: {company}")
     if context.domain:
-        lines.append(f"domain: {context.domain}")
+        lines.append(
+            "domain_from_documents (may be another field than the position: use it "
+            "only if it fits job_title and company, otherwise ignore it): "
+            f"{context.domain}"
+        )
     return fence("interview_setup", "\n".join(lines))
 
 

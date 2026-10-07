@@ -80,7 +80,7 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `job_application_id` | `uuid`, nullable, FK → `job_applications.id` | nullable — a standalone Interview needs no Application |
 | `job_title` | `text` | |
 | `company_name` | `text`, nullable | the candidate's, else read from the job description / cover letter when either names one, else null; lets persona/conversation/ask-back suggestions reference a real company even when no JD is uploaded |
-| `domain` | `text` | taken from the job description's (else the CV's) `document_analyses.domain` at creation; never entered by the candidate |
+| `domain` | `text` | the field of the position: the documents' `document_analyses.domain` (job description, else cover letter, else CV) is only a hint, which phase 2 checks against `job_title` and company and drops when it doesn't fit (e.g. a software CV for a barista job), giving the job title's field instead; never entered by the candidate |
 | `seniority` | `text` | |
 | `difficulty` | `enum(easy, medium, hard)` | |
 | `tone` | `text` | strict / neutral / friendly (a fixed set in the client form and the API's `Tone`); plain text rather than a DB enum so adding a tone needs no migration |

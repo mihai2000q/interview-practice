@@ -220,12 +220,16 @@ def test_no_usable_criteria_is_an_error(items: list[dict[str, str]]) -> None:
 # -- the domain -----------------------------------------------------------------------
 
 
-def test_an_analyzed_domain_is_used_and_not_asked_for() -> None:
-    model = FakeModel(persona_reply=persona(domain="something else"))
-    result = plan(model, ctx=context(domain="data science"))
-    assert result.domain == "data science"
-    assert '"domain"' not in model.system("persona")
-    assert "domain: data science" in model.user("persona")
+def test_a_documents_domain_is_a_hint_the_persona_call_checks() -> None:
+    model = FakeModel(persona_reply=persona(domain="hospitality"))
+    result = plan(model, ctx=context(domain="software engineering"))
+    # The model's answer wins: the CV's field didn't fit the position.
+    assert result.domain == "hospitality"
+    assert "compare it with the job_title and company" in model.system("persona")
+    for kind in ("persona", "questions", "criteria"):
+        user = model.user(kind)
+        assert "only if it fits job_title and company" in user
+        assert "software engineering" in user
 
 
 def test_without_an_analyzed_domain_the_model_is_asked_and_its_answer_tidied() -> None:
@@ -281,6 +285,13 @@ def test_difficulty_and_role_shape_the_questions_and_tone_shapes_the_persona() -
     assert "First-contact screen" in model.system("questions")
     assert "demanding" in model.system("persona")
     assert "First-contact screen" in model.system("persona")
+
+
+def test_the_plan_sticks_to_the_position_not_the_cvs_field() -> None:
+    model = FakeModel(questions_reply=questions(6))
+    plan(model, request())
+    assert "Stick to the position (job_title)" in model.system("questions")
+    assert "belong to that field" in model.system("persona")
 
 
 def test_a_known_company_adds_the_company_knowledge_question() -> None:

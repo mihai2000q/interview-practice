@@ -18,6 +18,7 @@ import {
   interviewSettings,
   labelOf,
 } from '@app/features/interviews/models/interview.options';
+import { endedByInterviewer } from '@app/features/interviews/models/interview-outcome';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
 import { ResultsCache } from '@app/features/interviews/services/results-cache';
 import { ChatTranscript } from '@app/features/interviews/components/chat-transcript/chat-transcript';
@@ -148,9 +149,13 @@ export class InterviewResults {
   protected readonly role = computed(() =>
     labelOf(INTERVIEWER_ROLES)(this.interview()?.interviewerRole),
   );
-  protected readonly statusLabel = computed(() =>
-    this.interview()?.status === 'abandoned' ? 'Abandoned' : 'Completed',
-  );
+  protected readonly statusLabel = computed(() => {
+    const interview = this.interview();
+    if (interview?.status === 'abandoned') {
+      return 'Abandoned';
+    }
+    return interview && endedByInterviewer(interview) ? 'Ended by the interviewer' : 'Completed';
+  });
   /** The Interview's settings, as the short chips under the heading (the label is the tooltip). */
   protected readonly facts = computed(() => {
     const interview = this.interview();

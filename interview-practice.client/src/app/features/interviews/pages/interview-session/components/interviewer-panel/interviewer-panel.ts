@@ -14,6 +14,7 @@ import {
   labelOf,
   SENIORITY_ICON,
 } from '@app/features/interviews/models/interview.options';
+import { endedByInterviewer } from '@app/features/interviews/models/interview-outcome';
 import { Interview } from '@app/features/interviews/models/interview.schema';
 import { initialsOf } from '@app/features/interviews/utils/initials';
 
@@ -51,6 +52,13 @@ export class InterviewerPanel {
     return { asked, target, percent: Math.round((asked / target) * 100) };
   });
   protected readonly inQa = computed(() => this.interview().phase === 'qa');
+  protected readonly statusLabel = computed(() => {
+    const interview = this.interview();
+    if (interview.status === 'abandoned') {
+      return 'Abandoned';
+    }
+    return endedByInterviewer(interview) ? 'Ended by the interviewer' : 'Completed';
+  });
   /** What the interview is for, shown first and set apart from the settings below it. */
   protected readonly job = computed(() => {
     const interview = this.interview();

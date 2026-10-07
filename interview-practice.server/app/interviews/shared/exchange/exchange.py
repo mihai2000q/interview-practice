@@ -112,5 +112,6 @@ def run_exchange(
         interviewer_is_clarification=result.is_clarification,
         completes_interview=(
             kind in (ExchangeKind.answer, ExchangeKind.close_interview) and result.done
-        ),
+        )
+        or result.ends_interview,
     )

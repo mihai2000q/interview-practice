@@ -110,7 +110,8 @@ One mock interview session, from creation through evaluation.
   assignment's own "questions to ask the interviewer" starter idea, which explicitly wants
   a company name — the ask-back suggestions (phase 4)
 - `domain`: taken at creation from the job description's `DocumentAnalysis` (else the
-  CV's), e.g. "backend engineering"; with no analyzed document, phase 2 supplies it from
+  cover letter's, else the CV's) as a hint that phase 2 checks against `job_title` and company and
+  drops when it doesn't fit, e.g. "backend engineering"; with no analyzed document, phase 2 supplies it from
   `job_title`/`seniority`. Not a form field, so the candidate never has to categorize their
   own role. Stored on the Interview and fed to the later prompts
 - `seniority`: e.g. junior / mid / senior

@@ -99,10 +99,20 @@ class FakeModel:
         self.client = fake_client(self.handle)
 
     def say(
-        self, message: str, *, done: bool = False, clarification: bool = False
+        self,
+        message: str,
+        *,
+        done: bool = False,
+        clarification: bool = False,
+        end_interview: bool = False,
     ) -> "FakeModel":
         self.replies.append(
-            {"message": message, "done": done, "clarification": clarification}
+            {
+                "message": message,
+                "done": done,
+                "clarification": clarification,
+                "end_interview": end_interview,
+            }
         )
         return self
 
@@ -312,6 +322,13 @@ def test_the_plan_shows_core_questions_and_reserves() -> None:
     assert "end the questions" in system
 
 
+def test_the_interviewer_sticks_to_the_position_and_company() -> None:
+    interview = build_interview(company_name="Cafe Luna", job_title="Barista")
+    system = build_messages(interview, [], ExchangeKind.ask, 0)[0].content
+    assert "exactly this position at Cafe Luna" in system
+    assert "Never invent a different or combined position" in system
+
+
 def test_the_interviewer_is_not_an_assistant() -> None:
     interview = ask_back_interview()
     transcript = [(m.role, m.content) for m in interview.messages]
@@ -332,3 +349,46 @@ def test_the_prompt_says_how_many_clarifications_are_left() -> None:
     assert "allowed 2 more times" in ask_prompt(0)
     assert "allowed 1 more time;" in ask_prompt(1)
     assert "may not stay on it again" in ask_prompt(MAX_CLARIFICATIONS)
+
+
+# -- ending the interview early -------------------------------------------------------
+
+
+def test_without_a_warning_the_interviewer_cannot_end_the_interview() -> None:
+    interview = with_clarifications(0)
+    model = FakeModel().say("Goodbye.", end_interview=True)
+    outcome = run(model, interview)
+    assert not outcome.completes_interview
+    outcome.apply_to(interview)
+    assert interview.status is InterviewStatus.in_progress
+
+
+def test_after_a_warning_the_interviewer_can_end_the_interview() -> None:
+    interview = with_clarifications(1)
+    model = FakeModel().say("I'm ending the interview here.", end_interview=True)
+    applied = run(model, interview).apply_to(interview)
+    assert interview.status is InterviewStatus.completed
+    assert interview.ended_at is not None
+    assert interview.phase is QA  # no ask-back
+    assert interview.ended_by_interviewer
+    assert not applied.interviewer_message.is_question  # a goodbye, not a question
+
+
+def test_an_interview_that_reached_ask_back_was_not_ended_by_the_interviewer() -> None:
+    interview = ask_back_interview()
+    finish_ask_back(interview, "No more questions", FakeModel().say("Bye!", done=True))
+    assert interview.status is InterviewStatus.completed
+    assert not interview.ended_by_interviewer
+
+
+def test_the_prompt_offers_ending_only_after_a_warning() -> None:
+    def ask_prompt(count: int) -> str:
+        interview = with_clarifications(count)
+        transcript = [(m.role, m.content) for m in interview.messages]
+        return build_messages(interview, transcript, ExchangeKind.ask, 1, count)[
+            0
+        ].content
+
+    assert "end the interview now" not in ask_prompt(0)
+    assert "end the interview now" in ask_prompt(1)
+    assert "you will have to end the interview if it continues" in ask_prompt(0)

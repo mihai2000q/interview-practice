@@ -168,7 +168,7 @@ developer-facing preferences area kept apart from the candidate experience.
   `EvaluationCriterion` rows (technical/behavioral rubric), `DocumentAnalysis` per Document
   (cached phase-1 output, keyed by model),
   `InterviewPhaseSettings` rows across 6 phases including the judge phase's narrower model
-  set), `Message` (phase, role, content, helper_text, sequence), `Evaluation` (verdict,
+  set), `Message` (phase, role, content, helper_text, is_clarification, sequence), `Evaluation` (verdict,
   reasoning, strengths, weaknesses, improvement_suggestions,
   star_situation/task/action/result +
   star_completeness, incomplete, model_used — the model the

@@ -14,9 +14,18 @@ from app.errors.exceptions import LlmUpstreamError
 from app.interviews.schemas import InterviewCreate
 from app.interviews.use_cases.create_interview.planning import plan_interview
 from app.interviews.use_cases.create_interview.planning.limits import plan_size
+from app.interviews.use_cases.create_interview.use_case import _previous_questions
 from app.llm.openrouter import CompletionSettings
+from app.models import (
+    InterviewCategory,
+    InterviewQuestion,
+    InterviewStatus,
+    JobApplication,
+    MessagePhase,
+    MessageRole,
+)
 from app.services.document_analysis import JobContext
-from tests.support import chat_response, fake_client
+from tests.support import build_interview, chat_response, fake_client
 
 
 @pytest.fixture(autouse=True)
@@ -437,3 +446,36 @@ def test_one_failing_call_fails_the_plan_without_waiting_for_the_others() -> Non
     with pytest.raises(LlmUpstreamError):
         plan(model)
     assert time.perf_counter() - started < 0.7
+
+
+# -- what earlier stages asked ---------------------------------------------------------
+
+
+def stage(
+    status: InterviewStatus, texts: list[str], clarifications: set[int] = frozenset()
+):
+    """A stage whose interviewer said `texts`; numbers in `clarifications` stay on the
+    previous question."""
+    interview = build_interview(
+        status=status,
+        messages=[(MessageRole.interviewer, MessagePhase.qa)] * len(texts),
+        clarifications=clarifications,
+    )
+    for message, text in zip(interview.messages, texts, strict=True):
+        message.content = text
+    return interview
+
+
+def test_later_stages_avoid_what_was_asked_not_what_was_planned() -> None:
+    first = stage(
+        InterviewStatus.completed,
+        ["Tell me about X?", "  Why   Y? ", "Clarify Y?"],
+        clarifications={3},
+    )
+    first.questions.append(
+        InterviewQuestion(category=InterviewCategory.technical, question="never asked")
+    )
+    unfinished = stage(InterviewStatus.abandoned, ["Skipped stage?"])
+    application = JobApplication(interviews=[first, unfinished])
+    assert _previous_questions(application) == ["Tell me about X?", "Why Y?"]
+    assert _previous_questions(None) == []

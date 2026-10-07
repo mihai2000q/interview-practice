@@ -18,6 +18,7 @@ from app.interviews.use_cases.create_interview.planning import (
     InterviewPlan,
     plan_interview,
 )
+from app.interviews.use_cases.create_interview.planning.limits import MAX_TEXT_CHARS
 from app.llm.factory import get_llm_client
 from app.llm.phase_settings import (
     ensure_judge_differs_from_interviewer,
@@ -128,15 +129,19 @@ def _existing_application(body: InterviewCreate) -> JobApplication | None:
 
 
 def _previous_questions(application: JobApplication | None) -> list[str]:
-    """The planned questions of the Application's completed stages, oldest first, so a
-    new stage doesn't ask them again."""
+    """The questions actually asked in the Application's completed stages, oldest first,
+    so a new stage doesn't ask them again. Not the planned ones: a plan holds reserves
+    that were never asked, and avoiding those would starve the later stages. An asked
+    question is the interviewer's message (clarifications left out), trimmed to its
+    end, where the question itself sits."""
     if application is None:
         return []
     questions = [
-        question.question
+        " ".join(message.content.split())[-MAX_TEXT_CHARS:]
         for stage in application.interviews
         if stage.status is InterviewStatus.completed
-        for question in stage.questions
+        for message in stage.messages
+        if message.is_question
     ]
     return list(dict.fromkeys(questions))[-MAX_PREVIOUS_QUESTIONS:]
 

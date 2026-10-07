@@ -33,8 +33,13 @@ Things worth acting on, all outside this document's scope and **not applied**:
    Create Interview) now carry an info icon saying that some models are not affected.
 4. **Coaching hints should stay on `gpt-5-mini`.** Its fabrication rate was 0 of 18; the
    other three models fabricated in 11% to 39% of runs.
-5. **`google/gemini-3.5-flash-lite` could not be tested.** The API key used here has a
-   workspace guardrail that blocks it (`404`), although it is in the judge's allowed set.
+5. **`google/gemini-3.5-flash-lite` could not be tested, and it does not work with the
+   app's current key.** The app lists it as a judge option, but OpenRouter answers `404`
+   ("Model blocked by guardrail") for it with the key the app runs on: a restriction in that
+   OpenRouter workspace's guardrail settings, not in this repo. Picking it as the judge makes
+   the review call fail, and a failed review is logged and dropped, so the interview would
+   simply have no review. Allowing the model in the OpenRouter guardrail fixes it (the same
+   key was used for the benchmark; the two were compared by hash).
 
 ## Method
 
@@ -367,10 +372,16 @@ the judge).
   arms, never as an absolute quality number.
 - **One provider, one day.** Results come from OpenRouter on 2026-10-07 with default settings;
   a model version or routing change can move them. `google/gemini-3.5-flash-lite` could not be
-  tested (blocked by a workspace guardrail on the key).
+  tested (OpenRouter returns `404` for it with the app's key, see the summary).
 - **The app's own guard is not exercised.** The injected-instruction cases test the *prompt's*
   "treat as data" rule. In the app the security guard would usually reject such text before it
   reaches a model.
+
+## See also
+
+[`llm-benchmarks.md`](./llm-benchmarks.md) places the app's models on the public leaderboards
+and compares that ranking with the results here: it is a reasonable guide to which model is
+stronger, and a poor guide to which one works for the app's prompts.
 
 ## Reproducing it
 

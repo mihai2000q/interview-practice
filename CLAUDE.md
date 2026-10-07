@@ -23,6 +23,8 @@ these, read the relevant file — don't rely on memory or guess:
 - Concrete database schema: `docs/database-schema.md`
 - Technical design, LLM phases, stack choices: `docs/architecture.md`
 - How each prompt is written (technique, rules, output contract, model settings, how it was iterated): `docs/prompt-engineering.md`. Read it before changing or adding a prompt.
+- How the prompts' techniques, settings and models were compared on real model calls (method, numbers, limits): `docs/prompt-benchmark.md`. The harness, test cases and raw results are in `experiments/`.
+- How the app's models rank on the public LLM leaderboards, and what that does and doesn't say: `docs/llm-benchmarks.md`.
 - REST contract (endpoints, request/response shapes): `docs/api-design.md`
 - Docker / env vars / how it runs: `docs/deployment.md`
 - Canonical project vocabulary: `CONTEXT.md` (repo root)

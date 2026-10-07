@@ -142,6 +142,8 @@ The full design lives in [`docs/`](docs/):
 - [`docs/domain-model.md`](docs/domain-model.md) — entities and their fields/relationships
 - [`docs/architecture.md`](docs/architecture.md) — technical design, the LLM phases, stack
 - [`docs/prompt-engineering.md`](docs/prompt-engineering.md) — every prompt: technique, rules, output contract, settings, how they were iterated
+- [`docs/prompt-benchmark.md`](docs/prompt-benchmark.md) — the experiment comparing the prompts' techniques, settings and models on real model calls (harness and results in [`experiments/`](experiments/))
+- [`docs/llm-benchmarks.md`](docs/llm-benchmarks.md) — where the app's models rank on the public LLM leaderboards
 - [`docs/database-schema.md`](docs/database-schema.md) — concrete Postgres schema
 - [`docs/api-design.md`](docs/api-design.md) — the REST contract between client and server
 - [`docs/deployment.md`](docs/deployment.md) — how it's containerized and run

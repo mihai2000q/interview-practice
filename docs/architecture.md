@@ -64,7 +64,7 @@ reasoning behind decisions only gestured at here.
 | `/interviews/new` | `CanDeactivate` leave-confirmation |
 | `/interviews/:id` | `CanDeactivate` leave-confirmation |
 | `/interviews/:id/results` | — |
-| `/preferences` | — |
+| `/preferences` | `CanDeactivate` leave-confirmation, only while the model defaults have unsaved edits |
 | `/applications/:id` | — |
 
 ## UI layout & navigation
@@ -131,6 +131,10 @@ navigation:
 - Both Create Interview and Interview Session are guarded with a **leave-confirmation
   prompt** (`CanDeactivate`, "are you sure you want to leave?") before navigating away,
   whether that navigation comes from the topbar, browser back, or closing the tab.
+  The **Preferences page** has the same guard, but only while its model defaults have
+  unsaved edits (a clean page leaves without asking), because it is the one page with a
+  Save / Discard draft. It covers in-app navigation only: closing or reloading the tab
+  does not warn there, unlike on Create Interview and Interview Session.
 - The **Preferences page** (see its own section below) sets, per phase, the default
   model, temperature, max tokens and reasoning effort. The judge's model is separate from
   the interview's. The system prompts are fixed in the server and not editable.

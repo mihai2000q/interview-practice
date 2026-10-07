@@ -129,8 +129,8 @@ developer-facing preferences area kept apart from the candidate experience.
 39. As the developer, I want every outbound prompt to pass through a single centralized
     security guard, so that prompt-injection and abuse are checked in one place rather
     than scattered per-endpoint.
-40. As the developer, I want a leave-confirmation guard on Create Interview and Interview
-    Session, so that a candidate doesn't lose in-progress work/state by navigating away
+40. As the developer, I want a leave-confirmation guard on Create Interview, Interview
+    Session and (while it has unsaved model defaults) Preferences, so that a candidate doesn't lose in-progress work/state by navigating away
     accidentally.
 41. As the developer, I want an ungracefully-closed interview (crash, Alt+F4) to eventually
     be marked abandoned automatically, so that no interview is stuck "in progress" forever

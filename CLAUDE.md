@@ -4,15 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-Two-part project at an early stage:
+Two-part project, plus Docker Compose to run it all (`docker-compose.yml`):
 
 - `interview-practice.client/`: Angular 22 single-page app. Its commands and conventions are in `interview-practice.client/CLAUDE.md`, and client commands must be run from that directory.
-- `interview-practice.server/`: Flask backend managed with `uv`, early-stage scaffold. Its commands and conventions are in `interview-practice.server/CLAUDE.md`, and server commands must be run from that directory.
+- `interview-practice.server/`: Flask backend managed with `uv`. Its commands and conventions are in `interview-practice.server/CLAUDE.md`, and server commands must be run from that directory.
+
+To run the app, see `README.md` (the quick start and the dev setup); each part's own `README.md` has its setup and commands. The server runs on port 8001 and the client on 8002.
 
 ## Documentation
 
-This is a documentation-first project: the full product and technical design exists in
-`docs/` before any implementation. Before answering a question about the product, the
+This is a documentation-first project: the full product and technical design lives in
+`docs/`, written before the implementation and kept in step with it. Before answering a question about the product, the
 data model, the API, or the architecture, or before writing code that touches any of
 these, read the relevant file — don't rely on memory or guess:
 
@@ -20,6 +22,7 @@ these, read the relevant file — don't rely on memory or guess:
 - Data model / entities / fields: `docs/domain-model.md`
 - Concrete database schema: `docs/database-schema.md`
 - Technical design, LLM phases, stack choices: `docs/architecture.md`
+- How each prompt is written (technique, rules, output contract, model settings, how it was iterated): `docs/prompt-engineering.md`. Read it before changing or adding a prompt.
 - REST contract (endpoints, request/response shapes): `docs/api-design.md`
 - Docker / env vars / how it runs: `docs/deployment.md`
 - Canonical project vocabulary: `CONTEXT.md` (repo root)

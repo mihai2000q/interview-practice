@@ -30,7 +30,6 @@ _DEFAULT_MODELS = {phase: _INTERVIEW_MODEL for phase in GenerationPhase} | {
 _INTERVIEW_MODELS = ("gpt-5-mini", "gpt-5-nano", "gpt-4o-mini")
 _JUDGE_MODELS = (
     "google/gemini-2.5-flash",
-    "google/gemini-3.5-flash-lite",
     "gpt-5-mini",
     "gpt-5-nano",
 )

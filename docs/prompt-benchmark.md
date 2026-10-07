@@ -19,7 +19,7 @@ tables are in [`experiments/results/tables.md`](../experiments/results/tables.md
 | **Does temperature matter?** | **Only on models that honor it, and mostly for wording.** `gpt-5-mini` and `gpt-5-nano` ignore it completely. On `gpt-4o-mini` it controls variety (distinct persona names per setup: 0.25 at 0, 1.00 at 1.4) and, in the evaluation, changes the wording but not the verdict. Higher temperature cost `gpt-4o-mini` some quality (the persona stated what it did not know 85% of the time at 0, 65% at 1.4). |
 | **Which model for which task?** | **`gpt-5-mini` is the best all-rounder** and the only one with no fabricated hints and no wrong live-interviewer flags. `gemini-2.5-flash` matched it on planning and on the judge task at a fraction of the cost and latency. **`gpt-4o-mini` cannot be a judge** (it missed 5 of 6 planted flaws), and **`gpt-5-nano` fabricated experience in 39% of coaching hints.** |
 
-Things worth acting on, all outside this document's scope and **not applied**:
+Findings worth acting on, and what became of each:
 
 1. **A real bug risk in prompt 5, documented but not fixed.** `evaluation._Reply.analysis` is
    a `str`, and `gpt-4o-mini` is a selectable model for that phase. It stays on offer and is
@@ -27,19 +27,21 @@ Things worth acting on, all outside this document's scope and **not applied**:
    [`prompt-engineering.md`](./prompt-engineering.md) and [`architecture.md`](./architecture.md)).
    Making the field tolerant (accept an object and keep it as text) would remove the failure.
 2. **The prompt-4 few-shot examples earn no measurable quality.** They are the assignment's
-   few-shot technique, so keep them, but the doc should not claim they improve the output.
+   few-shot technique, so they stay, but the docs no longer claim they improve the output
+   ([`prompt-engineering.md`](./prompt-engineering.md)).
 3. **Temperature has no effect on `gpt-5-mini` and `gpt-5-nano`.** The advanced settings
    offer it for every model, so both temperature controls in the client (Preferences and
    Create Interview) now carry an info icon saying that some models are not affected.
 4. **Coaching hints should stay on `gpt-5-mini`.** Its fabrication rate was 0 of 18; the
-   other three models fabricated in 11% to 39% of runs.
-5. **`google/gemini-3.5-flash-lite` could not be tested, and it does not work with the
-   app's current key.** The app lists it as a judge option, but OpenRouter answers `404`
-   ("Model blocked by guardrail") for it with the key the app runs on: a restriction in that
-   OpenRouter workspace's guardrail settings, not in this repo. Picking it as the judge makes
-   the review call fail, and a failed review is logged and dropped, so the interview would
-   simply have no review. Allowing the model in the OpenRouter guardrail fixes it (the same
-   key was used for the benchmark; the two were compared by hash).
+   other three models fabricated in 11% to 39% of runs. It is already the default, so nothing
+   changed.
+5. **`google/gemini-3.5-flash-lite` was removed from the judge's allowed models.** It could not
+   be tested: OpenRouter answers `404` ("Model blocked by guardrail") for it with the key the
+   app runs on (a restriction in that OpenRouter workspace's guardrail settings, not in this
+   repo; the benchmark used the same key, compared by hash). A review with it would fail, and a
+   failed review is logged and dropped, so the interview would just have no review. It was also
+   redundant next to `gemini-2.5-flash`, so it was removed instead of fixed
+   ([`architecture.md`](./architecture.md)).
 
 ## Method
 
@@ -372,7 +374,8 @@ the judge).
   arms, never as an absolute quality number.
 - **One provider, one day.** Results come from OpenRouter on 2026-10-07 with default settings;
   a model version or routing change can move them. `google/gemini-3.5-flash-lite` could not be
-  tested (OpenRouter returns `404` for it with the app's key, see the summary).
+  tested (OpenRouter returned `404` for it with the app's key; it has since been removed from
+  the judge's allowed models, see the summary).
 - **The app's own guard is not exercised.** The injected-instruction cases test the *prompt's*
   "treat as data" rule. In the app the security guard would usually reject such text before it
   reaches a model.

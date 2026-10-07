@@ -315,8 +315,8 @@ global Preferences defaults (`gpt-5-mini`, Preferences' temperature, etc.).
   scratchpad as an object instead of a string. A rejected evaluation stores nothing and can be
   requested again, but the default `gpt-5-mini` did not fail once.
 - **`interviewer_review`'s model choice is deliberately a different, narrower set**:
-  `google/gemini-2.5-flash` (the default — see below), `google/gemini-3.5-flash-lite`,
-  `gpt-5-mini`, `gpt-5-nano`. No `gpt-4o-mini` here — the OpenAI options exist as quick, cheap
+  `google/gemini-2.5-flash` (the default — see below), `gpt-5-mini`, `gpt-5-nano`. No
+  `gpt-4o-mini` here — the OpenAI options exist as quick, cheap
   experimentation, not an expected path; Gemini stays the recommendation. This is intentionally asymmetric with the
   other 5 phases, not an oversight: the judge's whole point is being a different vendor
   from the interview model, so its override set centers on that instead of mirroring the
@@ -328,7 +328,11 @@ global Preferences defaults (`gpt-5-mini`, Preferences' temperature, etc.).
   use `/api/alpha/decisions`). Offering it would have made every review fail, and silently,
   since a judge failure is logged and dropped rather than shown. Supporting it would mean a
   second client for that alpha endpoint and mapping the judge's three scores onto typed
-  decisions; not worth it while four chat models already work.
+  decisions; not worth it while three chat models already work.
+- **`google/gemini-3.5-flash-lite` was offered as a judge and removed.** It was redundant next
+  to `google/gemini-2.5-flash`, and OpenRouter can refuse it per workspace (a guardrail answers
+  `404`), which makes the review call fail; a failed review is logged and dropped, so the
+  interview would just have no review. Nothing stored refers to it.
 - **Anti-collision rule**: whichever model actually produced this Interview's `question_plan`
   and `live_conversation` phases (accounting for their own per-phase overrides, if set) is
   always excluded from the `interviewer_review` model choices here — so picking, say,

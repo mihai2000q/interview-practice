@@ -113,7 +113,7 @@ phase uses the global Preferences default.
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `interview_id` | `uuid`, FK → `interviews.id` `ON DELETE CASCADE`, not null | |
 | `phase` | `enum(jd_analysis, question_plan, live_conversation, coaching_helpers, evaluation, interviewer_review)` | |
-| `model` | `text`, nullable | OpenRouter model id. `interviewer_review`'s choice is a narrower set (`google/gemini-2.5-flash`/`google/gemini-3.5-flash-lite`/`gpt-5-mini`/`gpt-5-nano`) than the other 5 phases' — see architecture.md |
+| `model` | `text`, nullable | OpenRouter model id. `interviewer_review`'s choice is a narrower set (`google/gemini-2.5-flash`/`gpt-5-mini`/`gpt-5-nano`) than the other 5 phases' — see architecture.md |
 | `temperature` | `double precision`, nullable | |
 | `max_tokens` | `integer`, nullable | |
 | `reasoning_effort` | `text`, nullable | |

@@ -79,9 +79,7 @@ def test_candidate_facing_phases_accept_the_chat_models(model: str) -> None:
     ensure_model_allowed(P.live_conversation, model)
 
 
-@pytest.mark.parametrize(
-    "model", ["google/gemini-3.5-flash-lite", "google/gemini-2.5-flash"]
-)
+@pytest.mark.parametrize("model", ["google/gemini-2.5-flash"])
 def test_candidate_facing_phases_refuse_the_judge_only_models(model: str) -> None:
     with pytest.raises(BadRequestError) as caught:
         ensure_model_allowed(P.question_plan, model)
@@ -89,11 +87,7 @@ def test_candidate_facing_phases_refuse_the_judge_only_models(model: str) -> Non
 
 
 def test_the_judge_accepts_its_own_set() -> None:
-    for model in (
-        "google/gemini-2.5-flash",
-        "google/gemini-3.5-flash-lite",
-        "gpt-5-nano",
-    ):
+    for model in ("google/gemini-2.5-flash", "gpt-5-mini", "gpt-5-nano"):
         ensure_model_allowed(P.interviewer_review, model)
 
 
@@ -158,7 +152,7 @@ def test_an_interview_override_can_collide_with_a_preference_judge() -> None:
 
 def test_an_interview_can_move_its_judge_away_from_a_colliding_preference() -> None:
     ensure_judge_differs_from_interviewer(
-        [override(P.interviewer_review, model="google/gemini-3.5-flash-lite")],
+        [override(P.interviewer_review, model="google/gemini-2.5-flash")],
         [
             preference(P.question_plan, model="gpt-5-nano"),
             preference(P.interviewer_review, model="gpt-5-nano"),

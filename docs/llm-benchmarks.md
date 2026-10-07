@@ -2,9 +2,8 @@
 
 How the models this app can run on rank on the public benchmarks, what those rankings measure,
 and how they relate to [the app's own benchmark](./prompt-benchmark.md). It covers the four
-usable models of the app's allow-lists (`gpt-5-mini`, `gpt-5-nano`, `gpt-4o-mini`,
-`gemini-2.5-flash`) and `gemini-3.5-flash-lite`, which is an allowed judge model. The image
-model is out of scope.
+models of the app's allow-lists: `gpt-5-mini`, `gpt-5-nano`, `gpt-4o-mini` and
+`gemini-2.5-flash`. The image model is out of scope.
 
 **Figures are as of 2026-10-08**, when the pages were read. Leaderboards change, so treat the
 numbers as a dated snapshot and re-read the sources (listed at the end) before relying on them.
@@ -17,13 +16,12 @@ On general capability, by the public index with the widest coverage of these mod
 
 | # | Model | Intelligence Index | In the app |
 |---|---|---|---|
-| 1 | `gemini-3.5-flash-lite` | 22 | judge phase only; **fails with the app's current OpenRouter key** (`404`, a guardrail on the key's workspace) |
-| 2 | `gpt-5-mini` (high effort) | 17 | default for every interview phase |
-| 3 | `gpt-5-nano` (high effort) | 13 | selectable for every phase |
-| 4 | `gemini-2.5-flash` | 10 | default judge |
-| 5 | `gpt-4o-mini` | 7 | selectable for the interview phases |
+| 1 | `gpt-5-mini` (high effort) | 17 | default for every interview phase; selectable for the judge |
+| 2 | `gpt-5-nano` (high effort) | 13 | selectable for every phase |
+| 3 | `gemini-2.5-flash` | 10 | default judge |
+| 4 | `gpt-4o-mini` | 7 | selectable for the interview phases |
 
-For scale, the index's top score is 58 (Claude Opus 5.5), so all five sit in the lower part of
+For scale, the index's top score is 58 (Claude Opus 5.5), so all four sit in the lower part of
 the range. Three of the scores are labeled "estimated" on their pages (`gpt-5-nano`,
 `gpt-4o-mini`, `gemini-2.5-flash`).
 
@@ -31,7 +29,7 @@ the range. Three of the scores are labeled "estimated" on their pages (`gpt-5-na
 
 | | Public index | The app's own benchmark |
 |---|---|---|
-| Best overall | `gemini-3.5-flash-lite`, then `gpt-5-mini` | `gpt-5-mini` (not tested: `gemini-3.5-flash-lite`, which the app's key cannot call) |
+| Best overall | `gpt-5-mini` | `gpt-5-mini` |
 | Worst | `gpt-4o-mini` | `gpt-4o-mini` (failed as a judge, 40% invalid evaluations) |
 | `gpt-5-nano` vs `gemini-2.5-flash` | `gpt-5-nano` ahead (13 vs 10) | mixed: `gpt-5-nano` more accurate on the evaluation (100% vs 89%); `gemini-2.5-flash` passed the plan checks (100% vs 67%), fabricated less in hints (2 of 18 vs 7 of 18) and was as good a judge, much faster |
 | Speed | `gemini-2.5-flash` and `gpt-4o-mini` respond in under a second; the `gpt-5` models take a minute | the same order, with much shorter times at the app's default effort |
@@ -45,18 +43,18 @@ leaderboard.
 
 From each model's Artificial Analysis page (index v4.3.2 where the page states it):
 
-| | `gemini-3.5-flash-lite` | `gpt-5-mini` | `gpt-5-nano` | `gemini-2.5-flash` | `gpt-4o-mini` |
-|---|---|---|---|---|---|
-| Intelligence Index | 22 | 17 | 13 | 10 | 7 |
-| Variant scored | reasoning | high reasoning | high reasoning | non-reasoning | non-reasoning |
-| Price per 1M tokens, in / out | $0.30 / $2.50 | $0.25 / $2.00 | $0.05 / $0.40 | $0.30 / $2.50 | $0.15 / $0.60 |
-| Blended price per 1M | n/a | $0.27 | $0.05 | $0.33 | $0.14 |
-| Output speed (tokens/s) | 347 | 125 | 131 | 193 | 101 |
-| Time to first token | 8.75 s | 60.2 s | 89.9 s | 0.44 s | 0.83 s |
-| Context window | 1M | 400k | 400k | 1M | 128k |
-| Knowledge cutoff | n/a | May 2024 | May 2024 | Jan 2025 | Oct 2023 |
-| Released | July 2026 | Aug 2025 | Aug 2025 | May 2025 | July 2024 |
-| Marked deprecated by Artificial Analysis | no | yes (successor: GPT-5.4 mini) | yes (successor: GPT-5.4 nano) | yes | yes (successor: GPT-5 mini) |
+| | `gpt-5-mini` | `gpt-5-nano` | `gemini-2.5-flash` | `gpt-4o-mini` |
+|---|---|---|---|---|
+| Intelligence Index | 17 | 13 | 10 | 7 |
+| Variant scored | high reasoning | high reasoning | non-reasoning | non-reasoning |
+| Price per 1M tokens, in / out | $0.25 / $2.00 | $0.05 / $0.40 | $0.30 / $2.50 | $0.15 / $0.60 |
+| Blended price per 1M | $0.27 | $0.05 | $0.33 | $0.14 |
+| Output speed (tokens/s) | 125 | 131 | 193 | 101 |
+| Time to first token | 60.2 s | 89.9 s | 0.44 s | 0.83 s |
+| Context window | 400k | 400k | 1M | 128k |
+| Knowledge cutoff | May 2024 | May 2024 | Jan 2025 | Oct 2023 |
+| Released | Aug 2025 | Aug 2025 | May 2025 | July 2024 |
+| Marked deprecated by Artificial Analysis | yes (successor: GPT-5.4 mini) | yes (successor: GPT-5.4 nano) | yes | yes (successor: GPT-5 mini) |
 
 How to read the table:
 
@@ -66,9 +64,9 @@ How to read the table:
   high setting. In the app's own runs at the provider's default effort the whole call took 8 to
   36 s for `gpt-5-mini` and 17 to 71 s for `gpt-5-nano`, depending on the task, so the order
   matches and the numbers do not.
-- **Cost to run the index:** Artificial Analysis lists $0.05 per task for `gpt-5-mini` and $0.19
-  for `gemini-3.5-flash-lite`, although their per-token prices are similar. The pages do not say
-  why, so the per-token price alone should not be read as the cost of using a model.
+- **Cost to run the index:** the per-token price alone is not the cost of using a model, since
+  reasoning models spend many output tokens. Artificial Analysis lists $0.05 per index task for
+  `gpt-5-mini`, for example.
 - **"Deprecated" is Artificial Analysis's word for superseded**, not a shutdown. OpenAI's
   deprecation page lists no shutdown date for `gpt-4o-mini`, `gpt-5-mini` or `gpt-5-nano`, and
   Google's lists none for `gemini-2.5-flash`, though Google recommends newer models for new
@@ -77,11 +75,10 @@ How to read the table:
 ## Other leaderboards
 
 **Arena (human preference, text leaderboard, updated 2026-10-02; 413 models, 8,626,731 votes).**
-Only the Gemini models appear in the part of the list that could be read (the first 150 rows):
+Only `gemini-2.5-flash` appears in the part of the list that could be read (the first 150 rows):
 
 | Model | Rank | Score |
 |---|---|---|
-| `gemini-3.5-flash-lite` | 71 | 1455 ± 4 (35,763 votes) |
 | `gemini-2.5-flash` | 148 | 1409 ± 2 (125,012 votes) |
 
 `gpt-5-mini`, `gpt-5-nano` and `gpt-4o-mini` were not in those 150 rows, so they rank lower than
@@ -101,19 +98,15 @@ at least four benchmark evaluations, so a model without one is absent.
    measurement of the app's configuration. Artificial Analysis also scores `gemini-2.5-flash`
    as a *non-reasoning* model; whether the model the app reaches through OpenRouter thinks by
    default was not verified.
-2. **A higher general score does not mean a better fit.** `gemini-3.5-flash-lite` scores highest
-   here and is the only one of the five that the app's benchmark could not test: OpenRouter
-   answers `404` ("Model blocked by guardrail") for it with the key the app runs on, a setting of
-   that key's OpenRouter workspace. The app still offers it as a judge option, and picking it
-   makes the review call fail; a failed review is logged and dropped, so the interview just has
-   no review. Allowing the model in the OpenRouter guardrail would fix that. Its published score
-   and speed (347 tokens/s) are promising for a judge, but the app's own judge test (flaw
-   detection on planted cases) has not been run on it.
+2. **A higher general score does not mean a better fit.** `gemini-3.5-flash-lite` scores 22 on
+   the index, above all four models here, and was offered as a judge until it was removed:
+   redundant next to `gemini-2.5-flash`, and OpenRouter answered `404` ("Model blocked by
+   guardrail") for it with the app's key, so a review with it would silently be missing (see
+   [`architecture.md`](./architecture.md)). A better public score would not have helped there.
 3. **Most of the app's models are one generation behind their vendors.** Artificial Analysis names
    GPT-5.4 mini and GPT-5.4 nano as successors of `gpt-5-mini` and `gpt-5-nano`, and Google
-   recommends 3.5 Flash-Lite or 3.8 Flash over `gemini-2.5-flash`. Of those, only 3.5 Flash-Lite
-   is in an allow-list (the judge's, and not callable with the app's current key); GPT-5.4 mini and nano
-   and 3.8 Flash are neither allowed nor tested. Adding one to `experiments/run.py` and re-running
+   recommends 3.5 Flash-Lite or 3.8 Flash over `gemini-2.5-flash`. None of these is in an
+   allow-list, and none was tested. Adding one to `experiments/run.py` and re-running
    the same cases would show whether a newer model does better on the app's own tasks; the
    cached results mean the models already tested are not re-paid for.
 4. **Cheaper is not always worse here.** `gpt-5-nano` costs a fifth of `gpt-5-mini` per token and
@@ -125,7 +118,7 @@ at least four benchmark evaluations, so a model without one is absent.
 
 - **Leaderboards measure different things.** An aggregate index, a vote on style and an exam
   score can order the same models differently. For this app's models the public data is thin:
-  one index covers all five, Arena covers two of them (in the part that could be read), and Epoch's
+  one index covers all four, Arena covers one of them (in the part that could be read), and Epoch's
   index none.
 - **Aggregates hide their composition.** The index averages ten evaluations (agentic tasks,
   coding, general knowledge and scientific reasoning, at 25% each); a model that is strong on
@@ -144,10 +137,9 @@ at least four benchmark evaluations, so a model without one is absent.
 ## Sources
 
 - Artificial Analysis model pages:
-  [gemini-3.5-flash-lite](https://artificialanalysis.ai/models/gemini-3-5-flash-lite),
   [gpt-5-mini](https://artificialanalysis.ai/models/gpt-5-mini),
   [gpt-5-nano](https://artificialanalysis.ai/models/gpt-5-nano),
-  [gemini-2.5-flash](https://artificialanalysis.ai/models/gemini-2-5-flash),
+  [gemini-2.5-flash](https://artificialanalysis.ai/models/gemini-2-5-flash) and
   [gpt-4o-mini](https://artificialanalysis.ai/models/gpt-4o-mini); and its
   [Intelligence Index methodology](https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index)
   and [models leaderboard](https://artificialanalysis.ai/leaderboards/models) (for the top score)

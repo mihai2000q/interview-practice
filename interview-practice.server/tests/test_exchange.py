@@ -289,6 +289,14 @@ def test_only_an_ask_exchange_that_continues_can_be_a_clarification() -> None:
     assert not run(model, wrapping_up).interviewer_is_clarification
 
 
+def test_the_interviewer_is_told_not_to_follow_off_topic_tangents() -> None:
+    interview = with_clarifications(0)
+    transcript = [(m.role, m.content) for m in interview.messages]
+    for kind in (ExchangeKind.ask, ExchangeKind.answer):
+        system = build_messages(interview, transcript, kind, 1)[0].content
+        assert "never ask about it or follow it up" in system
+
+
 def test_the_prompt_says_how_many_clarifications_are_left() -> None:
     def ask_prompt(count: int) -> str:
         interview = with_clarifications(count)

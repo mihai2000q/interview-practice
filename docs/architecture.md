@@ -209,7 +209,10 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    framework and the Interview's `EvaluationCriterion` rows (phase 2's criteria, weighted toward
    whichever half — technical or behavioral — matches `interview_type`), and produces a
    verdict
-   (`hire`/`no_hire`), reasoning, and improvement suggestions. Technique:
+   (`hire`/`no_hire`), reasoning, strengths, weaknesses, and improvement suggestions. The
+   verdict's bar scales with the Interview's `difficulty`: lenient on `easy` (an acceptable
+   performance passes, only a very poor or disrespectful one doesn't), balanced on `medium`,
+   demanding on `hard`. Technique:
    **chain-of-thought** reasoning constrained to a structured JSON output;
    `Interview.response_style` shapes how long/detailed the reasoning and improvement
    suggestions are. Runs on the `evaluation` phase's model (the Interview's override, else Preferences, else
@@ -345,7 +348,7 @@ regenerated together; the score isn't derived separately from the narrative or v
 - **Model**: the `evaluation` phase's model and settings from Preferences (an Application has
   no overrides of its own); no seventh phase.
 - **Inputs**: every stage's `Evaluation` under that `JobApplication`, oldest stage first
-  (`reasoning`, `strengths`, `weaknesses`, `improvement_suggestions`, the STAR fields, the verdict, `incomplete`, plus the
+  (`reasoning`, `improvement_suggestions`, the STAR fields, the verdict, `incomplete`, plus the
   stage's role, type, difficulty and evaluation criteria) — deliberately not raw transcripts,
   since the comparison is about assessed performance, not re-reading every conversation.
 - **Output**: one structured-JSON call, `{score, summary}`. The score is the overall level across

@@ -53,11 +53,15 @@ export const INTERVIEWER_TONES: readonly { value: Tone; label: string }[] = [
 
 /**
  * How an Interview was set up (seniority, difficulty, type, response style), as label/value
- * rows. A page that shows the seniority elsewhere leaves it out with `withSeniority: false`.
+ * rows. A page that shows the seniority elsewhere leaves it out with `withSeniority: false`;
+ * one that doesn't show the tone elsewhere adds it with `withTone: true`.
  */
 export function interviewSettings(
-  interview: Pick<Interview, 'seniority' | 'difficulty' | 'interviewType' | 'responseStyle'>,
-  { withSeniority = true }: { withSeniority?: boolean } = {},
+  interview: Pick<
+    Interview,
+    'seniority' | 'difficulty' | 'interviewType' | 'responseStyle' | 'tone'
+  >,
+  { withSeniority = true, withTone = false }: { withSeniority?: boolean; withTone?: boolean } = {},
 ): { label: string; value: string }[] {
   return [
     ...(withSeniority
@@ -65,6 +69,7 @@ export function interviewSettings(
       : []),
     { label: 'Difficulty', value: labelOf(DIFFICULTIES)(interview.difficulty) },
     { label: 'Type', value: labelOf(INTERVIEW_TYPES)(interview.interviewType) },
+    ...(withTone ? [{ label: 'Tone', value: labelOf(INTERVIEWER_TONES)(interview.tone) }] : []),
     { label: 'Response style', value: labelOf(RESPONSE_STYLES)(interview.responseStyle) },
   ];
 }

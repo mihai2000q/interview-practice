@@ -159,7 +159,7 @@ export class InterviewResults {
   /** The Interview's settings, as the short chips under the heading (the label is the tooltip). */
   protected readonly facts = computed(() => {
     const interview = this.interview();
-    return interview ? interviewSettings(interview) : [];
+    return interview ? interviewSettings(interview, { withTone: true }) : [];
   });
   protected readonly subtitle = computed(() => {
     const interview = this.interview();

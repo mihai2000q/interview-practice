@@ -19,6 +19,8 @@ from app.interviews.shared.exchange.pacing import (
 from app.llm.openrouter import CompletionSettings
 from app.models import (
     Interview,
+    InterviewCategory,
+    InterviewQuestion,
     InterviewStatus,
     MessagePhase,
     MessageRole,
@@ -295,6 +297,19 @@ def test_the_interviewer_is_told_not_to_follow_off_topic_tangents() -> None:
     for kind in (ExchangeKind.ask, ExchangeKind.answer):
         system = build_messages(interview, transcript, kind, 1)[0].content
         assert "never ask about it or follow it up" in system
+
+
+def test_the_plan_shows_core_questions_and_reserves() -> None:
+    interview = build_interview(target=1)
+    interview.questions.append(
+        InterviewQuestion(category=InterviewCategory.behavioral, question="spare")
+    )
+    for number, question in enumerate(interview.questions, start=1):
+        question.sequence = number
+    transcript: list[tuple[MessageRole, str]] = []
+    system = build_messages(interview, transcript, ExchangeKind.ask, 0)[0].content
+    assert "Core:\n1. [technical] q\nReserves:\n2. [behavioral] spare" in system
+    assert "end the questions" in system
 
 
 def test_the_interviewer_is_not_an_assistant() -> None:

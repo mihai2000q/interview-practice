@@ -8,7 +8,8 @@ exchange it is and tells the model: `open` (greet and ask the first question), `
 question, with the option to end the questions early), `close_questions` (budget spent: thank
 the candidate and invite their questions), `answer` (ask-back) and `close_interview`. Every
 interviewer question in the Q&A phase counts toward `target_question_count`; the plan has
-exactly that many questions and is a guide, not a script. A **clarification** is not a
+that many core questions plus reserves the interviewer may swap in, and is a guide, not a script.
+A **clarification** is not a
 question: an interviewer message that stays on the previous one, to answer what the
 candidate asked back or to ask for clarification of a thin answer. It is flagged by the
 model (`clarification`), stored as `Message.is_clarification`, and left out of the count

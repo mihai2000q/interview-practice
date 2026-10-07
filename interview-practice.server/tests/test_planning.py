@@ -13,6 +13,7 @@ from flask import Flask
 from app.errors.exceptions import LlmUpstreamError
 from app.interviews.schemas import InterviewCreate
 from app.interviews.use_cases.create_interview.planning import plan_interview
+from app.interviews.use_cases.create_interview.planning.limits import plan_size
 from app.llm.openrouter import CompletionSettings
 from app.services.document_analysis import JobContext
 from tests.support import chat_response, fake_client
@@ -62,7 +63,7 @@ def persona(**changes: Any) -> dict[str, Any]:
     return {**reply, **changes}
 
 
-def questions(count: int | list[dict[str, str]] = 3) -> dict[str, Any]:
+def questions(count: int | list[dict[str, str]] = 6) -> dict[str, Any]:
     if isinstance(count, list):
         return {"questions": count}
     return {
@@ -153,11 +154,9 @@ def test_the_three_parts_come_together_in_order() -> None:
         "Dana Whitfield",
         "Staff Engineer",
     )
-    assert [q.question for q in result.questions] == ["Q0?", "Q1?", "Q2?"]
+    assert [q.question for q in result.questions] == [f"Q{i}?" for i in range(6)]
     assert [q.category.value for q in result.questions] == [
-        "technical",
-        "behavioral",
-        "technical",
+        "technical" if i % 2 == 0 else "behavioral" for i in range(6)
     ]
     assert len(result.evaluation_criteria) == 2
 
@@ -169,7 +168,7 @@ def test_text_is_trimmed_and_bounded() -> None:
             persona={"name": "  " + "n" * 300, "title": "t" * 300, "backstory": long}
         ),
         questions_reply=questions(
-            [{"category": "technical", "question": f"  {long}  "}] * 3
+            [{"category": "technical", "question": f"  {long}  "}] * 6
         ),
         criteria_reply=criteria([{"category": "technical", "criterion": long}]),
     )
@@ -184,14 +183,17 @@ def test_text_is_trimmed_and_bounded() -> None:
 # -- the parts must follow their contracts --------------------------------------------
 
 
-@pytest.mark.parametrize("returned", [2, 4, 0])
+@pytest.mark.parametrize("returned", [3, 5, 7, 0])
 def test_a_wrong_number_of_questions_is_an_error(returned: int) -> None:
     with pytest.raises(LlmUpstreamError, match="wrong number"):
         plan(FakeModel(questions_reply=questions(returned)))
 
 
 def test_a_blank_question_does_not_count() -> None:
-    items = [{"category": "technical", "question": q} for q in ("A?", "  ", "C?")]
+    items = [
+        {"category": "technical", "question": q}
+        for q in ("A?", "  ", "C?", "D?", "E?", "F?")
+    ]
     with pytest.raises(LlmUpstreamError, match="wrong number"):
         plan(FakeModel(questions_reply=questions(items)))
 
@@ -241,10 +243,26 @@ def test_with_no_domain_anywhere_a_placeholder_is_used(returned: str | None) -> 
 # -- what each prompt asks for --------------------------------------------------------
 
 
-def test_the_questions_prompt_asks_for_exactly_the_requested_number() -> None:
-    model = FakeModel(questions_reply=questions(5))
+def test_the_questions_prompt_asks_for_the_core_plan_and_reserves() -> None:
+    model = FakeModel(questions_reply=questions(10))
     plan(model, request(targetQuestionCount=5))
-    assert "exactly 5 questions" in model.system("questions")
+    system = model.system("questions")
+    assert "exactly 10 questions" in system
+    assert "The first 5 are the core plan" in system
+    assert "The other 5 are reserves" in system
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [(1, 2), (3, 6), (5, 10), (8, 13), (10, 15), (20, 28), (30, 41)],
+)
+def test_the_plan_holds_the_target_plus_reserves(target: int, expected: int) -> None:
+    assert plan_size(target) == expected
+
+
+def test_the_plan_never_shrinks_as_the_target_grows() -> None:
+    sizes = [plan_size(n) for n in range(1, 31)]
+    assert sizes == sorted(sizes)
 
 
 @pytest.mark.parametrize("interview_type", ["technical", "behavioral"])
@@ -372,9 +390,11 @@ def test_earlier_stages_questions_go_to_the_questions_call_only_as_data() -> Non
 
 
 def test_a_longer_interview_may_revisit_a_few_earlier_questions() -> None:
-    model = FakeModel(questions_reply=questions(8))
+    model = FakeModel(questions_reply=questions(13))
     plan(model, request(targetQuestionCount=8), previous_questions=("Old?",))
-    assert "at most 2 of the 8 questions may revisit" in model.system("questions")
+    assert "at most 2 of the 13 questions in all may revisit" in model.system(
+        "questions"
+    )
 
 
 def test_without_earlier_stages_the_prompt_says_nothing_about_repeats() -> None:

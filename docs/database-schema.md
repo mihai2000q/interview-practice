@@ -146,7 +146,7 @@ cover. Owned by the Interview and created with it; see `domain-model.md`.
 |---|---|---|
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `interview_id` | `uuid`, FK → `interviews.id` `ON DELETE CASCADE`, not null | |
-| `sequence` | `integer` | order within the plan, from 1 |
+| `sequence` | `integer` | order within the plan, from 1; the first `target_question_count` are core questions, the rest reserves |
 | `category` | `enum(technical, behavioral)` | |
 | `question` | `text` | |
 

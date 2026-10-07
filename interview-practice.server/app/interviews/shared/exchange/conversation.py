@@ -125,10 +125,17 @@ Your manner is {tone}. Keep each message to {style}.
 The interview: {job_title} ({seniority}) in {domain}{company}. Difficulty is \
 {difficulty}.
 
-Your question plan (a guide, not a script; adapt to what the candidate says):
+Your question plan (a guide, not a script; adapt to what the candidate says). The \
+core questions are the ones you mean to ask; the reserves are alternatives you may \
+swap in. You ask {target} questions in total:
 {plan}
 
-You have asked {asked} of {target} planned questions so far.
+You have asked {asked} of {target} questions so far. Choose each next question from \
+the plan so that it still makes sense after how the interview has gone: skip one the \
+candidate already covered, and pick a reserve when no core question fits. Never ask \
+something that would be absurd after what has happened, such as salary expectations, \
+availability or an invitation to join after the candidate was rude or abusive; pick \
+another question, or end the questions.
 
 Rules:
 - Keep each message under {max_chars} characters.
@@ -172,9 +179,13 @@ class InterviewerReply:
 
 
 def _plan_lines(interview: Interview) -> str:
-    return "\n".join(
+    target = interview.target_question_count
+    lines = [
         f"{q.sequence}. [{q.category.value}] {q.question}" for q in interview.questions
-    )
+    ]
+    if len(lines) <= target:
+        return "\n".join(lines)
+    return "\n".join(["Core:", *lines[:target], "Reserves:", *lines[target:]])
 
 
 def build_messages(

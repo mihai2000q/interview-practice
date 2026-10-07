@@ -1,6 +1,11 @@
 <app-topbar />
 <!-- One outlet, always: moving it when the sidebar comes and goes would build the page twice. -->
-<hlm-sidebar-wrapper class="min-h-[calc(100svh-57px)]">
+<!-- While the sidebar's edge is dragged, its width must follow the pointer without the easing. -->
+<hlm-sidebar-wrapper
+  [attr.data-dragging]="sidebarWidth.dragging() ? '' : null"
+  [sidebarWidth]="sidebarWidth.css()"
+  class="min-h-[calc(100svh-57px)] [&[data-dragging]_[data-slot=sidebar-container]]:transition-none [&[data-dragging]_[data-slot=sidebar-gap]]:transition-none"
+>
   @if (route.hasHistory()) {
     @defer {
       <app-history-sidebar />

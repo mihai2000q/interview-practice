@@ -208,6 +208,30 @@
   </hlm-sidebar-content>
 </hlm-sidebar>
 
+@if (resizable()) {
+  <!-- Spartan's resizable group over the page, below the topbar: its first panel is as wide as the
+       sidebar and the handle sits on the sidebar's edge. Only the handle takes pointer events. -->
+  <div #group class="pointer-events-none fixed inset-x-0 top-[57px] bottom-0 z-20">
+    <hlm-resizable-group
+      (dragEnd)="width.dragging.set(false); width.save()"
+      (dragStart)="width.dragging.set(true)"
+      (layoutChange)="onLayout($event)"
+      [layout]="layout()"
+    >
+      <hlm-resizable-panel
+        [collapsible]="false"
+        [defaultSize]="sidebarPercent()"
+        [maxSize]="maxPercent()"
+        [minSize]="minPercent()"
+      />
+      <hlm-resizable-handle
+        class="pointer-events-auto bg-transparent transition-colors after:w-2 hover:bg-primary/50"
+      />
+      <hlm-resizable-panel [defaultSize]="100 - sidebarPercent()" />
+    </hlm-resizable-group>
+  </div>
+}
+
 <hlm-alert-dialog (stateChanged)="onDialogState($event)" [state]="target() ? 'open' : 'closed'">
   <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
     <hlm-alert-dialog-header>

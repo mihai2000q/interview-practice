@@ -398,17 +398,6 @@ regenerated together; the score isn't derived separately from the narrative or v
   `database-schema.md`) rather than a separate entity, since it's a single regenerated pair
   of fields, not a history of past summaries.
 
-## Per-prompt cost tracking (nice to have, not built)
-
-Compute and report the cost of each OpenRouter call (input/output tokens × that model's
-price, from OpenRouter's models/pricing endpoint), satisfying the assignment's "calculate
-and provide the price of the prompt" optional task, aggregated per Interview. There is **no
-Excel export** (dropped) and how the figure would be shown is undecided; a live
-running-cost display is real UI work that isn't core to the candidate experience.
-
-State today: the OpenRouter client already reads the `prompt_tokens` and `completion_tokens`
-of every response, but nothing stores or uses them, and there is no price lookup.
-
 ## Security guard
 
 A single, centralized Flask service that **every** outbound prompt passes through before
@@ -548,9 +537,8 @@ the opening message. It is served by `GET /api/interviews/:id/persona-image`.
 Note: the assignment's Sprint 1 allow-list only names this one model for image generation,
 so there isn't actually a "cheapest option" to pick between within scope — using a
 different, cheaper image model would mean stepping outside what's sanctioned for this
-sprint. If a real cost figure is needed later, that should come from OpenRouter's live
-pricing endpoint (the same mechanism as the per-prompt cost tracking nice-to-have above)
-rather than a number quoted here, since model pricing changes over time.
+sprint. If a real cost figure is needed, it should come from OpenRouter's live pricing
+endpoint rather than a number quoted here, since model pricing changes over time.
 
 ## Document file storage & download
 

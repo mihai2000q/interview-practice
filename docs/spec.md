@@ -248,7 +248,6 @@ client adapter as the one necessary fake boundary (the one real external depende
   strategy, CI/CD, cloud hosting choice, horizontal scaling.
 - TTS voice/rate tuning and a per-message replay button — designed (see `architecture.md`)
   but not built this pass.
-- Per-prompt cost tracking — designed but not built this pass.
 - A scheduled cleanup of abandoned document uploads (needed only for a cloud deployment).
 
 ## Further Notes

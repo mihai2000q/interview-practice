@@ -102,10 +102,6 @@ bonus-task bar (2 medium + 1 hard) without needing LangChain — see
 
 ## Open items (not yet designed)
 
-- **Nice to have: per-prompt cost tracking** — design-resolved only in outline, not built.
-  The token counts OpenRouter returns are read but not stored, and there is no price lookup
-  or report yet. (The interviewer's voice and dictated replies are built; see
-  `architecture.md`.)
 - Exact wording/trigger sensitivity of the JobApplication progress summary's narrative
   (e.g. how much data before it says "doing great as usual" vs staying neutral) — see
   `architecture.md`'s Progress summary section.

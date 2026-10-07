@@ -295,7 +295,7 @@ in-session toggle.
   message keeps `helper_text` null, the endpoint answers `200` with it, and the card is
   simply not shown; nothing else fails. This is different from "no grounded match", which still gets a generic hint.
 
-## Per-interview advanced settings (nice to have)
+## Per-interview advanced settings
 
 A collapsed "advanced settings" section on Create Interview lets the candidate override LLM
 settings **per phase**, for just that Interview. Anything not overridden keeps using the

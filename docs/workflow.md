@@ -60,7 +60,7 @@ step is implemented.
   exists, falling back to a generic hint when there's no document or no grounded match —
   the hint prompt must never fabricate experience the candidate didn't actually provide —
   and the ask-back phase offers suggested questions to ask the interviewer (see below).
-- **Advanced settings** (collapsed, nice to have) — per-phase overrides for model
+- **Advanced settings** (collapsed) — per-phase overrides for model
   (`gpt-5-mini`/`gpt-5-nano`/`gpt-4o-mini`), temperature, max tokens, and reasoning effort,
   for any of the phases individually (JD/CV analysis, question plan, live interview,
   coaching helpers — the hints and the ask-back suggestions — evaluation, and the

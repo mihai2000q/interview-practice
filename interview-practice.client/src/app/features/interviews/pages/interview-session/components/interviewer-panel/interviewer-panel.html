@@ -1,12 +1,13 @@
 <div class="flex flex-col gap-4">
   <section aria-labelledby="interviewer-heading" hlmCard>
     <div class="justify-items-center text-center" hlmCardHeader>
-      <hlm-avatar class="size-48 rounded-xl after:rounded-xl">
+      <!-- The portrait fades in over the same muted background the initials sit on. -->
+      <hlm-avatar class="size-48 rounded-xl bg-muted after:rounded-xl">
         @if (personaImageUrl(); as src) {
           <img
             [ngSrc]="src"
             alt=""
-            class="rounded-xl"
+            class="rounded-xl animate-in fade-in duration-500 motion-reduce:animate-none"
             height="96"
             hlmAvatarImage
             priority
@@ -45,7 +46,7 @@
         }
       } @else {
         <span class="self-center -mt-1.5 -mb-2.5" hlmBadge variant="secondary">
-          {{ interview().status === 'completed' ? 'Completed' : 'Abandoned' }}
+          {{ statusLabel() }}
         </span>
       }
     </div>

@@ -38,6 +38,7 @@ class RecentInterview:
     id: uuid.UUID
     job_title: str
     company_name: str | None
+    interviewer_role: str
     status: InterviewStatus
     verdict: Verdict | None
     ended_at: datetime
@@ -115,6 +116,7 @@ def compute_dashboard() -> Dashboard:
             Interview.id,
             Interview.job_title,
             Interview.company_name,
+            Interview.interviewer_role,
             Interview.status,
             Evaluation.verdict,
             Interview.ended_at,
@@ -129,6 +131,7 @@ def compute_dashboard() -> Dashboard:
             id=row.id,
             job_title=row.job_title,
             company_name=row.company_name,
+            interviewer_role=row.interviewer_role,
             status=row.status,
             verdict=row.verdict,
             ended_at=row.ended_at,

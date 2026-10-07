@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -22,7 +22,8 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { HlmContextMenuImports } from '@spartan-ng/helm/context-menu';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
-import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
+import { HlmResizableImports } from '@spartan-ng/helm/resizable';
+import { HlmSidebarImports, HlmSidebarService } from '@spartan-ng/helm/sidebar';
 import { filter } from 'rxjs';
 import { InterviewStatus } from '@app/features/interviews/models/interview.enums';
 import { OUTCOME_TEXT, outcomeOf } from '@app/features/interviews/models/interview-outcome';
@@ -35,6 +36,7 @@ import {
   HistoryGroup,
   InterviewHistory,
 } from '../interview-history';
+import { HistorySidebarWidth, MAX_WIDTH, MIN_WIDTH } from './history-sidebar-width';
 
 /**
  * The way into practice, beside the pages that show it: start an interview, or open a past one.
@@ -50,6 +52,7 @@ import {
     HlmCollapsibleImports,
     HlmContextMenuImports,
     HlmDropdownMenuImports,
+    HlmResizableImports,
     HlmSidebarImports,
     NgIcon,
     RouterLink,
@@ -81,6 +84,18 @@ export class HistorySidebar {
   protected readonly placeholders = [1, 2, 3, 4];
   private readonly router = inject(Router);
 
+  protected readonly width = inject(HistorySidebarWidth);
+  protected readonly sidebar = inject(HlmSidebarService);
+  /** The edge can be dragged only where the sidebar is a panel beside the page, and open. */
+  protected readonly resizable = computed(() => !this.sidebar.isMobile() && this.sidebar.open());
+  /** Width of the layer the resizable group fills (the viewport), which its percentages are of. */
+  private readonly total = signal(window.innerWidth);
+  private readonly group = viewChild<ElementRef<HTMLElement>>('group');
+  protected readonly sidebarPercent = computed(() => (this.width.px() / this.total()) * 100);
+  protected readonly layout = computed(() => [this.sidebarPercent(), 100 - this.sidebarPercent()]);
+  protected readonly minPercent = computed(() => (MIN_WIDTH / this.total()) * 100);
+  protected readonly maxPercent = computed(() => (MAX_WIDTH / this.total()) * 100);
+
   /** What the open confirmation is about; `null` while there is none. */
   protected readonly target = signal<DeleteTarget | null>(null);
   protected readonly deleting = signal(false);
@@ -100,6 +115,15 @@ export class HistorySidebar {
   });
 
   constructor() {
+    effect((onCleanup) => {
+      const element = this.group()?.nativeElement;
+      if (!element) {
+        return;
+      }
+      const observer = new ResizeObserver(() => this.total.set(element.offsetWidth));
+      observer.observe(element);
+      onCleanup(() => observer.disconnect());
+    });
     // Whatever was done since a page last showed this (an interview made, ended or evaluated) may
     // have changed it: read it again on arriving, and on every move between these pages.
     this.history.refresh();
@@ -109,6 +133,10 @@ export class HistorySidebar {
         takeUntilDestroyed(),
       )
       .subscribe(() => this.history.refresh());
+  }
+
+  protected onLayout(layout: number[]): void {
+    this.width.set((layout[0] / 100) * this.total());
   }
 
   protected entryLabel(entry: HistoryEntry): string {

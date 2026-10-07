@@ -40,6 +40,17 @@ def test_every_role_and_tone_has_guidance_wording() -> None:
     assert set(TONE_GUIDANCE) == set(Tone)
 
 
+def test_every_role_has_a_checkability_rule_in_the_evaluation() -> None:
+    assert set(evaluation._CHECKABILITY) == set(InterviewerRole)
+
+
+def test_a_non_technical_interviewer_cannot_vouch_for_technical_claims() -> None:
+    recruiter = build_interview(interviewer_role="recruiter")
+    assert "not an engineer" in evaluation.build_messages(recruiter)[0].content
+    screener = build_interview(interviewer_role="technical_screener")
+    assert "technical depth" in evaluation.build_messages(screener)[0].content
+
+
 @pytest.mark.parametrize("interview_type", list(InterviewType))
 def test_every_interview_type_has_a_weighting(interview_type: InterviewType) -> None:
     interview = build_interview(interview_type=interview_type.value)

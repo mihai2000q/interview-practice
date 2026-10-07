@@ -62,6 +62,10 @@
         </span>
       </div>
     </form>
+
+    @if (interviewForm().submitting()) {
+      <app-interview-creation-progress />
+    }
   } @else {
     <div aria-busy="true" class="flex flex-col gap-6" role="status">
       <span class="sr-only">Loading your defaults…</span>

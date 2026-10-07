@@ -76,17 +76,22 @@ def test_a_cv_never_supplies_the_company() -> None:
     assert context(cv=document(CV, company="Past Employer")).company_name is None
 
 
-def test_the_job_descriptions_domain_wins_over_the_cvs() -> None:
+def test_the_job_descriptions_domain_is_the_one_used() -> None:
     result = context(jd=document(JD, domain="backend"), cv=document(CV, domain="data"))
     assert result.domain == "backend"
 
 
 def test_the_cvs_domain_is_used_when_the_job_description_has_none() -> None:
+    # Only a proposal: the plan checks it against the job title before using it.
     assert context(jd=document(JD), cv=document(CV, domain="data")).domain == "data"
+    assert context(cv=document(CV, domain="data")).domain == "data"
 
 
-def test_a_cover_letter_never_supplies_the_domain() -> None:
-    assert context(cover=document(COVER, domain="anything")).domain is None
+def test_the_cover_letters_domain_comes_before_the_cvs() -> None:
+    result = context(
+        cv=document(CV, domain="software"), cover=document(COVER, domain="hospitality")
+    )
+    assert result.domain == "hospitality"
 
 
 def test_no_documents_resolve_to_nothing() -> None:
@@ -165,7 +170,7 @@ def test_a_cv_ignores_a_company_the_model_returns() -> None:
     assert result.skills == ["SQL"]
 
 
-def test_a_cover_letter_keeps_only_the_company() -> None:
+def test_a_cover_letter_keeps_only_the_company_and_the_domain() -> None:
     result = run_extract(
         COVER,
         {
@@ -175,8 +180,8 @@ def test_a_cover_letter_keeps_only_the_company() -> None:
             "company_name": "Acme",
         },
     )
-    assert (result.domain, result.skills, result.likely_topics) == (None, [], [])
-    assert result.company_name == "Acme"
+    assert (result.skills, result.likely_topics) == ([], [])
+    assert (result.domain, result.company_name) == ("x", "Acme")
 
 
 @pytest.mark.parametrize("placeholder", ["", "null", "None", "N/A", "unknown", "  "])
@@ -208,7 +213,7 @@ def test_missing_keys_are_empty_not_an_error() -> None:
     [
         (JD, ["domain", "skills", "likely_topics", "company_name"], []),
         (CV, ["domain", "skills", "likely_topics"], ["company_name"]),
-        (COVER, ["company_name"], ["domain", "skills", "likely_topics"]),
+        (COVER, ["domain", "company_name"], ["skills", "likely_topics"]),
     ],
 )
 def test_the_prompt_asks_each_document_type_only_for_what_it_can_hold(

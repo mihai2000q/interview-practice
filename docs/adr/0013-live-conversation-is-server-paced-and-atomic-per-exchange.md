@@ -7,11 +7,21 @@ own how the interview is structured. For each call the server works out what kin
 exchange it is and tells the model: `open` (greet and ask the first question), `ask` (next
 question, with the option to end the questions early), `close_questions` (budget spent: thank
 the candidate and invite their questions), `answer` (ask-back) and `close_interview`. Every
-interviewer message in the Q&A phase counts as one question toward `target_question_count`,
-follow-ups included; the plan has exactly that many questions and is a guide, not a script.
-When the budget is spent the server forces the wrap-up, and if the model's reply breaks the
+interviewer question in the Q&A phase counts toward `target_question_count`; the plan has
+that many core questions plus reserves the interviewer may swap in, and is a guide, not a script.
+A **clarification** is not a
+question: an interviewer message that stays on the previous one, to answer what the
+candidate asked back or to ask for clarification of a thin answer. It is flagged by the
+model (`clarification`), stored as `Message.is_clarification`, and left out of the count
+(and of the coaching hint, which is for questions). At most two in a row (`MAX_CLARIFICATIONS`):
+the prompt says how many are left, and a clarification the model sends past the limit is
+stored as a question, so the budget still bounds the interview. A clarification can only
+come from an `ask` exchange, and the prompt says when one is called for: a vague, off-topic
+(steered back gently), nonsensical, contradictory or rude answer, or a wrong claim the persona's
+own background lets it check. A claim outside that background is taken as given.
+When the budget is spent the server forces the wrap-up, even right after a clarification, and if the model's reply breaks the
 exchange's contract (it asks another question when it had to close, or the reverse) the
-request fails with `502` instead of being patched up. The model replies `{message, done}`;
+request fails with `502` instead of being patched up. The model replies `{message, done, clarification}`;
 `done` means the current phase is over after this message, so the interviewer message that
 ends the Q&A phase is stored as the first `ask_back` message.
 
@@ -20,6 +30,15 @@ model and no database), the prompt and reply contract, and the final step of add
 `PUT .../messages/:id/helper`, so no question waits for it). `open_interview` (the opening) and
 `send_message` (every later reply) both go through it and keep only what concerns their
 request: loading, the claim, the lock and the commit.
+
+**Ending early.** For a rude or abusive candidate the interviewer first warns, inside a
+clarification, that it will have to end the interview if it continues. Only after such a
+warning (the previous interviewer message was a clarification) may an `ask` exchange come back
+with `end_interview: true`; without one the flag is ignored. The goodbye is stored as a Q&A
+message that is not a question, the Interview becomes `completed` with no ask-back phase, and
+no new status exists: an Interview `completed` without any `ask_back` message was ended by the
+interviewer (`Interview.ended_by_interviewer`). The evaluation and the review are told, so
+the missing questions aren't penalized and the conduct behind it weighs in the verdict.
 
 The ask-back phase ends when the interviewer closes it (`done`, which the model sets when the
 candidate declines or has no more questions) or after 5 candidate questions, whichever comes

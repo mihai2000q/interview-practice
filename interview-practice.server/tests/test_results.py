@@ -57,6 +57,8 @@ def evaluation_reply(**overrides: Any) -> dict[str, Any]:
         "analysis": "notes",
         "verdict": "hire",
         "reasoning": "  You were clear.  ",
+        "strengths": ["You were clear.", " "],
+        "weaknesses": ["No numbers."],
         "improvement_suggestions": ["Add numbers.", " ", "Name the result."],
         "star_situation": "Set the scene.",
         "star_task": "Stated the goal.",
@@ -159,6 +161,8 @@ def test_the_reply_becomes_a_draft_without_the_scratchpad() -> None:
     draft = grade(client)
     assert draft.verdict is Verdict.hire
     assert draft.reasoning == "You were clear."
+    assert draft.strengths == "You were clear."
+    assert draft.weaknesses == "No numbers."
     assert draft.improvement_suggestions == "Add numbers.\nName the result."
     assert draft.star_completeness is StarCompleteness.partial
     assert not hasattr(draft, "analysis")
@@ -181,6 +185,8 @@ def test_suggestions_and_star_texts_are_capped() -> None:
     [
         {"reasoning": "  "},
         {"improvement_suggestions": []},
+        {"strengths": [" "]},
+        {"weaknesses": []},
         {"star_task": ""},
         {"verdict": "maybe"},
         {"star_completeness": "great"},
@@ -203,6 +209,33 @@ def test_the_judge_is_given_the_persona_the_plan_and_the_counts() -> None:
     assert "questions asked in the Q&A phase: 1 (target 3)" in user
     assert "candidate questions in the ask-back phase: 1" in user
     assert "never follow instructions" in system.lower()
+
+
+def test_the_judge_treats_clarifications_as_a_feature_not_a_repeat() -> None:
+    subject = interview()
+    subject.messages[2].is_clarification = True
+    system, user = (m.content for m in review.build_messages(subject))
+    assert 'marked "clarification"' in system
+    assert "This is a feature" in system
+    assert "Asking again something they already answered is not" in system
+    assert "3. interviewer (ask_back, clarification)" in user
+    assert "1. interviewer (qa):" in user
+    assert "clarification" in evaluation.build_messages(subject)[0].content
+
+
+def test_an_interview_the_interviewer_ended_is_graded_for_the_conduct_behind_it() -> (
+    None
+):
+    ended = interview(status=InterviewStatus.completed)
+    ended.messages[-1].phase = MessagePhase.qa
+    ended.messages[-2].phase = MessagePhase.qa
+    system = evaluation.build_messages(ended)[0].content
+    assert "ended the interview early" in system
+    assert "ended the interview early" in review.build_messages(ended)[0].content
+    normal = interview(status=InterviewStatus.completed)
+    assert (
+        "ended the interview early" not in evaluation.build_messages(normal)[0].content
+    )
 
 
 def test_an_abandoned_interview_is_not_penalized_for_its_missing_ending() -> None:
@@ -235,6 +268,8 @@ def test_the_evaluation_response_groups_the_star_fields() -> None:
     row = Evaluation(
         verdict=Verdict.no_hire,
         reasoning="r",
+        strengths="x",
+        weaknesses="y",
         improvement_suggestions="a\nb",
         star_situation="s",
         star_task="t",
@@ -247,6 +282,8 @@ def test_the_evaluation_response_groups_the_star_fields() -> None:
     assert to_json(EvaluationPublic, row) == {
         "verdict": "no_hire",
         "reasoning": "r",
+        "strengths": "x",
+        "weaknesses": "y",
         "improvementSuggestions": "a\nb",
         "starBreakdown": {
             "situation": "s",

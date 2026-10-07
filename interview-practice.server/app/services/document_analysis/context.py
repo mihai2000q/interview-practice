@@ -26,7 +26,9 @@ def _analysis(document: Document | None) -> DocumentAnalysis | None:
 @dataclass(frozen=True)
 class JobContext:
     company_name: str | None  # the job description's, else the cover letter's
-    domain: str | None  # the job description's, else the CV's
+    # A proposal: the job description's, else the cover letter's, else the CV's. A CV
+    # may be another field than the position, so the plan checks it against the job.
+    domain: str | None
     job_text: str  # the job description's skills and topics, fenced; "" if none
     candidate_text: str  # the CV's skills and topics, fenced; "" if none
 
@@ -45,6 +47,7 @@ class JobContext:
             company_name=(job.company_name if job else None)
             or (letter.company_name if letter else None),
             domain=(job.domain if job else None)
+            or (letter.domain if letter else None)
             or (candidate.domain if candidate else None),
             job_text=_render("job_analysis", job),
             candidate_text=_render("candidate_analysis", candidate),

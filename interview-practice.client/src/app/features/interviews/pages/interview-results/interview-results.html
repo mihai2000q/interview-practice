@@ -1,4 +1,15 @@
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
+  <!-- The status and the settings the Interview was made with, as chips (the label is the tooltip). -->
+  <ng-template #settings>
+    <span hlmBadge variant="secondary">{{ statusLabel() }}</span>
+    @for (fact of facts(); track fact.label) {
+      <span [hlmTooltip]="fact.label" hlmBadge position="bottom" variant="outline">
+        <span class="sr-only">{{ fact.label }}:</span>
+        {{ fact.value }}
+      </span>
+    }
+  </ng-template>
+
   @if (evaluation(); as evaluation) {
     <header class="flex items-center gap-4">
       @if (interview(); as interview) {
@@ -27,12 +38,11 @@
 
     @if (interview()) {
       <div class="-mt-2 flex flex-wrap items-center gap-2">
-        <span hlmBadge variant="secondary">{{ statusLabel() }}</span>
-        @for (fact of facts(); track fact) {
-          <span hlmBadge variant="outline">{{ fact }}</span>
-        }
+        <ng-container *ngTemplateOutlet="settings" />
       </div>
     }
+
+    <hlm-separator />
 
     <app-verdict-summary
       [incomplete]="evaluation.incomplete"
@@ -41,6 +51,10 @@
     />
     <app-star-breakdown [breakdown]="evaluation.starBreakdown" />
     <app-improvement-suggestions [text]="evaluation.improvementSuggestions" />
+    <app-strengths-weaknesses
+      [strengths]="evaluation.strengths"
+      [weaknesses]="evaluation.weaknesses"
+    />
 
     @if (interview(); as interview) {
       <section
@@ -104,31 +118,72 @@
       [review]="review()"
     />
   } @else if (problem(); as problem) {
-    <div hlmEmpty>
-      <div hlmEmptyHeader>
-        <h1 hlmEmptyTitle>{{ problem.title }}</h1>
-        <p hlmEmptyDescription>{{ problem.description }}</p>
+    <!-- Whatever went wrong, the Interview was still set up this way. -->
+    @if (interview(); as interview) {
+      <header class="flex items-center gap-4">
+        <app-persona-avatar
+          [imageUrl]="personaImageUrl()"
+          [name]="interview.personaName"
+          class="shrink-0"
+          size="lg"
+        />
+        <div class="min-w-0">
+          <p class="text-sm text-muted-foreground">
+            Interview with {{ interview.personaName }} · {{ role() }}
+          </p>
+          <p class="text-2xl font-semibold tracking-tight">{{ subtitle() }}</p>
+        </div>
+      </header>
+      <div class="-mt-2 flex flex-wrap items-center gap-2">
+        <ng-container *ngTemplateOutlet="settings" />
       </div>
-      <div hlmEmptyContent>
-        @switch (problem.action) {
-          @case ('retry') {
-            <button (click)="retry()" hlmBtn>Try again</button>
-          }
-          @case ('session') {
-            <a [routerLink]="['/interviews', id()]" hlmBtn>Back to the interview</a>
-          }
-          @case ('new') {
-            <a hlmBtn routerLink="/interviews/new">Start a new interview</a>
-          }
-          @case ('preferences') {
-            <a hlmBtn routerLink="/preferences">Open Preferences</a>
-          }
-          @default {
-            <a hlmBtn routerLink="/" variant="outline">Back home</a>
-          }
-        }
+      <hlm-separator />
+    } @else if (interviewLoading()) {
+      <div class="flex items-center gap-4">
+        <div aria-hidden="true" class="size-16 shrink-0 rounded-xl" hlmSkeleton></div>
+        <div class="flex flex-col gap-2">
+          <div class="h-4 w-48" hlmSkeleton></div>
+          <div class="h-7 w-64" hlmSkeleton></div>
+        </div>
       </div>
-    </div>
+      <hlm-separator />
+    }
+    <!--
+      The message: a square tile about as tall as the text beside it, vertically centered on
+      the text and the button.
+    -->
+    <section class="flex items-center gap-5">
+      <div
+        [class]="problem.tileClass"
+        aria-hidden="true"
+        class="flex size-28 shrink-0 items-center justify-center rounded-2xl"
+      >
+        <ng-icon [name]="problem.icon" class="text-5xl" />
+      </div>
+      <div class="flex min-w-0 flex-col items-start gap-1">
+        <h1 class="text-xl font-semibold tracking-tight">{{ problem.title }}</h1>
+        <p class="max-w-prose text-muted-foreground">{{ problem.description }}</p>
+        <div class="mt-4">
+          @switch (problem.action) {
+            @case ('retry') {
+              <button (click)="retry()" hlmBtn>Try again</button>
+            }
+            @case ('session') {
+              <a [routerLink]="['/interviews', id()]" hlmBtn>Back to the interview</a>
+            }
+            @case ('new') {
+              <a hlmBtn routerLink="/interviews/new">Start a new interview</a>
+            }
+            @case ('preferences') {
+              <a hlmBtn routerLink="/preferences">Open Preferences</a>
+            }
+            @default {
+              <a hlmBtn routerLink="/" variant="outline">Back home</a>
+            }
+          }
+        </div>
+      </div>
+    </section>
   } @else {
     <div class="flex w-full flex-col gap-6">
       <header class="flex flex-col gap-1">

@@ -1,0 +1,32 @@
+<div class="flex w-full max-w-sm flex-col gap-5 rounded-xl border bg-card p-6 shadow-lg">
+  <div class="flex flex-col gap-1">
+    <h2 class="text-lg font-semibold tracking-tight">Preparing your interview</h2>
+    <p class="text-sm text-muted-foreground">This usually takes a few seconds.</p>
+  </div>
+
+  <span class="sr-only" role="status">Creating your interview. This might take a moment.</span>
+  <ol aria-hidden="true" class="flex flex-col gap-3 text-sm">
+    @for (step of steps; track step; let index = $index) {
+      <li
+        [class.text-muted-foreground]="index > current()"
+        [class.opacity-50]="index > current()"
+        class="flex items-center gap-2 transition-opacity duration-500 motion-reduce:transition-none"
+      >
+        @if (index < current()) {
+          <ng-icon class="text-success" name="lucideCircleCheck" size="16" />
+        } @else if (index === current()) {
+          <hlm-spinner />
+        } @else {
+          <span class="size-4 rounded-full border border-dashed"></span>
+        }
+        {{ step }}
+      </li>
+    }
+    @if (waiting(); as phrase) {
+      <li class="flex items-center gap-2">
+        <hlm-spinner />
+        {{ phrase }}
+      </li>
+    }
+  </ol>
+</div>

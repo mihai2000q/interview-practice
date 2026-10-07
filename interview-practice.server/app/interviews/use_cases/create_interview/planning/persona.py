@@ -1,4 +1,4 @@
-"""The interviewer persona: name, title and backstory (and the domain, if unknown)."""
+"""The interviewer persona: name, title, backstory, and the position's domain."""
 
 from dataclasses import dataclass
 
@@ -32,15 +32,19 @@ Hard constraints:
 - Invent a realistic full name (never a real public figure) and a job title that fits \
 the interviewer role. Write a backstory of 3 to 5 sentences covering their background, \
 what they know well and what they do NOT know, shaped by the role: {role}. \
-The persona's manner is {tone}.{company}
+The persona's manner is {tone}. The interviewer is hiring for the position in the \
+setup, so their title and backstory belong to that field.{company}
 
 JSON keys:
 {keys}\
 """
 
 _DOMAIN_KEY = """\
-- "domain": the role's field as a short lowercase label of at most four words, such as \
-"backend engineering" or "product management".
+- "domain": the field of the position as a short lowercase label of at most four \
+words, such as "backend engineering" or "hospitality". The setup may carry a \
+domain_from_documents taken from the candidate's documents: compare it with the \
+job_title and company, use it only if it fits them, and otherwise give the field of \
+the job_title. It is never the candidate's own background.
 """
 _PERSONA_KEY = '- "persona": {"name": string, "title": string, "backstory": string}'
 
@@ -61,7 +65,7 @@ class PersonaDraft:
     name: str
     title: str
     backstory: str
-    domain: str | None  # the model's, only when the documents gave none
+    domain: str | None  # the position's field, checked against the documents' hint
 
 
 def generate_persona(
@@ -80,7 +84,7 @@ def generate_persona(
             if company_of(request, context)
             else ""
         ),
-        keys=_PERSONA_KEY if context.domain else _DOMAIN_KEY + _PERSONA_KEY,
+        keys=_DOMAIN_KEY + _PERSONA_KEY,
     )
     messages = [
         ChatMessage("system", system),

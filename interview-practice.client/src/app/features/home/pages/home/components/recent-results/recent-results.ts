@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { OUTCOME_BADGE, outcomeOf } from '@app/features/interviews/models/interview-outcome';
+import { INTERVIEWER_ROLES, labelOf } from '@app/features/interviews/models/interview.options';
 import { RecentInterview } from '@app/features/home/models/dashboard.schema';
 
 /** The interviews that ended last, each one click from its results. */
@@ -17,4 +18,5 @@ export class RecentResults {
 
   protected readonly outcomeOf = outcomeOf;
   protected readonly badgeOf = OUTCOME_BADGE;
+  protected readonly roleLabel = labelOf(INTERVIEWER_ROLES);
 }

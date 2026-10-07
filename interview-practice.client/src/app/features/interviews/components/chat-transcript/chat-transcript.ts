@@ -5,6 +5,7 @@ import { HlmMessageImports } from '@spartan-ng/helm/message';
 import { HlmMessageScrollerImports } from '@spartan-ng/helm/message-scroller';
 import { TypingIndicator } from '@app/shared/components/typing-indicator/typing-indicator';
 import { InterviewStatus } from '@app/features/interviews/models/interview.enums';
+import { endedByInterviewer } from '@app/features/interviews/models/interview-outcome';
 import { Message } from '@app/features/interviews/models/interview.schema';
 import { ChatMessage } from '../chat-message/chat-message';
 import { PersonaAvatar } from '../persona-avatar/persona-avatar';
@@ -77,7 +78,9 @@ export class ChatTranscript {
     }
     switch (this.status()) {
       case 'completed':
-        return 'Interview completed';
+        return endedByInterviewer({ status: 'completed', messages: this.messages() })
+          ? 'Interview ended by the interviewer'
+          : 'Interview completed';
       case 'abandoned':
         return 'Interview abandoned';
       default:

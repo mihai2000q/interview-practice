@@ -36,7 +36,9 @@ services:
     volumes:
       - uploads:/app/instance/uploads
     depends_on:
-      - db
+      # The server runs `flask db upgrade` on start, so the database must be accepting connections
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:16-alpine
@@ -45,6 +47,11 @@ services:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     env_file:
       - ./interview-practice.server/.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
     volumes:
       - db-data:/var/lib/postgresql/data
 

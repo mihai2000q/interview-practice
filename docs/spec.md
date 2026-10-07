@@ -114,6 +114,9 @@ developer-facing preferences area kept apart from the candidate experience.
     limitation, see `overview.md`.)
 35. As a candidate, I want to start a brand-new interview or add a stage to an existing
     application from the sidebar, so that starting practice is always one click away.
+    (Only "+ New Interview" is in the sidebar. Adding a stage to an existing application is
+    done inside Create Interview, and a one-click "add stage" on the application in the sidebar
+    is a known limitation, see `overview.md`.)
 36. As the developer, I want a separate review of the AI interviewer's own conduct
     (question quality, persona consistency, pacing), so that I can assess and demonstrate
     the quality of my own prompt engineering independent of any one candidate's
@@ -126,8 +129,8 @@ developer-facing preferences area kept apart from the candidate experience.
 39. As the developer, I want every outbound prompt to pass through a single centralized
     security guard, so that prompt-injection and abuse are checked in one place rather
     than scattered per-endpoint.
-40. As the developer, I want a leave-confirmation guard on Create Interview and Interview
-    Session, so that a candidate doesn't lose in-progress work/state by navigating away
+40. As the developer, I want a leave-confirmation guard on Create Interview, Interview
+    Session and (while it has unsaved model defaults) Preferences, so that a candidate doesn't lose in-progress work/state by navigating away
     accidentally.
 41. As the developer, I want an ungracefully-closed interview (crash, Alt+F4) to eventually
     be marked abandoned automatically, so that no interview is stuck "in progress" forever
@@ -142,6 +145,12 @@ developer-facing preferences area kept apart from the candidate experience.
 45. As the developer, I want the OpenRouter API key sourced only from each developer's own
     machine, never written into any file in the repo, so that it's never accidentally
     committed or shared.
+46. As a candidate, I want to dictate my replies with my voice and see a live level meter
+    while I speak, so that I can answer the way I would in a real interview instead of
+    typing. (Built on the browser's speech recognition; see `architecture.md`.)
+47. As a candidate, I want a rude or abusive interview to be ended by the interviewer, after
+    a warning, the way a real interviewer would, with the evaluation told about it so the
+    questions that were never asked are not held against me. (See ADR 0013.)
 
 ## Implementation Decisions
 
@@ -168,8 +177,9 @@ developer-facing preferences area kept apart from the candidate experience.
   `EvaluationCriterion` rows (technical/behavioral rubric), `DocumentAnalysis` per Document
   (cached phase-1 output, keyed by model),
   `InterviewPhaseSettings` rows across 6 phases including the judge phase's narrower model
-  set), `Message` (phase, role, content, helper_text, sequence), `Evaluation` (verdict,
-  reasoning, improvement_suggestions, star_situation/task/action/result +
+  set), `Message` (phase, role, content, helper_text, is_clarification, sequence), `Evaluation` (verdict,
+  reasoning, strengths, weaknesses, improvement_suggestions,
+  star_situation/task/action/result +
   star_completeness, incomplete, model_used — the model the
   `evaluation` phase resolved to, `gpt-5-mini` unless overridden, see [ADR 0003](./adr/0003-self-grading-evaluation-vs-decoupled-interviewer-review.md)),
   `InterviewerReview` (judge_model default `google/gemini-2.5-flash`, score_question_relevance /
@@ -186,7 +196,8 @@ developer-facing preferences area kept apart from the candidate experience.
   Evaluations' reasoning/improvement_suggestions/STAR fields/evaluation criteria, not
   raw transcripts).
 - **Security guard**: one centralized Flask service all outbound prompts pass through
-  (length limits, prompt-injection detection, off-topic/abuse detection).
+  (length limits, prompt-injection detection). Off-topic/abuse classification is designed but
+  not built; abuse is handled in the interviewer's own prompt (warn, then end the interview).
 - **UI layout**: topbar (app logo, page breadcrumb trail and light/dark toggle, unconditional),
   left history sidebar ("+ New Interview" CTA, Preferences link, history grouped by
   JobApplication with a hover-reveal-icon-or-right-click context menu), right interviewer
@@ -195,41 +206,49 @@ developer-facing preferences area kept apart from the candidate experience.
   either sidebar).
 - **API contract**: the 5 blueprints' endpoints exactly as specified in `api-design.md`
   (create/get/message/abandon/evaluation/interviewer-review for interviews;
-  list/upload/download/rename/delete for documents; list/get/rename/delete for
-  applications; get/patch singleton for preferences; one read-only `GET /api/dashboard`
-  aggregate for the Home page) + the uniform error contract
-  (400/404/409/500, one JSON error shape).
+  list/upload/download/rename/delete for documents; list/get/progress-summary/delete for
+  applications (renaming one is a known limitation); get/patch singleton for preferences;
+  one read-only `GET /api/dashboard` aggregate for the Home page) + the uniform error
+  contract (400/404/409/500 and the others in `api-design.md`, one JSON error shape).
 - **File storage**: local disk under the Flask app's `instance/` folder, backed by a
   persisted Docker volume in deployment (see `deployment.md`).
 - **Deployment**: Docker Compose (`client`/`server`/`db`), project name pinned to `interview-practice`, nginx reverse-proxying `/api/*`
   same-origin in the client container (no CORS in that path), CORS only relevant for local
   dev via `CLIENT_HOST`/`CLIENT_PORT`, discrete `POSTGRES_*` env vars assembled into the DB URI at
   runtime, `.env.dev` as a checked-in template copied to a real git-ignored `.env`,
-  `OPENROUTER_API_KEY` sourced only from the host shell environment, never a file.
+  `OPENROUTER_API_KEY` sourced only from the host shell environment, never a file. The
+  `server` container applies pending database migrations on every start.
 - **Known limitations accepted**: no auth
-  ([ADR 0002](./adr/0002-single-user-prototype-no-auth.md)), no logging strategy yet
-  (deferred, not hidden).
+  ([ADR 0002](./adr/0002-single-user-prototype-no-auth.md)); no logging *strategy* yet
+  (some logging exists, see `architecture.md`; deferred, not hidden); history entries can't
+  be renamed and there is no one-click "add stage" in the sidebar; abandoned document
+  uploads are never cleaned up (fine for a local app, a cloud deployment would need a
+  scheduled cleanup job). All in `overview.md`.
 
 ## Testing Decisions
 
-No automated test suite for this pass — explicitly out of scope, given the time budget of
-a bootcamp project. If/when this changes, the natural seam is the Flask API layer itself
-(test through HTTP via the contract in `api-design.md`, not internal functions), with a
-thin OpenRouter client adapter as the one necessary fake boundary (the one real external
-dependency).
+The server has automated tests for its critical parts: the security guard, the OpenRouter
+client, the exchange pacing, planning, the interview lifecycle and staleness, results, phase
+settings and preferences, the concurrency rules and the application progress summary. They
+need no database and run against a fake LLM transport (`tests/support.py`). Coverage is not
+complete: the other parts of the server (for example document upload and PDF parsing, and
+the HTTP routes, only the guard is exercised through the Flask test client) are untested,
+and the client has **no tests at all** (deliberately, not an oversight).
+
+If coverage is ever extended, the natural seam is the Flask API layer itself (test through
+HTTP via the contract in `api-design.md`, not internal functions), with the OpenRouter
+client adapter as the one necessary fake boundary (the one real external dependency).
 
 ## Out of Scope
 
 - Authentication/multi-user support ([ADR 0002](./adr/0002-single-user-prototype-no-auth.md)).
 - LangChain ([ADR 0005](./adr/0005-langchain-not-used.md)).
 - Real RAG/vector database for JD/CV context ([ADR 0004](./adr/0004-job-description-context-is-not-rag.md)).
-- Automated testing, logging/observability, CI/CD, cloud hosting choice, horizontal
-  scaling.
+- Complete automated test coverage (see Testing Decisions), a logging/observability
+  strategy, CI/CD, cloud hosting choice, horizontal scaling.
 - TTS voice/rate tuning and a per-message replay button — designed (see `architecture.md`)
   but not built this pass.
-- Per-prompt cost tracking UI — designed (export-only) but not built this pass.
-- Exact visual/pixel design (icon choices, grouped-history collapse treatment, interviewer
-  sidebar's finer layout) — left for whenever those screens actually get built.
+- A scheduled cleanup of abandoned document uploads (needed only for a cloud deployment).
 
 ## Further Notes
 

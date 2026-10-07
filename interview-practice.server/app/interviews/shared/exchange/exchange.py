@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from app.interviews.shared.exchange.conversation import ask_interviewer, phase_after
 from app.interviews.shared.exchange.pacing import (
     ExchangeKind,
+    clarification_streak,
     decide_kind,
     questions_asked,
 )
@@ -44,6 +45,7 @@ class ExchangeOutcome:
     candidate_phase: MessagePhase
     interviewer_content: str
     interviewer_phase: MessagePhase
+    interviewer_is_clarification: bool
     completes_interview: bool
 
     def apply_to(self, interview: Interview) -> AppliedExchange:
@@ -62,6 +64,7 @@ class ExchangeOutcome:
         interviewer = Message(
             role=MessageRole.interviewer,
             phase=self.interviewer_phase,
+            is_clarification=self.interviewer_is_clarification,
             content=self.interviewer_content,
             sequence=count + 1,
         )
@@ -99,13 +102,16 @@ def run_exchange(
             transcript,
             kind,
             questions_asked(interview),
+            clarification_streak(interview),
         )
     return ExchangeOutcome(
         candidate_content=candidate_reply,
         candidate_phase=interview.phase,
         interviewer_content=result.message,
         interviewer_phase=phase_after(kind, result),
+        interviewer_is_clarification=result.is_clarification,
         completes_interview=(
             kind in (ExchangeKind.answer, ExchangeKind.close_interview) and result.done
-        ),
+        )
+        or result.ends_interview,
     )

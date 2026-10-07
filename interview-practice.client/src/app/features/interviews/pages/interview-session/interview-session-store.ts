@@ -140,8 +140,9 @@ export class InterviewSessionStore {
   );
   readonly questionsAsked = computed(
     () =>
-      this.interview()?.messages.filter((m) => m.role === 'interviewer' && m.phase === 'qa')
-        .length ?? 0,
+      this.interview()?.messages.filter(
+        (m) => m.role === 'interviewer' && m.phase === 'qa' && !m.isClarification,
+      ).length ?? 0,
   );
   readonly phaseLabel = computed(() =>
     this.interview()?.phase === 'ask_back' ? 'Ask-back phase' : 'Q&A phase',
@@ -221,13 +222,14 @@ export class InterviewSessionStore {
 
   private requestHelperFor(interview: Interview): void {
     const last = interview.messages.at(-1);
-    // Only the newest message, and only while it is still the open question: an older gap, or a
-    // question the candidate already answered, gets no hint.
+    // Only the newest message, and only while it is still the open question: an older gap, a
+    // question the candidate already answered, or a clarification, gets no hint.
     if (
       !interview.coachingHelpersEnabled ||
       interview.status !== 'in_progress' ||
       last?.role !== 'interviewer' ||
       last.phase !== 'qa' ||
+      last.isClarification ||
       last.helperText !== null ||
       this.helperRequested.has(last.id)
     ) {

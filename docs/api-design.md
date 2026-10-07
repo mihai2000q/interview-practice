@@ -9,7 +9,7 @@ shape, not the entities themselves. See [`architecture.md`](./architecture.md) f
 ## Backend structure
 
 Flask **application factory** (`create_app()`) with one **Blueprint** per domain area:
-`interviews`, `documents`, `applications`, `preferences`. Each blueprint owns its own
+`interviews`, `documents`, `applications`, `preferences`, `dashboard`. Each blueprint owns its own
 Pydantic request/response models, colocated with its routes (e.g.
 `app/interviews/schemas.py`). No blueprint per Evaluation/InterviewerReview/Message — those
 are sub-resources of `interviews`, not independent areas.
@@ -45,6 +45,7 @@ Every error response: `{"error": {"code": "<SNAKE_CASE_CODE>", "message": "<huma
 | 503 | The provider can't serve us right now (rate limit, credits, key); `details.retryAfterSeconds` when known | `LLM_UNAVAILABLE` |
 | 504 | The provider took too long | `LLM_TIMEOUT` |
 | 500 | Unexpected server error | `INTERNAL_ERROR` (no internals leaked in `message`) |
+| 405, 415, other | Errors Flask itself raises before a route runs, returned in the same shape: a wrong HTTP method on a route (`405`), a body of an unsupported type (`415`), and any other HTTP error | `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `HTTP_ERROR` |
 
 ## `interviews` blueprint — `/api/interviews`
 
@@ -84,8 +85,9 @@ Create Interview submission. Request:
   the client never re-sends the file.
 - `jobApplication` — `null` for a fully standalone Interview (no `JobApplication` at
   all); `{id}` to add this Interview as the next stage of an existing one (pre-fills
-  `companyName`/`jobTitle`/documents from it, per `workflow.md`); `{createNew: true}`
-  creates a fresh `JobApplication` from this request's `companyName`/`jobTitle` and
+  `companyName`/`jobTitle`/documents from it, per `workflow.md`; the request's `seniority`
+  is ignored and the Application's is used); `{createNew: true}`
+  creates a fresh `JobApplication` from this request's `companyName`/`jobTitle`/`seniority` and
   attaches this Interview as its first stage. If `companyName` is absent, the
   Application's company is read from the job description or cover letter (left null if
   neither names one).
@@ -111,7 +113,7 @@ which stay hidden from the candidate. It has no messages yet.
 
 No body. Creates the interviewer's opening message (a greeting and the first question, phase
 `qa`; its coaching helper is asked for separately) and returns it as a `Message`
-(`{id, phase, role, content, helperText, sequence, createdAt}`). **Idempotent**: an
+(`{id, phase, role, content, helperText, isClarification, sequence, createdAt}`). **Idempotent**: an
 Interview that already has messages returns its first message and calls no model. Two calls
 at once run the model once; the other gets `409 TURN_IN_PROGRESS`, and the client should
 re-read the Interview. A failure (`502`/`503`/`504`) leaves the Interview untouched, and
@@ -147,8 +149,9 @@ The client groups the entries under their Application with `GET /api/application
 
 Fetch an Interview plus its `Message`s (ordered by `sequence`), for rendering the session
 or resuming one already in progress. Response `200`: the Interview fields (as in the create
-response, plus `endedAt`), `phase` (`"qa"` | `"ask_back"`, the phase of the last message)
-and `messages: [{id, phase, role, content, helperText, sequence, createdAt}]`. An
+response, plus `endedAt` and `lastActivityAt`, the time of the latest message, which the
+30-minute staleness check below runs on), `phase` (`"qa"` | `"ask_back"`, the phase of the last message)
+and `messages: [{id, phase, role, content, helperText, isClarification, sequence, createdAt}]`. An
 `in_progress` Interview with no activity for 30 minutes is flipped to `abandoned` as it is
 read ([ADR 0006](./adr/0006-lazy-staleness-detection-not-a-background-job.md)). `404` for
 an unknown id.
@@ -173,7 +176,11 @@ stored in the same call, the current `phase`
 turn works: the server counts the interviewer's questions against `target_question_count`
 and forces the wrap-up when the budget is spent; the interviewer message that ends the Q&A
 phase is the first `ask_back` message (it invites the candidate's questions); the Interview
-becomes `completed` when the interviewer closes the ask-back phase. A turn is
+becomes `completed` when the interviewer closes the ask-back phase, or earlier, with no
+ask-back phase at all, when the interviewer ends it for a rude or abusive candidate (after a
+warning; see ADR 0013). There is no field or status for that: the response is an ordinary
+`completed` Interview whose last message is a Q&A one, and the client derives "ended by the
+interviewer" from there being no `ask_back` message. A turn is
 all-or-nothing: if the model fails, nothing is stored and the candidate can send the reply
 again. `409 INTERVIEW_ALREADY_ENDED` if the Interview is no longer `in_progress`, and
 `409 TURN_IN_PROGRESS` if the previous reply is still being answered (the client should wait
@@ -248,8 +255,8 @@ stored; the client retries).
 ### `GET /api/interviews/:id/evaluation`
 
 The stored `Evaluation` (Results page data), never generates one:
-`{verdict, reasoning, improvementSuggestions, starBreakdown, incomplete}`. `verdict` is
-`"hire"` | `"no_hire"`; `improvementSuggestions` is text with one suggestion per line;
+`{verdict, reasoning, strengths, weaknesses, improvementSuggestions, starBreakdown, incomplete}`. `verdict` is
+`"hire"` | `"no_hire"`; `strengths`, `weaknesses` and `improvementSuggestions` are text with one item per line;
 `starBreakdown` is `{situation, task, action, result, completeness}` where `completeness` is
 `"strong"` | `"partial"` | `"weak"`; `incomplete` is `true` when the Interview was abandoned
 (the evaluation then says it rests on a partial interview). `404` until `PUT` has made it.
@@ -426,8 +433,7 @@ resource, same as `GET`.
   empty body.
 - `400 MODEL_NOT_ALLOWED` if a `model` is not one the phase may run on: `gpt-5-mini`,
   `gpt-5-nano` or `gpt-4o-mini` for the five candidate-facing phases; `google/gemini-2.5-flash`,
-  `google/gemini-3.5-flash-lite`, `gpt-5-mini`, `gpt-5-nano` or `typesafe/jev-1.13` for
-  `interviewerReview` (see `architecture.md`). `POST /api/interviews` and
+  `gpt-5-mini` or `gpt-5-nano` for `interviewerReview` (see `architecture.md`). `POST /api/interviews` and
   `PUT /api/documents/<id>/analysis` answer it too, for the `model` of their overrides.
 - `400 REASONING_EFFORT_NOT_ALLOWED` if a `reasoningEffort` is not `minimal`, `low`, `medium`
   or `high` (`details` = `{reasoningEffort, allowed}`). `POST /api/interviews` and
@@ -453,7 +459,7 @@ itself. Its own tiny blueprint. Response `200`:
   "recent": [
     {
       "id": "…", "jobTitle": "Senior Engineer", "companyName": "Acme",
-      "status": "completed", "verdict": "hire", "endedAt": "2026-10-06T09:10:00Z"
+      "interviewerRole": "recruiter", "status": "completed", "verdict": "hire", "endedAt": "2026-10-06T09:10:00Z"
     }
   ]
 }
@@ -470,7 +476,7 @@ itself. Its own tiny blueprint. Response `200`:
   so this is the "go and open your results" number. An abandoned Interview with nothing to
   grade (`NOTHING_TO_EVALUATE`) is in none of the three outcomes.
 - `recent` is the (up to) 5 Interviews that ended most recently, newest `endedAt` first, each
-  `{id, jobTitle, companyName, status, verdict, endedAt}` with `verdict` `null` when it has no
+  `{id, jobTitle, companyName, interviewerRole, status, verdict, endedAt}` with `verdict` `null` when it has no
   `Evaluation`. This is the "trend" the Home page draws.
 - All counts are `0` and `recent` is `[]` when there is nothing yet (the Home page then shows
   its onboarding state). The endpoint only reads: it never generates an `Evaluation`.

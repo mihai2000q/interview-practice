@@ -87,9 +87,10 @@ _SPECS = {
     DocumentType.cover_letter: _Spec(
         "a candidate's cover letter",
         {
+            _Field.domain: "the field of the role the candidate is applying for",
             _Field.company_name: (
                 "the company the candidate is applying to, if the letter names it"
-            )
+            ),
         },
     ),
 }

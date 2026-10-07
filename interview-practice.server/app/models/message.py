@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Text, false, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import Base, uuid_pk
@@ -38,6 +38,11 @@ class Message(Base):
     role: Mapped[MessageRole] = mapped_column(Enum(MessageRole))
     content: Mapped[str] = mapped_column(Text)
     helper_text: Mapped[str | None] = mapped_column(Text)
+    # An interviewer message that stays on the previous question (answering the
+    # candidate or asking them to clarify), not counted as a question.
+    is_clarification: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false()
+    )
     sequence: Mapped[int]
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -47,6 +52,10 @@ class Message(Base):
 
     @property
     def is_question(self) -> bool:
-        """An interviewer's Q&A question (follow-ups included), as opposed to a
-        candidate message or the ask-back phase."""
-        return self.role is MessageRole.interviewer and self.phase is MessagePhase.qa
+        """An interviewer's Q&A question, as opposed to a candidate message, the
+        ask-back phase or a clarification of the previous question."""
+        return (
+            self.role is MessageRole.interviewer
+            and self.phase is MessagePhase.qa
+            and not self.is_clarification
+        )

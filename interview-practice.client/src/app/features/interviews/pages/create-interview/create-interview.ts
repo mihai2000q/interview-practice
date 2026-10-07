@@ -21,6 +21,7 @@ import { InterviewJobContext } from './components/interview-job-context/intervie
 import { InterviewStructure } from './components/interview-structure/interview-structure';
 import { InterviewPersona } from './components/interview-persona/interview-persona';
 import { InterviewApplication } from './components/interview-application/interview-application';
+import { InterviewCreationProgress } from './components/interview-creation-progress/interview-creation-progress';
 import { InterviewDocuments } from './components/interview-documents/interview-documents';
 
 @Component({
@@ -36,6 +37,7 @@ import { InterviewDocuments } from './components/interview-documents/interview-d
     InterviewStructure,
     InterviewPersona,
     InterviewDocuments,
+    InterviewCreationProgress,
   ],
   templateUrl: './create-interview.html',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },

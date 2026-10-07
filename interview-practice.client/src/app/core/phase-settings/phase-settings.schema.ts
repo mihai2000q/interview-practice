@@ -34,6 +34,10 @@ export const PHASE_HINTS: Partial<Record<Phase, string>> = {
   coachingHelpers: 'Covers both the coaching hints and the ask-back suggestions.',
 };
 
+/** Shown beside every temperature control: not every model honors it. */
+export const TEMPERATURE_HINT =
+  'Some models are not affected by changes to this setting (e.g. gpt-5-mini, gpt-5-nano).';
+
 export function isSubStep(phase: Phase): boolean {
   return PHASE_STEPS[phase].includes('.');
 }
@@ -46,14 +50,8 @@ export const INTERVIEW_MODELS = ['gpt-5-mini', 'gpt-5-nano', 'gpt-4o-mini'] as c
 export function builtInModelOf(phase: Phase): string {
   return phase === 'interviewerReview' ? DEFAULT_JUDGE_MODEL : DEFAULT_INTERVIEW_MODEL;
 }
-/** Not a subset of `INTERVIEW_MODELS` on purpose, see docs/architecture.md and ADR 0009. Jev is a decision model, so only the judge can use it. */
-export const JUDGE_MODELS = [
-  'google/gemini-2.5-flash',
-  'google/gemini-3.5-flash-lite',
-  'gpt-5-mini',
-  'gpt-5-nano',
-  'typesafe/jev-1.13',
-] as const;
+/** Not a subset of `INTERVIEW_MODELS` on purpose, see docs/architecture.md and ADR 0009. */
+export const JUDGE_MODELS = ['google/gemini-2.5-flash', 'gpt-5-mini', 'gpt-5-nano'] as const;
 /** Where a slider rests when neither the Interview nor Preferences set the value; it is not sent. */
 export const DEFAULT_TEMPERATURE = 0.7;
 export const DEFAULT_MAX_TOKENS = 1024;

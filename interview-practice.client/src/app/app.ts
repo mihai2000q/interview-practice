@@ -7,6 +7,7 @@ import { HlmToasterImports } from '@spartan-ng/helm/sonner';
 import { RouteContext } from './core/layout/route-context';
 import { Topbar } from './core/layout/topbar/topbar';
 import { HistorySidebar } from './features/history/history-sidebar/history-sidebar';
+import { HistorySidebarWidth } from './features/history/history-sidebar/history-sidebar-width';
 
 @Component({
   imports: [HistorySidebar, HlmSidebarWrapper, RouterOutlet, Topbar, HlmToasterImports],
@@ -15,4 +16,5 @@ import { HistorySidebar } from './features/history/history-sidebar/history-sideb
 })
 export class App {
   protected readonly route = inject(RouteContext);
+  protected readonly sidebarWidth = inject(HistorySidebarWidth);
 }

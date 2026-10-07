@@ -10,6 +10,9 @@ from app.models import Interview, MessagePhase, MessageRole
 
 # A real interview lets the candidate ask a handful of questions, not an endless Q&A.
 MAX_ASK_BACK_QUESTIONS = 5
+# How many times in a row the interviewer may stay on one question (to answer what the
+# candidate asked back, or to ask for clarification) before accepting the answer.
+MAX_CLARIFICATIONS = 2
 
 
 class ExchangeKind(Enum):
@@ -23,8 +26,34 @@ class ExchangeKind(Enum):
 
 
 def questions_asked(interview: Interview) -> int:
-    """Interviewer messages in the Q&A phase so far (follow-ups count)."""
+    """Interviewer questions in the Q&A phase so far. Clarifications don't count."""
     return sum(m.is_question for m in interview.messages)
+
+
+def clarifications_left(kind: ExchangeKind, streak: int) -> int:
+    """How many more times the interviewer may stay on the question in this exchange:
+    only an `ask` exchange can, and only up to `MAX_CLARIFICATIONS` in a row."""
+    return max(0, MAX_CLARIFICATIONS - streak) if kind is ExchangeKind.ask else 0
+
+
+def may_end_interview(kind: ExchangeKind, streak: int) -> bool:
+    """Whether the interviewer may end the interview on the spot (an abusive candidate,
+    no ask-back): only in an `ask` exchange, and only after it stayed on the question
+    at least once, which is where the warning is given."""
+    return kind is ExchangeKind.ask and streak >= 1
+
+
+def clarification_streak(interview: Interview) -> int:
+    """How many interviewer messages in a row, ending the Q&A so far, stayed on one
+    question instead of asking a new one."""
+    streak = 0
+    for message in reversed(interview.messages):
+        if message.role is not MessageRole.interviewer:
+            continue
+        if message.phase is not MessagePhase.qa or not message.is_clarification:
+            break
+        streak += 1
+    return streak
 
 
 def decide_kind(interview: Interview, *, has_reply: bool) -> ExchangeKind:

@@ -275,7 +275,7 @@ def test_overrides_with_an_allowed_model_for_their_phase_are_allowed() -> None:
     ensure_overrides_allowed(
         [
             row(GenerationPhase.live_conversation, model="gpt-4o-mini"),
-            row(GenerationPhase.interviewer_review, model="typesafe/jev-1.13"),
+            row(GenerationPhase.interviewer_review, model="google/gemini-2.5-flash"),
         ]
     )
 
@@ -283,7 +283,7 @@ def test_overrides_with_an_allowed_model_for_their_phase_are_allowed() -> None:
 @pytest.mark.parametrize(
     ("phase", "model"),
     [
-        (GenerationPhase.question_plan, "typesafe/jev-1.13"),
+        (GenerationPhase.question_plan, "google/gemini-2.5-flash"),
         (GenerationPhase.live_conversation, "made-up/model"),
         (GenerationPhase.interviewer_review, "gpt-4o-mini"),
     ],

@@ -22,13 +22,11 @@
                 <span class="truncate text-sm font-medium">{{ item.jobTitle }}</span>
                 <span class="truncate text-xs text-muted-foreground">
                   @if (item.companyName) {
-                    {{ item.companyName }}
-                    @if (item.endedAt) {
-                      ·
-                    }
+                    {{ item.companyName }} ·
                   }
+                  {{ roleLabel(item.interviewerRole) }}
                   @if (item.endedAt) {
-                    {{ item.endedAt | date: 'MMM d' }}
+                    · {{ item.endedAt | date: 'MMM d' }}
                   }
                 </span>
               </span>

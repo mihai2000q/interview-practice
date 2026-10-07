@@ -1,15 +1,24 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideHouse, lucidePlus } from '@ng-icons/lucide';
+import {
+  lucideChevronDown,
+  lucideClock,
+  lucideHouse,
+  lucideMessageSquareOff,
+  lucidePlus,
+  lucideSearchX,
+  lucideTriangleAlert,
+} from '@ng-icons/lucide';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
-import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { ApiError, toApiError } from '@app/core/api/api-error';
 import { valueOrUndefined } from '@app/core/api/resource-value';
 import {
@@ -17,21 +26,32 @@ import {
   interviewSettings,
   labelOf,
 } from '@app/features/interviews/models/interview.options';
+import { endedByInterviewer } from '@app/features/interviews/models/interview-outcome';
 import { InterviewsApi } from '@app/features/interviews/services/interviews-api';
 import { ResultsCache } from '@app/features/interviews/services/results-cache';
 import { ChatTranscript } from '@app/features/interviews/components/chat-transcript/chat-transcript';
 import { PersonaAvatar } from '@app/features/interviews/components/persona-avatar/persona-avatar';
+import { StrengthsWeaknesses } from './components/strengths-weaknesses/strengths-weaknesses';
 import { ImprovementSuggestions } from './components/improvement-suggestions/improvement-suggestions';
 import { InterviewerReviewPanel } from './components/interviewer-review-panel/interviewer-review-panel';
 import { StarBreakdown } from './components/star-breakdown/star-breakdown';
 import { VerdictSummary } from './components/verdict-summary/verdict-summary';
 
-/** What the page says when the Evaluation can't be shown, and what the candidate can do about it. */
+/**
+ * What the page says when the Evaluation can't be shown, and what the candidate can do about it.
+ * `icon` fills the tile beside the message; `tileClass` colors it (neutral for something the
+ * candidate can resolve, destructive for something that failed).
+ */
 interface Problem {
   title: string;
   description: string;
   action: 'retry' | 'session' | 'new' | 'preferences' | 'home';
+  icon: string;
+  tileClass: string;
 }
+
+const NEUTRAL_TILE = 'bg-muted text-muted-foreground';
+const FAILED_TILE = 'bg-destructive/10 text-destructive';
 
 function problemOf(error: ApiError): Problem {
   switch (error.code) {
@@ -40,12 +60,16 @@ function problemOf(error: ApiError): Problem {
         title: 'This interview is still in progress',
         description: 'Finish it (or abandon it) first, then come back for your results.',
         action: 'session',
+        icon: 'lucideClock',
+        tileClass: NEUTRAL_TILE,
       };
     case 'NOTHING_TO_EVALUATE':
       return {
         title: 'Nothing to evaluate',
         description: "You didn't reply to the interviewer, so there is nothing to grade.",
         action: 'new',
+        icon: 'lucideMessageSquareOff',
+        tileClass: NEUTRAL_TILE,
       };
     case 'JUDGE_MODEL_COLLISION':
       // The Preferences changed since the interview was made; trying again fails the same way.
@@ -53,14 +77,24 @@ function problemOf(error: ApiError): Problem {
         title: "The judge can't use this model",
         description: error.message,
         action: 'preferences',
+        icon: 'lucideTriangleAlert',
+        tileClass: FAILED_TILE,
       };
     default:
       return error.status === 404
-        ? { title: 'Interview not found', description: error.message, action: 'home' }
+        ? {
+            title: 'Interview not found',
+            description: error.message,
+            action: 'home',
+            icon: 'lucideSearchX',
+            tileClass: NEUTRAL_TILE,
+          }
         : {
             title: 'Could not evaluate the interview',
             description: error.message,
             action: 'retry',
+            icon: 'lucideTriangleAlert',
+            tileClass: FAILED_TILE,
           };
   }
 }
@@ -73,18 +107,30 @@ function problemOf(error: ApiError): Problem {
     HlmButtonImports,
     HlmCardImports,
     HlmCollapsibleImports,
-    HlmEmptyImports,
     HlmSeparatorImports,
     HlmSkeleton,
+    HlmTooltipImports,
     ImprovementSuggestions,
+    StrengthsWeaknesses,
     InterviewerReviewPanel,
     NgIcon,
+    NgTemplateOutlet,
     PersonaAvatar,
     RouterLink,
     StarBreakdown,
     VerdictSummary,
   ],
-  providers: [provideIcons({ lucideChevronDown, lucideHouse, lucidePlus })],
+  providers: [
+    provideIcons({
+      lucideChevronDown,
+      lucideClock,
+      lucideHouse,
+      lucideMessageSquareOff,
+      lucidePlus,
+      lucideSearchX,
+      lucideTriangleAlert,
+    }),
+  ],
   templateUrl: './interview-results.html',
 })
 export class InterviewResults {
@@ -144,13 +190,20 @@ export class InterviewResults {
   protected readonly role = computed(() =>
     labelOf(INTERVIEWER_ROLES)(this.interview()?.interviewerRole),
   );
-  protected readonly statusLabel = computed(() =>
-    this.interview()?.status === 'abandoned' ? 'Abandoned' : 'Completed',
-  );
-  /** The Interview's settings, as the short chips under the heading. */
+  protected readonly statusLabel = computed(() => {
+    const interview = this.interview();
+    if (interview?.status === 'abandoned') {
+      return 'Abandoned';
+    }
+    if (interview?.status === 'in_progress') {
+      return 'In progress';
+    }
+    return interview && endedByInterviewer(interview) ? 'Ended by the interviewer' : 'Completed';
+  });
+  /** The Interview's settings, as the short chips under the heading (the label is the tooltip). */
   protected readonly facts = computed(() => {
     const interview = this.interview();
-    return interview ? interviewSettings(interview).map((setting) => setting.value) : [];
+    return interview ? interviewSettings(interview, { withTone: true }) : [];
   });
   protected readonly subtitle = computed(() => {
     const interview = this.interview();

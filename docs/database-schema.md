@@ -80,14 +80,14 @@ Deleting a row here cascades (`ON DELETE CASCADE`) to every `interviews` row wit
 | `job_application_id` | `uuid`, nullable, FK → `job_applications.id` | nullable — a standalone Interview needs no Application |
 | `job_title` | `text` | |
 | `company_name` | `text`, nullable | the candidate's, else read from the job description / cover letter when either names one, else null; lets persona/conversation/ask-back suggestions reference a real company even when no JD is uploaded |
-| `domain` | `text` | taken from the job description's (else the CV's) `document_analyses.domain` at creation; never entered by the candidate |
+| `domain` | `text` | the field of the position: the documents' `document_analyses.domain` (job description, else cover letter, else CV) is only a hint, which phase 2 checks against `job_title` and company and drops when it doesn't fit (e.g. a software CV for a barista job), giving the job title's field instead; never entered by the candidate |
 | `seniority` | `text` | |
 | `difficulty` | `enum(easy, medium, hard)` | |
 | `tone` | `text` | strict / neutral / friendly (a fixed set in the client form and the API's `Tone`); plain text rather than a DB enum so adding a tone needs no migration |
 | `interview_type` | `text` | technical / behavioral (the API's `InterviewType`); plain text, same extensibility reasoning as `tone` |
 | `interviewer_role` | `text` | recruiter / technical_screener / hr / hiring_manager (the API's `InterviewerRole`); plain text, same extensibility reasoning as `tone` |
 | `target_question_count` | `integer` | soft cap, seeded by difficulty; 1–30 (`CHECK`) |
-| `status` | `enum(in_progress, completed, abandoned)` | |
+| `status` | `enum(in_progress, completed, abandoned)` | an Interview the interviewer ended early (a rude or abusive candidate) is `completed` with no `ask_back` message; no column or status marks it, it is derived — see domain-model.md |
 | `turn_started_at` | `timestamptz`, nullable | set while a Q&A turn is being processed so a second reply is refused (`409 TURN_IN_PROGRESS`); cleared when the turn commits or fails; ignored once older than 5 minutes — see ADR 0013 |
 | `last_activity_at` | `timestamptz` | updated on every new message; staleness timeout 30 minutes — lazily detects a stale/ungracefully-closed session and marks it `abandoned` — see domain-model.md |
 | `persona_name` | `text` | |
@@ -113,7 +113,7 @@ phase uses the global Preferences default.
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `interview_id` | `uuid`, FK → `interviews.id` `ON DELETE CASCADE`, not null | |
 | `phase` | `enum(jd_analysis, question_plan, live_conversation, coaching_helpers, evaluation, interviewer_review)` | |
-| `model` | `text`, nullable | OpenRouter model id. `interviewer_review`'s choice is a narrower set (`google/gemini-2.5-flash`/`google/gemini-3.5-flash-lite`/`gpt-5-mini`/`gpt-5-nano`/`typesafe/jev-1.13`) than the other 5 phases' — see architecture.md |
+| `model` | `text`, nullable | OpenRouter model id. `interviewer_review`'s choice is a narrower set (`google/gemini-2.5-flash`/`gpt-5-mini`/`gpt-5-nano`) than the other 5 phases' — see architecture.md |
 | `temperature` | `double precision`, nullable | |
 | `max_tokens` | `integer`, nullable | |
 | `reasoning_effort` | `text`, nullable | |
@@ -146,7 +146,7 @@ cover. Owned by the Interview and created with it; see `domain-model.md`.
 |---|---|---|
 | `id` | `uuid` PK, default `gen_random_uuid()` | |
 | `interview_id` | `uuid`, FK → `interviews.id` `ON DELETE CASCADE`, not null | |
-| `sequence` | `integer` | order within the plan, from 1 |
+| `sequence` | `integer` | order within the plan, from 1; the first `target_question_count` are core questions, the rest reserves |
 | `category` | `enum(technical, behavioral)` | |
 | `question` | `text` | |
 
@@ -177,6 +177,7 @@ Unique: `(interview_id, sequence)`.
 | `role` | `enum(interviewer, candidate)` | |
 | `content` | `text` | |
 | `helper_text` | `text`, nullable | populated only for `interviewer`/`qa` rows when `interviews.coaching_helpers_enabled` is true |
+| `is_clarification` | `boolean`, default false | an interviewer message that stays on the previous question; not counted as a question — see ADR 0013 |
 | `sequence` | `integer` | ordering within the interview |
 | `created_at` | `timestamptz` | default now() |
 
@@ -190,6 +191,8 @@ Index: `(interview_id, sequence)` for ordered transcript retrieval.
 | `interview_id` | FK → `interviews.id`, unique, not null | one-to-one |
 | `verdict` | `enum(hire, no_hire)` | |
 | `reasoning` | `text` | |
+| `strengths` | `text` | one strength per line; at least one |
+| `weaknesses` | `text` | same, for weaknesses |
 | `improvement_suggestions` | `text` | |
 | `star_situation` | `text` | short assessment of the Situation, aggregated across the whole interview |
 | `star_task` | `text` | same, for Task |
@@ -296,7 +299,10 @@ Postgres must be running and reachable at `POSTGRES_HOST:POSTGRES_PORT` — loca
 
 - **Never edit a migration that has been committed or shared.** Write a new one. A
   migration that exists only on your machine can be undone with `downgrade`, deleted, and
-  regenerated after fixing the model.
+  regenerated after fixing the model. (The one `initial` migration was reworked several
+  times while the schema was still being shaped and no database outside a developer's own
+  machine existed; that was the exception for the initial project. From now on, schema
+  changes are new migrations.)
 - **Re-running is safe.** `upgrade` applies only what is missing — Alembic records the
   current revision in the `alembic_version` table — so running it on an up-to-date
   database does nothing.
@@ -305,5 +311,6 @@ Postgres must be running and reachable at `POSTGRES_HOST:POSTGRES_PORT` — loca
 - **Starting over locally:** `docker compose down -v` deletes the `db-data` volume (and the
   uploads volume with it), then `docker compose up -d db` and `scripts/db.sh upgrade`
   rebuild an empty database.
-- Migrations only run when you run them — nothing migrates on app start, and the app
-  factory (`create_app()`) never touches the schema.
+- Outside Docker, migrations only run when you run them (`scripts/db.sh upgrade`); the app
+  factory (`create_app()`) never touches the schema. The `server` container is the one
+  exception: it runs `flask db upgrade` before starting gunicorn (see `deployment.md`).

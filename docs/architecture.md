@@ -24,7 +24,7 @@ reasoning behind decisions only gestured at here.
   actually apply at all.
 - **Backend**: `interview-practice.server` — Flask, managed with `uv`, structured as an
   **application factory** (`create_app()`) with **Blueprints** per domain area
-  (`interviews`, `documents`, `applications`, `preferences` — see `api-design.md`). Owns
+  (`interviews`, `documents`, `applications`, `preferences`, `dashboard` — see `api-design.md`). Owns
   every OpenRouter call and the security guard. The OpenRouter API key and all prompt
   construction stay server-side — the client never sees a system prompt or an API key. A
   **Pydantic v2** validation layer sits between the API routes and the app's internals —
@@ -42,10 +42,19 @@ reasoning behind decisions only gestured at here.
   is single-host Docker Compose, not multi-instance (see `deployment.md`), as long as that
   folder is a persisted volume.
 - **Deployment**: Docker Compose, single-host — see `deployment.md`.
-- **Logging/observability**: not designed yet — genuinely absent, not an oversight being
-  hidden. Revisit before this goes anywhere beyond a local prototype.
-- **Testing**: no testing strategy designed yet either side (client or server); explicitly
-  deferred, not part of this documentation pass.
+- **Logging/observability**: some logging exists on the server, but there is **no logging
+  strategy** yet (levels, format, destination, retention are undecided), and no
+  observability beyond that. What exists: the OpenRouter client, the security guard (the
+  category of a rejection goes to the log, never to the client), the error handlers (an
+  unexpected 500 is logged with its traceback), the live conversation (for example a model
+  that tried to end an interview without a warning), and a per-step timing log under the
+  `app.timing` logger (`app/llm/timing.py`). Not a hidden gap: decide the strategy before
+  this goes anywhere beyond a local prototype.
+- **Testing**: the server has automated tests for its critical parts (security guard,
+  OpenRouter client, pacing, planning, lifecycle and staleness, results, phase settings,
+  preferences, concurrency, the progress summary), DB-free and against a fake LLM transport;
+  coverage is partial, not complete. The client has no tests, deliberately. See the Testing
+  Decisions in `spec.md`.
 
 ## Routes
 
@@ -55,7 +64,7 @@ reasoning behind decisions only gestured at here.
 | `/interviews/new` | `CanDeactivate` leave-confirmation |
 | `/interviews/:id` | `CanDeactivate` leave-confirmation |
 | `/interviews/:id/results` | — |
-| `/preferences` | — |
+| `/preferences` | `CanDeactivate` leave-confirmation, only while the model defaults have unsaved edits |
 | `/applications/:id` | — |
 
 ## UI layout & navigation
@@ -75,9 +84,10 @@ navigation:
   owns for the reason given there.
 - **History sidebar** (left) — built with Spartan's `sidebar`: a panel beside the page on wide
   screens and a drawer on narrow ones, shown and hidden by a trigger at the left of the topbar
-  (only on the pages that have the sidebar). Visible only on Home and Results, hidden on Create Interview
-  and Interview Session (keeps those flows free of distraction and of the temptation to
-  jump into an unrelated past result mid-task). Anchored to the top: a **"+ New Interview"**
+  (only on the pages that have the sidebar). Visible on Home, Results, Preferences and the
+  Application Overview, hidden on Create Interview and Interview Session (keeps those
+  flows free of distraction and of the temptation to jump into an unrelated past result
+  mid-task). A route opts in with `data: showsHistory()`. Anchored to the top: a **"+ New Interview"**
   CTA, and below it a **Preferences** link (icon *and* text, not either/or) to the
   **Preferences page** (`/preferences`). The history list fills the rest, below both.
   Putting the Preferences link here rather than in the topbar means its availability just
@@ -87,8 +97,8 @@ navigation:
     (e.g. "Acme Corp — Senior Software Engineer" as a group header, showing each pipeline
     stage's status at a glance — done/in progress/not started), falling back to a flat,
     ungrouped entry for standalone Interviews with no Application. Each Interview entry
-    still opens straight into its own Results page. Exact grouped-list visual treatment
-    (collapsible groups vs. a simple label prefix) is an open item — see `overview.md`.
+    still opens straight into its own Results page. Groups are collapsible, and each stage
+    shows an outcome icon, its interviewer role and its date.
   - The group header itself is clickable, opening `/applications/:id` (the Application
     Overview page — see the Progress summary section below). Its context menu has two ways
     in: a kebab/menu icon that only reveals on hover (not always-visible, but always visible
@@ -121,6 +131,10 @@ navigation:
 - Both Create Interview and Interview Session are guarded with a **leave-confirmation
   prompt** (`CanDeactivate`, "are you sure you want to leave?") before navigating away,
   whether that navigation comes from the topbar, browser back, or closing the tab.
+  The **Preferences page** has the same guard, but only while its model defaults have
+  unsaved edits (a clean page leaves without asking), because it is the one page with a
+  Save / Discard draft. It covers in-app navigation only: closing or reloading the tab
+  does not warn there, unlike on Create Interview and Interview Session.
 - The **Preferences page** (see its own section below) sets, per phase, the default
   model, temperature, max tokens and reasoning effort. The judge's model is separate from
   the interview's. The system prompts are fixed in the server and not editable.
@@ -129,7 +143,9 @@ navigation:
 
 The assignment requires at least 5 system prompts using different prompting techniques.
 Each one corresponds to a distinct backend phase of the interview lifecycle, rather than to
-5 separate standalone tools:
+5 separate standalone tools. This section is the design of each phase; how the prompts are
+actually written (the techniques, rules, output contracts, settings and how they were
+iterated) is in [`prompt-engineering.md`](./prompt-engineering.md):
 
 All five run on **`gpt-5-mini`** by default (selectable among the allowed OpenRouter
 chat models via Preferences), using 5 deliberately distinct techniques:
@@ -139,27 +155,33 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    runs it at submit only for a Document with no analysis, or when the Interview overrides
    the `jd_analysis` model) — one small call **per Document**
    (job description, CV, cover letter; run in parallel at submit): extracts skills, likely topics,
-   the role's domain (job description / CV) and the employer's name (job description /
-   cover letter). The result is stored as that Document's `DocumentAnalysis` and reused by
+   the role's domain and the employer's name. The job description and the CV are the substantive
+   inputs (skills and topics come from them). The cover letter is a secondary input, often not
+   uploaded and rarely decisive: its analysis has no skills or topics, and only contributes the
+   employer's name and a fallback domain. The result is stored as that Document's
+   `DocumentAnalysis` and reused by
    every later Interview that uses the Document, unless that Interview's `jd_analysis`
    model differs, in which case it is re-run and overwritten — see
    [ADR 0012](./adr/0012-document-analysis-cached-per-document-and-model.md). The
-   Interview's `domain` comes from the job description's (else the CV's) analysis.
+   Interview's `domain` is proposed by the job description's analysis, else the cover letter's, else the CV's, but phase 2 checks the proposal against the job title and company and ignores it when it makes no sense (a software CV for a barista job).
    Technique: **zero-shot** extraction with a structured JSON output contract. Plain context-injection, not RAG —
    see [ADR 0004](./adr/0004-job-description-context-is-not-rag.md).
 2. **Question-plan & persona generation** — produces the interviewer persona (name, job
    title, tone, and a knowledge scope/backstory shaped by `interviewer_role`), the question
    plan (skewed
    technical vs. behavioral by `interview_type`: at least 70% of the questions are of the
-   interview's own type, and exactly `target_question_count` of them are planned), and a
+   interview's own type; the plan holds `target_question_count` core questions plus 3 to `3 + target/4`
+   reserves (never more than the target), in all 5→8-9, 10→13-15, 20→23-28, 30→33-41: the interviewer asks only the target number and swaps in a
+   reserve when a core question no longer fits, e.g. after a rude candidate, so it never ends on
+   salary expectations), and a
    structured set of **Evaluation criteria**
    (technical + behavioral criteria, stored as `EvaluationCriterion` rows; the question plan
    as `InterviewQuestion` rows) — the assignment's
    "generate interviewer guidelines" optional task, folded into this same phase rather
    than a separate one. Seeded by `difficulty`, `domain`, `seniority`, `interview_type`,
    `interviewer_role`, `company_name`, and the JD/CV analysis output. A new stage under an
-   existing Application also gets the planned questions of that Application's **completed**
-   stages (fenced as data, question call only). It may revisit a few of them, reworded (at most a quarter of its questions, so none under 4), but never most or all.
+   existing Application also gets the questions actually asked in that Application's **completed**
+   stages (the interviewer's non-clarification messages, not the plans, which hold unasked reserves) (fenced as data, question call only). It may revisit a few of them, reworded (at most a quarter of its questions, so none under 4), but never most or all.
    Technique:
    **instruction/constraint-based prompting** — driven by the explicit structured inputs
    (difficulty/domain/seniority/analysis output) rather than worked examples, which is what
@@ -170,8 +192,9 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    `backstory`), the questions, and the evaluation criteria — because none depends on
    another, only on the shared inputs; so it takes as long as the slowest one, not one
    long reply (reasoning effort is deliberately not lowered to save time). Each reply is
-   validated before anything is stored; an incomplete persona, no usable criteria, or a
-   question count other than `target_question_count` fails the request with `502` and
+   validated before anything is stored; an incomplete persona, no usable criteria, or
+   fewer questions than the target plus 3 reserves (extra reserves are just dropped) fails the
+   request with `502` and
    creates nothing, and the other calls are abandoned. The persona call also returns the
    Interview's `domain`, but only when no analyzed Document supplied one; the persona call
    sees only the setup, while the questions and criteria also get the JD/CV analyses. The backstory is stored as
@@ -184,8 +207,11 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    `target_question_count`). Technique: **role/persona prompting**. `Interview.response_style`
    (concise/detailed) shapes how elaborate the interviewer's phrasing is. The model gets
    the persona (name, title, backstory), the role, tone, the question plan and the
-   transcript, and returns `{message, done}`; the server decides what kind of turn it is
-   (open, ask, wrap up, answer, close) and enforces the budget — see
+   transcript, and returns `{message, done, end_interview}`; the server decides what kind of
+   turn it is (open, ask, wrap up, answer, close) and enforces the budget. `end_interview`
+   is how it ends the whole interview, with no ask-back phase, on a rude or abusive
+   candidate: it is honored only after the interviewer has first warned the candidate
+   (inside a clarification), and ignored (and logged) otherwise — see
    [ADR 0013](./adr/0013-live-conversation-is-server-paced-and-atomic-per-exchange.md). The
    evaluation criteria are deliberately not shown to it. The model comes from the
    Interview's `live_conversation` setting.
@@ -209,7 +235,14 @@ chat models via Preferences), using 5 deliberately distinct techniques:
    framework and the Interview's `EvaluationCriterion` rows (phase 2's criteria, weighted toward
    whichever half — technical or behavioral — matches `interview_type`), and produces a
    verdict
-   (`hire`/`no_hire`), reasoning, and improvement suggestions. Technique:
+   (`hire`/`no_hire`), reasoning, strengths, weaknesses, and improvement suggestions. The
+   verdict's bar scales with the Interview's `difficulty`: lenient on `easy` (an acceptable
+   performance passes, only a very poor or disrespectful one doesn't), balanced on `medium`,
+   demanding on `hard`. What the interviewer could check also matters: a recruiter or HR
+   interviewer can't judge technical details, so a possibly wrong technical claim isn't
+   penalized (and is noted as unverified), while rudeness, nonsense and ignoring the question
+   always count against the candidate, and drifting off-topic and returning when asked doesn't.
+   Technique:
    **chain-of-thought** reasoning constrained to a structured JSON output;
    `Interview.response_style` shapes how long/detailed the reasoning and improvement
    suggestions are. Runs on the `evaluation` phase's model (the Interview's override, else Preferences, else
@@ -262,7 +295,7 @@ in-session toggle.
   message keeps `helper_text` null, the endpoint answers `200` with it, and the card is
   simply not shown; nothing else fails. This is different from "no grounded match", which still gets a generic hint.
 
-## Per-interview advanced settings (nice to have)
+## Per-interview advanced settings
 
 A collapsed "advanced settings" section on Create Interview lets the candidate override LLM
 settings **per phase**, for just that Interview. Anything not overridden keeps using the
@@ -276,18 +309,26 @@ global Preferences defaults (`gpt-5-mini`, Preferences' temperature, etc.).
   setting, which would be a wide, mostly-null `interviews` table; the API still takes and
   returns the nested `phaseSettingsOverride` object.
 - **Model choice**: for the 5 candidate-facing phases, the chat models (`gpt-5-mini`,
-  `gpt-5-nano`, `gpt-4o-mini`). `typesafe/jev-1.13` is not among them: it is a decision
-  model (typed questions in, typed answers with probabilities out, on a separate endpoint),
-  so it cannot write a persona, questions or an interviewer reply. It is offered only as a
-  judge, whose job is a decision.
+  `gpt-5-nano`, `gpt-4o-mini`). `gpt-4o-mini` stays on offer but is **unreliable for the
+  `evaluation` phase**: in the [benchmark](./prompt-benchmark.md#experiment-2-chain-of-thought-scratchpad-star-evaluation)
+  about 4 in 10 of its evaluations were rejected, because it sometimes writes the `analysis`
+  scratchpad as an object instead of a string. A rejected evaluation stores nothing and can be
+  requested again, but the default `gpt-5-mini` did not fail once.
 - **`interviewer_review`'s model choice is deliberately a different, narrower set**:
-  `google/gemini-2.5-flash` (the default — see below), `google/gemini-3.5-flash-lite`,
-  `gpt-5-mini`, `gpt-5-nano`,
-  `typesafe/jev-1.13`. No `gpt-4o-mini` here — the OpenAI options exist as quick, cheap
+  `google/gemini-2.5-flash` (the default — see below), `gpt-5-mini`, `gpt-5-nano`. No
+  `gpt-4o-mini` here — the OpenAI options exist as quick, cheap
   experimentation, not an expected path; Gemini stays the recommendation. This is intentionally asymmetric with the
   other 5 phases, not an oversight: the judge's whole point is being a different vendor
   from the interview model, so its override set centers on that instead of mirroring the
   candidate-facing phases' allow-list.
+- **`typesafe/jev-1.13` is deliberately not offered, for any phase.** It was considered as a
+  judge, being a decisions model (typed questions in, typed answers with probabilities out),
+  but OpenRouter refuses it on `/chat/completions`, the only endpoint the server's client
+  uses (`400`: "a decisions model and cannot be used with the chat/completions endpoint",
+  use `/api/alpha/decisions`). Offering it would have made every review fail, and silently,
+  since a judge failure is logged and dropped rather than shown. Supporting it would mean a
+  second client for that alpha endpoint and mapping the judge's three scores onto typed
+  decisions; not worth it while three chat models already work.
 - **Anti-collision rule**: whichever model actually produced this Interview's `question_plan`
   and `live_conversation` phases (accounting for their own per-phase overrides, if set) is
   always excluded from the `interviewer_review` model choices here — so picking, say,
@@ -308,6 +349,13 @@ given Interview — question relevance/quality, persona consistency, pacing — 
 actually satisfies the assignment's Hard optional task "assess the performance of your
 prompt and/or model via LLM-as-a-judge." Not shown on the candidate-facing Results page by
 default; it's a reflection/debugging tool for the developer.
+
+The judge knows the interviewer may stay on a question (a clarification, marked in the
+transcript): re-asking or steering back is right when the candidate left part of the question
+unanswered, drifted or contradicted themselves, and counts against relevance only when the
+question had already been answered or it goes on past two in a row. It also knows the plan
+has unasked reserves and that an interview the interviewer ended early shouldn't be
+penalized for pacing.
 
 - Runs against the separate **interviewer-judge model**, default `google/gemini-2.5-flash`
   — selected in Preferences (see below) globally, or overridable per-interview via the
@@ -358,16 +406,6 @@ regenerated together; the score isn't derived separately from the narrative or v
 - Persisted as `JobApplication.progress_score` / `progress_summary` / `progress_basis` (see `domain-model.md` /
   `database-schema.md`) rather than a separate entity, since it's a single regenerated pair
   of fields, not a history of past summaries.
-
-## Per-prompt cost tracking (nice to have)
-
-Compute and report the cost of each OpenRouter call (input/output tokens × that model's
-price, from OpenRouter's models/pricing endpoint), satisfying the assignment's "calculate
-and provide the price of the prompt" optional task. Aggregate per Interview and export as an
-Excel report — reusing the same reporting format the assignment suggests for jailbreak-test
-results, so both nice-to-haves can share one export mechanism. **Export-only** for v1 — a
-live running-cost display is real UI work that isn't core to the candidate experience, and
-the Excel export alone satisfies the assignment's optional task.
 
 ## Security guard
 
@@ -508,9 +546,8 @@ the opening message. It is served by `GET /api/interviews/:id/persona-image`.
 Note: the assignment's Sprint 1 allow-list only names this one model for image generation,
 so there isn't actually a "cheapest option" to pick between within scope — using a
 different, cheaper image model would mean stepping outside what's sanctioned for this
-sprint. If a real cost figure is needed later, that should come from OpenRouter's live
-pricing endpoint (the same mechanism as the per-prompt cost tracking nice-to-have above)
-rather than a number quoted here, since model pricing changes over time.
+sprint. If a real cost figure is needed, it should come from OpenRouter's live pricing
+endpoint rather than a number quoted here, since model pricing changes over time.
 
 ## Document file storage & download
 
@@ -539,7 +576,9 @@ Interview Session
   Q&A phase:
     loop: interviewer prompt → candidate reply (guard-checked) → ...
     ends when: target_question_count reached, OR interviewer judges enough signal,
-               OR candidate quits explicitly (→ status = abandoned, skip to Evaluation)
+               OR candidate quits explicitly (→ status = abandoned, skip to Evaluation),
+               OR interviewer ends it for a rude/abusive candidate, after a warning
+               (→ status = completed with no ask-back phase, skip to Evaluation)
   Ask-back phase (always offered, declinable):
     optional: candidate-question-suggestions prompt
     candidate asks 0+ questions (guard-checked) or declines
@@ -550,7 +589,7 @@ Interview Session
 [No graceful exit: Alt+F4 / process kill / crash / power loss — see ADR 0006]
   → status is left at in_progress, last_activity_at stops advancing
   → next time this Interview is read (history list, reopening it) and
-    last_activity_at is older than the staleness timeout (TBD):
+    last_activity_at is older than the staleness timeout (30 minutes):
     → status = abandoned, ended_at = last_activity_at, then the same Evaluation request
     (same path as an explicit quit, just detected lazily instead of live)
 

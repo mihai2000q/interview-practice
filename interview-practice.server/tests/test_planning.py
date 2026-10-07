@@ -13,9 +13,19 @@ from flask import Flask
 from app.errors.exceptions import LlmUpstreamError
 from app.interviews.schemas import InterviewCreate
 from app.interviews.use_cases.create_interview.planning import plan_interview
+from app.interviews.use_cases.create_interview.planning.limits import plan_range
+from app.interviews.use_cases.create_interview.use_case import _previous_questions
 from app.llm.openrouter import CompletionSettings
+from app.models import (
+    InterviewCategory,
+    InterviewQuestion,
+    InterviewStatus,
+    JobApplication,
+    MessagePhase,
+    MessageRole,
+)
 from app.services.document_analysis import JobContext
-from tests.support import chat_response, fake_client
+from tests.support import build_interview, chat_response, fake_client
 
 
 @pytest.fixture(autouse=True)
@@ -62,7 +72,7 @@ def persona(**changes: Any) -> dict[str, Any]:
     return {**reply, **changes}
 
 
-def questions(count: int | list[dict[str, str]] = 3) -> dict[str, Any]:
+def questions(count: int | list[dict[str, str]] = 6) -> dict[str, Any]:
     if isinstance(count, list):
         return {"questions": count}
     return {
@@ -153,11 +163,9 @@ def test_the_three_parts_come_together_in_order() -> None:
         "Dana Whitfield",
         "Staff Engineer",
     )
-    assert [q.question for q in result.questions] == ["Q0?", "Q1?", "Q2?"]
+    assert [q.question for q in result.questions] == [f"Q{i}?" for i in range(6)]
     assert [q.category.value for q in result.questions] == [
-        "technical",
-        "behavioral",
-        "technical",
+        "technical" if i % 2 == 0 else "behavioral" for i in range(6)
     ]
     assert len(result.evaluation_criteria) == 2
 
@@ -169,7 +177,7 @@ def test_text_is_trimmed_and_bounded() -> None:
             persona={"name": "  " + "n" * 300, "title": "t" * 300, "backstory": long}
         ),
         questions_reply=questions(
-            [{"category": "technical", "question": f"  {long}  "}] * 3
+            [{"category": "technical", "question": f"  {long}  "}] * 6
         ),
         criteria_reply=criteria([{"category": "technical", "criterion": long}]),
     )
@@ -184,14 +192,17 @@ def test_text_is_trimmed_and_bounded() -> None:
 # -- the parts must follow their contracts --------------------------------------------
 
 
-@pytest.mark.parametrize("returned", [2, 4, 0])
+@pytest.mark.parametrize("returned", [3, 5, 0])
 def test_a_wrong_number_of_questions_is_an_error(returned: int) -> None:
     with pytest.raises(LlmUpstreamError, match="wrong number"):
         plan(FakeModel(questions_reply=questions(returned)))
 
 
 def test_a_blank_question_does_not_count() -> None:
-    items = [{"category": "technical", "question": q} for q in ("A?", "  ", "C?")]
+    items = [
+        {"category": "technical", "question": q}
+        for q in ("A?", "  ", "C?", "D?", "E?", "F?")
+    ]
     with pytest.raises(LlmUpstreamError, match="wrong number"):
         plan(FakeModel(questions_reply=questions(items)))
 
@@ -218,12 +229,16 @@ def test_no_usable_criteria_is_an_error(items: list[dict[str, str]]) -> None:
 # -- the domain -----------------------------------------------------------------------
 
 
-def test_an_analyzed_domain_is_used_and_not_asked_for() -> None:
-    model = FakeModel(persona_reply=persona(domain="something else"))
-    result = plan(model, ctx=context(domain="data science"))
-    assert result.domain == "data science"
-    assert '"domain"' not in model.system("persona")
-    assert "domain: data science" in model.user("persona")
+def test_a_documents_domain_is_a_hint_the_persona_call_checks() -> None:
+    model = FakeModel(persona_reply=persona(domain="hospitality"))
+    result = plan(model, ctx=context(domain="software engineering"))
+    # The model's answer wins: the CV's field didn't fit the position.
+    assert result.domain == "hospitality"
+    assert "compare it with the job_title and company" in model.system("persona")
+    for kind in ("persona", "questions", "criteria"):
+        user = model.user(kind)
+        assert "only if it fits job_title and company" in user
+        assert "software engineering" in user
 
 
 def test_without_an_analyzed_domain_the_model_is_asked_and_its_answer_tidied() -> None:
@@ -241,10 +256,42 @@ def test_with_no_domain_anywhere_a_placeholder_is_used(returned: str | None) -> 
 # -- what each prompt asks for --------------------------------------------------------
 
 
-def test_the_questions_prompt_asks_for_exactly_the_requested_number() -> None:
-    model = FakeModel(questions_reply=questions(5))
+def test_the_questions_prompt_asks_for_the_core_plan_and_a_few_reserves() -> None:
+    model = FakeModel(questions_reply=questions(9))
     plan(model, request(targetQuestionCount=5))
-    assert "exactly 5 questions" in model.system("questions")
+    system = model.system("questions")
+    assert "between 8 and 9 questions" in system
+    assert "The first 5 are the core plan" in system
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        (1, (2, 2)),
+        (3, (6, 6)),
+        (5, (8, 9)),
+        (10, (13, 15)),
+        (20, (23, 28)),
+        (30, (33, 41)),
+    ],
+)
+def test_the_plan_holds_the_target_plus_a_range_of_reserves(
+    target: int, expected: tuple[int, int]
+) -> None:
+    assert plan_range(target) == expected
+
+
+def test_the_plan_never_shrinks_as_the_target_grows() -> None:
+    ranges = [plan_range(n) for n in range(1, 31)]
+    assert [r[0] for r in ranges] == sorted(r[0] for r in ranges)
+    assert [r[1] for r in ranges] == sorted(r[1] for r in ranges)
+
+
+def test_surplus_reserves_are_dropped_but_missing_core_questions_fail() -> None:
+    result = plan(FakeModel(questions_reply=questions(10)))  # target 3: 6 allowed
+    assert len(result.questions) == 6
+    with pytest.raises(LlmUpstreamError, match="wrong number"):
+        plan(FakeModel(questions_reply=questions(5)))
 
 
 @pytest.mark.parametrize("interview_type", ["technical", "behavioral"])
@@ -263,6 +310,13 @@ def test_difficulty_and_role_shape_the_questions_and_tone_shapes_the_persona() -
     assert "First-contact screen" in model.system("questions")
     assert "demanding" in model.system("persona")
     assert "First-contact screen" in model.system("persona")
+
+
+def test_the_plan_sticks_to_the_position_not_the_cvs_field() -> None:
+    model = FakeModel(questions_reply=questions(6))
+    plan(model, request())
+    assert "Stick to the position (job_title)" in model.system("questions")
+    assert "belong to that field" in model.system("persona")
 
 
 def test_a_known_company_adds_the_company_knowledge_question() -> None:
@@ -372,9 +426,11 @@ def test_earlier_stages_questions_go_to_the_questions_call_only_as_data() -> Non
 
 
 def test_a_longer_interview_may_revisit_a_few_earlier_questions() -> None:
-    model = FakeModel(questions_reply=questions(8))
+    model = FakeModel(questions_reply=questions(13))
     plan(model, request(targetQuestionCount=8), previous_questions=("Old?",))
-    assert "at most 2 of the 8 questions may revisit" in model.system("questions")
+    assert "at most 2 of the 13 questions in all may revisit" in model.system(
+        "questions"
+    )
 
 
 def test_without_earlier_stages_the_prompt_says_nothing_about_repeats() -> None:
@@ -406,3 +462,36 @@ def test_one_failing_call_fails_the_plan_without_waiting_for_the_others() -> Non
     with pytest.raises(LlmUpstreamError):
         plan(model)
     assert time.perf_counter() - started < 0.7
+
+
+# -- what earlier stages asked ---------------------------------------------------------
+
+
+def stage(
+    status: InterviewStatus, texts: list[str], clarifications: set[int] = frozenset()
+):
+    """A stage whose interviewer said `texts`; numbers in `clarifications` stay on the
+    previous question."""
+    interview = build_interview(
+        status=status,
+        messages=[(MessageRole.interviewer, MessagePhase.qa)] * len(texts),
+        clarifications=clarifications,
+    )
+    for message, text in zip(interview.messages, texts, strict=True):
+        message.content = text
+    return interview
+
+
+def test_later_stages_avoid_what_was_asked_not_what_was_planned() -> None:
+    first = stage(
+        InterviewStatus.completed,
+        ["Tell me about X?", "  Why   Y? ", "Clarify Y?"],
+        clarifications={3},
+    )
+    first.questions.append(
+        InterviewQuestion(category=InterviewCategory.technical, question="never asked")
+    )
+    unfinished = stage(InterviewStatus.abandoned, ["Skipped stage?"])
+    application = JobApplication(interviews=[first, unfinished])
+    assert _previous_questions(application) == ["Tell me about X?", "Why Y?"]
+    assert _previous_questions(None) == []

@@ -2,7 +2,7 @@
 Interview. No database anywhere."""
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from typing import Any
 
 import httpx
@@ -53,12 +53,14 @@ def build_interview(
     target: int = 3,
     helpers: bool = False,
     messages: list[tuple[MessageRole, MessagePhase]] | None = None,
+    clarifications: Collection[int] = (),
     job_analysis: bool = False,
     cv: str | None = None,
     cover_letter: str | None = None,
     **fields: Any,
 ) -> Interview:
-    """An unsaved Interview. `messages` are (role, phase) pairs, numbered from 1;
+    """An unsaved Interview. `messages` are (role, phase) pairs, numbered from 1,
+    those whose number is in `clarifications` flagged as clarifications;
     `job_analysis` attaches an analyzed job description; other fields override."""
     job_description = None
     if job_analysis:
@@ -94,6 +96,12 @@ def build_interview(
     )
     for number, (role, phase) in enumerate(messages or [], start=1):
         interview.messages.append(
-            Message(role=role, phase=phase, content=f"m{number}", sequence=number)
+            Message(
+                role=role,
+                phase=phase,
+                content=f"m{number}",
+                sequence=number,
+                is_clarification=number in clarifications,
+            )
         )
     return interview

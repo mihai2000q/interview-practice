@@ -110,7 +110,8 @@ One mock interview session, from creation through evaluation.
   assignment's own "questions to ask the interviewer" starter idea, which explicitly wants
   a company name — the ask-back suggestions (phase 4)
 - `domain`: taken at creation from the job description's `DocumentAnalysis` (else the
-  CV's), e.g. "backend engineering"; with no analyzed document, phase 2 supplies it from
+  cover letter's, else the CV's) as a hint that phase 2 checks against `job_title` and company and
+  drops when it doesn't fit, e.g. "backend engineering"; with no analyzed document, phase 2 supplies it from
   `job_title`/`seniority`. Not a form field, so the candidate never has to categorize their
   own role. Stored on the Interview and fed to the later prompts
 - `seniority`: e.g. junior / mid / senior
@@ -162,7 +163,13 @@ One mock interview session, from creation through evaluation.
   server, so a typo can't produce an hours-long interview
 - `status`: `in_progress` | `completed` | `abandoned` — `abandoned` either when the
   candidate explicitly quits mid-session, or when the session goes stale (see
-  `last_activity_at` below); evaluation still runs in both cases but is flagged incomplete
+  `last_activity_at` below); evaluation still runs in both cases but is flagged incomplete.
+  A third way for an Interview to stop early has **no status of its own**: the interviewer
+  ending it for a rude or abusive candidate (after a warning, see ADR 0013). That Interview
+  is `completed` but never reached the ask-back phase, so it has no `ask_back` Message;
+  "ended by the interviewer" is derived from exactly that (`Interview.ended_by_interviewer`
+  on the server) rather than stored, and the evaluation and the interviewer review are told
+  about it so the unasked questions aren't penalized
 - `turn_started_at`: nullable timestamptz — set while a turn is being processed so a second reply is refused with `TURN_IN_PROGRESS`, cleared when the turn ends, and treated as expired after 5 minutes if its request died (see ADR 0013). An Interview with a live marker is never marked stale
 - `last_activity_at`: timestamptz, updated on every new `Message`. Staleness timeout: **30
   minutes** — long enough that a candidate thinking mid-answer isn't falsely flagged, short
@@ -215,7 +222,9 @@ or cover. Belongs to exactly one Interview (created with it, deleted with it) an
 shown to the candidate.
 
 - `interview_id`: FK → Interview
-- `sequence`: order within the plan, from 1
+- `sequence`: order within the plan, from 1. The first `target_question_count` are the core
+  questions, the rest reserves the interviewer may swap in (the plan holds the target plus 3 to
+  `3 + target/4` reserves: 10→13-15, 20→23-28)
 - `category`: `technical` | `behavioral` — the plan is skewed between the two by
   `Interview.interview_type`
 - `question`: text
@@ -245,6 +254,9 @@ One turn in the interview transcript. Ordered, phase-tagged, role-tagged.
 - `helper_text`: nullable text — a coaching-hint card, populated only for `interviewer` /
   `qa`-phase messages when `Interview.coaching_helpers_enabled` is true, and written after the
   message exists, so it is null until the session page asks for it (see `architecture.md`)
+- `is_clarification`: boolean, default false — an `interviewer` / `qa` message that stays on the
+  previous question (answers the candidate's question or asks them to clarify) instead of asking
+  a new one. Not counted toward `target_question_count`; at most two in a row (ADR 0013)
 - `sequence`: ordering index within the interview, from 1. The first message of every
   Interview is the interviewer's opening, created when the session page first asks for it (an
   Interview may briefly have no messages). The Interview's current phase is
@@ -259,6 +271,8 @@ The outcome of an Interview. One-to-one with Interview, created once the session
 - `interview_id`: FK → Interview (unique)
 - `verdict`: `hire` | `no_hire`
 - `reasoning`: explanation for the verdict
+- `strengths`, `weaknesses`: what went well and where it fell short, one per line; at least
+  one of each
 - `improvement_suggestions`: what the candidate should work on
 - `star_situation`, `star_task`, `star_action`, `star_result`: one short assessment per
   STAR letter, aggregated across the whole interview (not per-question)
@@ -285,7 +299,7 @@ the same call as `Evaluation` (made once the session has ended, in parallel with
 - `judge_model`: the OpenRouter model id used to run this review, default
   `google/gemini-2.5-flash` (selectable globally in Preferences, or overridable per
   Interview via the `interviewer_review` `InterviewPhaseSettings` row's `model`, restricted there to
-  `google/gemini-2.5-flash` / `google/gemini-3.5-flash-lite` / `gpt-5-mini` / `gpt-5-nano` / `typesafe/jev-1.13`) — deliberately independent of
+  `google/gemini-2.5-flash` / `gpt-5-mini` / `gpt-5-nano`) — deliberately independent of
   whichever model produced this Interview's question-plan/persona generation (phase 2) and
   live conversation (phase 3): that model is always excluded from the judge-model choices,
   in both Preferences and advanced settings, so the two can never collide — see

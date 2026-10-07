@@ -20,6 +20,7 @@ import {
   PhaseSettingsOverride,
   isSubStep,
   REASONING_EFFORTS,
+  TEMPERATURE_HINT,
   TEMPERATURE_RANGE,
 } from '@app/core/phase-settings/phase-settings.schema';
 import {
@@ -78,6 +79,7 @@ export class PhaseModelOverrides {
   protected readonly phaseLabels = PHASE_LABELS;
   protected readonly phaseSteps = PHASE_STEPS;
   protected readonly phaseHints = PHASE_HINTS;
+  protected readonly temperatureHint = TEMPERATURE_HINT;
   protected readonly isSubStep = isSubStep;
   protected readonly reasoningEfforts = REASONING_EFFORTS;
   protected readonly temperatureRange = TEMPERATURE_RANGE;
@@ -87,7 +89,6 @@ export class PhaseModelOverrides {
   private scrollTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly field = computed(() => this.interviewForm().phaseSettings());
   private readonly value = computed(() => this.field().value());
-  protected readonly takenNote = takenNote;
   /** The models the judge and the interviewer run on now, chosen here or from the Preferences. */
   private readonly ruleModels = computed(() => this.judgeRuleModels(this.value()));
 
@@ -118,6 +119,11 @@ export class PhaseModelOverrides {
   /** Whether `model` is shown but can't be picked for `phase`, as the judge rule forbids it. */
   protected isTaken(phase: Phase, model: string): boolean {
     return isModelTaken(phase, model, this.ruleModels());
+  }
+
+  /** Who holds a model `isTaken` rules out, shown next to it. */
+  protected takenBy(phase: Phase, model: string): string {
+    return takenNote(phase, model, this.ruleModels());
   }
 
   /** What the phase starts from: the Preferences default, to which this Interview's choices are layered. */
